@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 910" font-family="system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <title>End-to-end topology: Playwright drives two browser contexts through nginx into two backend instances of the E2E stack</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <rect width="960" height="910" fill="#111418"/>
+  <text x="480" y="34" text-anchor="middle" fill="#e8ebf0" font-size="20" font-weight="600">End to end: two real browsers, one real stack, only the DOM contract asserted</text>
+
+  <!-- Playwright runner -->
+  <rect x="20" y="60" width="920" height="84" rx="10" fill="#1b2027" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="480" y="84" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">Playwright 1.63 runner (e2e/playwright.config.ts) - workers: 1, fullyParallel: false, retries: 0</text>
+  <text x="480" y="106" text-anchor="middle" fill="#8b95a4" font-size="13">project "desktop": Chromium 1280 x 720 (every spec but ux-touch)</text>
+  <text x="480" y="126" text-anchor="middle" fill="#8b95a4" font-size="13">project "mobile": Pixel 5, 360 x 640, hasTouch (ux-touch.spec.ts only)</text>
+
+  <!-- contexts -->
+  <line x1="245" y1="144" x2="245" y2="168" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="715" y1="144" x2="715" y2="168" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="20" y="170" width="450" height="150" rx="10" fill="#1b2027" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="245" y="194" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">context A - Alma (1440 x 900)</text>
+  <text x="245" y="216" text-anchor="middle" fill="#8b95a4" font-size="12">openSession(): addInitScript writes snapland:view:&lt;id&gt;</text>
+  <text x="245" y="232" text-anchor="middle" fill="#8b95a4" font-size="12">to localStorage, signs in through the real form and waits</text>
+  <text x="245" y="248" text-anchor="middle" fill="#8b95a4" font-size="12">for connection-status[data-state] = live</text>
+  <text x="245" y="264" text-anchor="middle" fill="#8b95a4" font-size="12">clicks the map at fractions of its box; reads data-testid</text>
+  <text x="245" y="280" text-anchor="middle" fill="#8b95a4" font-size="12">and data-* attributes only, never copy or CSS</text>
+  <text x="245" y="296" text-anchor="middle" fill="#8b95a4" font-size="12">page.on('pageerror') is collected: a spec ends with</text>
+  <text x="245" y="312" text-anchor="middle" fill="#8b95a4" font-size="12">expect(errors).toEqual([])</text>
+
+  <rect x="490" y="170" width="450" height="150" rx="10" fill="#1b2027" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="715" y="194" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">context B - Bento (1024 x 768)</text>
+  <text x="715" y="216" text-anchor="middle" fill="#8b95a4" font-size="12">same helper; sees Alma's remote-draft and remote-draft-chip</text>
+  <text x="715" y="232" text-anchor="middle" fill="#8b95a4" font-size="12">within 5 s; presence-item[data-status] drawing -> viewing;</text>
+  <text x="715" y="248" text-anchor="middle" fill="#8b95a4" font-size="12">activity-item collab.created</text>
+  <text x="715" y="270" text-anchor="middle" fill="#8b95a4" font-size="12">degradation.spec: context.routeWebSocket(/\/ws/, ...)</text>
+  <text x="715" y="286" text-anchor="middle" fill="#8b95a4" font-size="12">closes every socket with code 1011 -> the pill goes to limited,</text>
+  <text x="715" y="302" text-anchor="middle" fill="#8b95a4" font-size="12">the save still succeeds over REST</text>
+
+  <!-- nginx -->
+  <line x1="245" y1="320" x2="400" y2="348" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="715" y1="320" x2="560" y2="348" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="230" y="350" width="500" height="110" rx="10" fill="#1b2027" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="480" y="374" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">nginx, http://localhost:5173 (E2E_BASE_URL)</text>
+  <text x="480" y="394" text-anchor="middle" fill="#8b95a4" font-size="12">image snapland-nginx:e2e</text>
+  <text x="480" y="410" text-anchor="middle" fill="#8b95a4" font-size="12">VITE_E2E_HOOKS=true, VITE_ENABLE_ITM_LAYER=true</text>
+  <text x="480" y="426" text-anchor="middle" fill="#8b95a4" font-size="12">serves the SPA; proxies /api and /ws to</text>
+  <text x="480" y="442" text-anchor="middle" fill="#8b95a4" font-size="12">backend-1 / backend-2 (least_conn)</text>
+
+  <!-- backends -->
+  <line x1="380" y1="460" x2="260" y2="498" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="580" y1="460" x2="700" y2="498" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="60" y="500" width="400" height="76" rx="10" fill="#1b2027" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="260" y="524" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">backend-1</text>
+  <text x="260" y="544" text-anchor="middle" fill="#8b95a4" font-size="12">AUTH/REFRESH limit 1000</text>
+  <text x="260" y="560" text-anchor="middle" fill="#8b95a4" font-size="12">every other limit keeps its production value</text>
+  <rect x="500" y="500" width="400" height="76" rx="10" fill="#1b2027" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="700" y="524" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">backend-2</text>
+  <text x="700" y="544" text-anchor="middle" fill="#8b95a4" font-size="12">same raise: every browser context reaches nginx</text>
+  <text x="700" y="560" text-anchor="middle" fill="#8b95a4" font-size="12">from one Docker gateway IP</text>
+
+  <!-- data -->
+  <line x1="260" y1="576" x2="400" y2="608" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="700" y1="576" x2="560" y2="608" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="230" y="610" width="500" height="76" rx="10" fill="#1b2027" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="480" y="634" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">postgres (PostGIS), redis, redis-cache</text>
+  <text x="480" y="654" text-anchor="middle" fill="#8b95a4" font-size="12">every run registers fresh users (e2e-alma-&lt;stamp&gt;)</text>
+  <text x="480" y="670" text-anchor="middle" fill="#8b95a4" font-size="12">and draws at a random quiet place in the Negev</text>
+
+  <!-- side notes, in their own row below the stack -->
+  <rect x="20" y="710" width="450" height="180" rx="10" fill="#0d1a1f" stroke="#22d3ee" stroke-width="1"/>
+  <text x="245" y="734" text-anchor="middle" fill="#e8ebf0" font-size="14" font-weight="600">Why it survives a redesign</text>
+  <text x="32" y="758" fill="#8b95a4" font-size="12">Specs never read copy or CSS: they use the data-testid</text>
+  <text x="32" y="774" fill="#8b95a4" font-size="12">registry of UX.md section 12 and data-* attributes</text>
+  <text x="32" y="790" fill="#8b95a4" font-size="12">(data-state, data-km2, data-count).</text>
+  <text x="32" y="814" fill="#8b95a4" font-size="12">Saved areas are canvas pixels with no DOM node; the</text>
+  <text x="32" y="830" fill="#8b95a4" font-size="12">read-only hook window.__snapland (E2E build only)</text>
+  <text x="32" y="846" fill="#8b95a4" font-size="12">exposes areasInView and the draft.</text>
+
+  <rect x="490" y="710" width="450" height="180" rx="10" fill="#0d1a1f" stroke="#22d3ee" stroke-width="1"/>
+  <text x="715" y="734" text-anchor="middle" fill="#e8ebf0" font-size="14" font-weight="600">The six specs in the tree</text>
+  <text x="502" y="758" fill="#e8ebf0" font-size="12">two-users-realtime, draft, chip, presence</text>
+  <text x="502" y="774" fill="#e8ebf0" font-size="12">layer-switch, Map <-> Aerial keeps points</text>
+  <text x="502" y="790" fill="#e8ebf0" font-size="12">degradation, WS refused, REST still saves</text>
+  <text x="502" y="806" fill="#e8ebf0" font-size="12">xss, HTML in names renders as text</text>
+  <text x="502" y="822" fill="#e8ebf0" font-size="12">studio-frame, theme, docked frame</text>
+  <text x="502" y="838" fill="#e8ebf0" font-size="12">ux-touch, phone frame, 44 px targets</text>
+  <text x="502" y="862" fill="#8b95a4" font-size="12">conflict resolution is proven at</text>
+  <text x="502" y="878" fill="#8b95a4" font-size="12">integration level, not in a browser</text>
+</svg>

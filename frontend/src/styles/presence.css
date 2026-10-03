@@ -1,0 +1,209 @@
+/* ==========================================================================
+   Presence (UX C-25, section 6.1; UI.md v2 section 10.4): avatars with status badges (title bar 28, People / Activity rows 26,
+   toasts 24, banners 20), the presence rows (People section at >= 600 px, popover on phones) and a person's name
+   after their colour dot. A person's colour arrives inline as --c.
+   ========================================================================== */
+
+/* ------------------------------------------------------------------ avatar */
+.avatar {
+  --c: var(--collab-7);
+  /* The 2 px gap ring takes the colour of the surface the avatar sits on. */
+  --avatar-ring: var(--color-bg);
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--size-avatar-lg);
+  height: var(--size-avatar-lg);
+  border-radius: var(--radius-full);
+  background: var(--c);
+  color: var(--collab-ink);
+  box-shadow:
+    0 0 0 2px var(--avatar-ring),
+    var(--avatar-edge);
+  font-size: var(--font-size-2xs);
+  line-height: 1;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.avatar--md {
+  --avatar-ring: var(--color-surface);
+  width: var(--size-avatar-md);
+  height: var(--size-avatar-md);
+}
+.avatar--sm {
+  --avatar-ring: var(--color-elevated);
+  width: var(--size-avatar-sm);
+  height: var(--size-avatar-sm);
+}
+/* "Me" reads as one colour: my presence colour (what others see) plus the accent ring outside the gap (section 2.2). */
+.avatar--me {
+  box-shadow:
+    0 0 0 2px var(--avatar-ring),
+    0 0 0 3.5px var(--color-accent),
+    var(--avatar-edge);
+}
+.avatar--more {
+  background: var(--color-neutral-badge-bg);
+  color: var(--color-neutral-badge-text);
+  font-family: var(--font-mono);
+}
+
+/* Status badge: a 16 px disc sticking out 6 px at the bottom-right, ringed in the bar colour; the glyph says the
+   status, so colour is never the only cue (plus = drawing, pencil = editing, eye = viewing, clock = idle). */
+.avatar__badge {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  display: grid;
+  place-items: center;
+  width: var(--size-status-badge);
+  height: var(--size-status-badge);
+  border-radius: var(--radius-full);
+  background: var(--c);
+  color: var(--collab-ink);
+  box-shadow: 0 0 0 2px var(--avatar-ring);
+}
+.avatar__badge--viewing,
+.avatar__badge--idle {
+  background: var(--color-badge-viewing-bg);
+  color: var(--color-badge-viewing-fg);
+}
+.avatar--me .avatar__badge {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+}
+
+/* ------------------------------------------------------------------ a person's name after their dot (section 2.3) */
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.who::before {
+  content: '';
+  flex: none;
+  width: var(--size-person-dot);
+  height: var(--size-person-dot);
+  border-radius: var(--radius-full);
+  background: var(--c, var(--collab-7));
+  box-shadow: var(--shadow-collab-dot);
+}
+.who--me::before {
+  background: var(--color-accent);
+}
+.who bdi {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ presence rows */
+.presence-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.presence-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 3px 12px;
+  border-radius: var(--radius-row);
+}
+.presence-row:hover {
+  background: var(--color-surface-hover);
+}
+.presence-row__text {
+  flex: 1;
+  min-width: 0;
+}
+.presence-row__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+}
+.presence-row__name bdi {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.presence-row__status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  min-width: 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-secondary);
+}
+.presence-row__status > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.presence-row__status--viewing,
+.presence-row__status--idle {
+  color: var(--color-text-tertiary);
+}
+.presence-row__icon--person {
+  color: var(--c);
+}
+/* Neon on white is about 1.2:1, so the light theme keeps these icons in the secondary text colour (section 2.3). */
+:root[data-theme='light'] .presence-row__icon--person {
+  color: var(--color-text-secondary);
+}
+.presence-row__icon--me {
+  color: var(--color-accent-text);
+}
+.presence-row__in-view {
+  flex: none;
+  font-size: var(--font-size-2xs);
+  line-height: var(--line-height-2xs);
+  color: var(--color-text-tertiary);
+}
+.presence-note {
+  padding: 2px 12px 6px;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-tertiary);
+}
+/* "Only you are here right now." reads as body text under my row; the Limited / Offline notes stay small (section 10.4). */
+.presence-note--alone {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+}
+
+/* The phone popover (the presence list's only home below 600 px). */
+.presence-pop .presence-row:hover {
+  background: var(--color-elevated-hover);
+}
+.presence-pop .avatar--md {
+  --avatar-ring: var(--color-elevated);
+}
+
+/* Joins ease in (UI.md section 10.4); instant with reduced motion. Only a new person carries the class (for one render), so
+   the stack re-sorting on a status change never replays it (Presence.tsx useNewcomers). */
+.avatar-stack > .avatar--entering {
+  animation: presence-in var(--duration-remote-fade) var(--ease-standard);
+}
+@keyframes presence-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-stack > .avatar--entering {
+    animation: none;
+  }
+}

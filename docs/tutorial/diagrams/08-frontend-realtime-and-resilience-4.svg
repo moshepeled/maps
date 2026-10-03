@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640" role="img" aria-labelledby="title4">
+  <title id="title4">A live draft travels from Alma's DraftSession through the server to Bento's remoteDraftsStore, where four receiver gates filter it before the RemoteDraftsLayer draws it</title>
+  <defs>
+    <marker id="arr4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrm4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="640" fill="#111418"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e8ebf0">
+    <text x="480" y="34" text-anchor="middle" font-size="18" font-weight="600">Real-time drawing: sender, server, receiver gates, renderer</text>
+
+    <!-- sender -->
+    <rect x="24" y="70" width="280" height="250" rx="14" fill="#161b22" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="164" y="98" text-anchor="middle" font-weight="600">Alma's tab, DraftSession</text>
+    <text x="164" y="116" text-anchor="middle" font-size="13" fill="#8b95a4">realtime/draftSession.ts</text>
+    <text x="40" y="146" font-size="13">1. first point -> draft.start</text>
+    <text x="40" y="164" font-size="13" fill="#8b95a4">   {resume: false}; ack = claimed</text>
+    <text x="40" y="182" font-size="13" fill="#8b95a4">   (counts as one drawing action)</text>
+    <text x="40" y="206" font-size="13">2. draft.update rev n, <= 10 Hz</text>
+    <text x="40" y="224" font-size="13" fill="#8b95a4">   vertices + cursor, 6 decimals,</text>
+    <text x="40" y="242" font-size="13" fill="#8b95a4">   trailing throttle</text>
+    <text x="40" y="266" font-size="13">3. draft.touch every 20 s when quiet</text>
+    <text x="40" y="290" font-size="13">4. save: POST /areas {id = draftId},</text>
+    <text x="40" y="308" font-size="13" fill="#8b95a4">   then draft.end committed</text>
+
+    <!-- server -->
+    <rect x="340" y="70" width="280" height="250" rx="14" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="480" y="98" text-anchor="middle" font-weight="600">Server (any replica)</text>
+    <text x="480" y="116" text-anchor="middle" font-size="13" fill="#8b95a4">SPEC section 7.6</text>
+    <text x="356" y="146" font-size="13">claims draftId in Redis (SET NX)</text>
+    <text x="356" y="170" font-size="13">coalesces updates for 50 ms,</text>
+    <text x="356" y="188" font-size="13">then publishes once to the bus</text>
+    <text x="356" y="212" font-size="13">keyframe = same rev again every 5 s</text>
+    <text x="356" y="236" font-size="13">relays only to intersecting viewports,</text>
+    <text x="356" y="254" font-size="13">never back to the sender</text>
+    <text x="356" y="278" font-size="13">publishes area.changed BEFORE the 201,</text>
+    <text x="356" y="296" font-size="13">-> the area arrives before draft.ended</text>
+
+    <path d="M304 190 L340 190" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr4)"/>
+    <path d="M620 190 L656 190" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr4)"/>
+
+    <!-- receiver -->
+    <rect x="656" y="70" width="280" height="250" rx="14" fill="#161b22" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="796" y="98" text-anchor="middle" font-weight="600">Bento's tab, handlers.onMessage</text>
+    <text x="796" y="116" text-anchor="middle" font-size="13" fill="#8b95a4">draftId != my draft -> remoteDraftsStore</text>
+    <text x="672" y="146" font-size="13">handleDraftUpdated gates (drop if any):</text>
+    <text x="672" y="170" font-size="13" fill="#22d3ee">a. id ended less than 30 s ago</text>
+    <text x="672" y="194" font-size="13" fill="#22d3ee">b. user.id differs from the held author</text>
+    <text x="672" y="218" font-size="13" fill="#22d3ee">c. ghost already committed (waiting)</text>
+    <text x="672" y="242" font-size="13" fill="#22d3ee">d. rev lower than the held rev</text>
+    <text x="672" y="272" font-size="13">same rev = a keyframe:</text>
+    <text x="672" y="290" font-size="13">proves alive, is not activity</text>
+
+    <!-- store and layer -->
+    <path d="M796 320 L796 350" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr4)"/>
+    <rect x="556" y="350" width="380" height="90" rx="12" fill="#1c232c" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="746" y="376" text-anchor="middle" font-weight="600">remoteDraftsStore.drafts (zustand)</text>
+    <text x="746" y="398" text-anchor="middle" font-size="13">rev, vertices, cursor, lastMessageAt, lastRevChangeAt</text>
+    <text x="746" y="420" text-anchor="middle" font-size="13">committedAt / committedAreaId while a ghost waits</text>
+
+    <path d="M746 440 L746 480" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr4)"/>
+    <rect x="556" y="480" width="380" height="90" rx="12" fill="#1c232c" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="746" y="506" text-anchor="middle" font-weight="600">MapController -> RemoteDraftsLayer.sync</text>
+    <text x="746" y="528" text-anchor="middle" font-size="13">rebuilds a draft only when its render key changed</text>
+    <text x="746" y="550" text-anchor="middle" font-size="13">dashed outline in Alma's colour, chip "drawing, km²"</text>
+
+    <!-- sweep -->
+    <rect x="24" y="350" width="500" height="220" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1"/>
+    <text x="44" y="378" font-weight="600">Housekeeping: sweepRemoteDrafts every 500 ms</text>
+    <text x="44" y="406" font-size="13">no message for 15 s -> drop (a lost draft.ended)</text>
+    <text x="44" y="430" font-size="13">committed ghost older than 2 s -> drop (the area never came)</text>
+    <text x="44" y="454" font-size="13">ended ids forgotten after 30 s</text>
+    <text x="44" y="490" font-weight="600">No flicker on save</text>
+    <text x="44" y="514" font-size="13">draft.ended committed + area already known -> ghost removed at once</text>
+    <text x="44" y="538" font-size="13">area not yet known -> ghost waits for area.changed (handleAreaArrived)</text>
+    <text x="44" y="562" font-size="13" fill="#8b95a4">the saved area reuses the draft's id, so the ghost becomes the area</text>
+
+    <text x="480" y="612" text-anchor="middle" font-size="13" fill="#8b95a4">Limited / offline / signed-out with the socket closed: remoteDrafts.clear() - a frozen ghost would lie.</text>
+  </g>
+</svg>

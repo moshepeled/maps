@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" role="img" aria-labelledby="t3 d3">
+  <title id="t3">docker compose topology and boot order</title>
+  <desc id="d3">The host publishes 127.0.0.1:5173 to nginx. nginx load-balances two backend replicas with least_conn. Both replicas use postgres, redis and redis-cache. One one-shot job, migrate, runs before the backends, once postgres answers its TCP healthcheck. A boot-order strip at the bottom lists the four gates.</desc>
+  <defs>
+    <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <style>
+      text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #e8ebf0; font-size: 15px; }
+      .h { font-size: 20px; font-weight: 600; }
+      .b { font-weight: 600; }
+      .m { fill: #8b95a4; font-size: 14px; }
+      .a { fill: #22d3ee; }
+      .box { fill: #1a1f26; stroke: #3a4250; stroke-width: 1.5; }
+      .acc { stroke: #22d3ee; }
+      .dash { stroke-dasharray: 6 5; }
+      .frame { fill: none; stroke: #3a4250; stroke-width: 1.5; stroke-dasharray: 8 6; }
+      .ln { stroke: #22d3ee; stroke-width: 2; fill: none; marker-end: url(#ar3); }
+      .dim { stroke: #8b95a4; stroke-width: 1.5; fill: none; marker-end: url(#ar3); }
+      .pill { fill: #232a33; stroke: #22d3ee; stroke-width: 1.5; }
+    </style>
+  </defs>
+  <rect width="960" height="680" fill="#111418"/>
+  <text x="30" y="40" class="h">docker compose: what runs, who talks to whom, and the boot order</text>
+
+  <!-- Host -->
+  <rect x="30" y="60" width="900" height="56" rx="10" class="box"/>
+  <text x="45" y="84" class="b">Host (Docker Desktop) - browser at <tspan class="a">http://localhost:5173</tspan></text>
+  <text x="45" y="106" class="m">published ports bind 127.0.0.1 only: 5173->nginx:80, 55432->postgres, 56379->redis, 56380->redis-cache (dev tools, tests)</text>
+
+  <!-- Project frame -->
+  <rect x="30" y="136" width="900" height="420" rx="12" class="frame"/>
+  <text x="45" y="158" class="m">compose project `snapland`, network snapland_default, every app container: non-root, read-only rootfs, cap_drop ALL</text>
+
+  <!-- one-shot -->
+  <rect x="225" y="180" width="165" height="80" rx="10" class="box dash"/>
+  <text x="237" y="206" class="b">migrate</text>
+  <text x="237" y="228" class="m">runs migrate.js up</text>
+  <text x="237" y="248" class="m">advisory lock, exit 0</text>
+
+  <!-- nginx -->
+  <rect x="400" y="180" width="220" height="80" rx="10" class="box acc"/>
+  <text x="415" y="206" class="b">nginx :80</text>
+  <text x="415" y="228" class="m">SPA files + reverse proxy</text>
+  <text x="415" y="248" class="m">/healthz, edge problem+json</text>
+  <path d="M510,116 L510,180" class="ln"/>
+
+  <!-- tools -->
+  <rect x="740" y="180" width="170" height="80" rx="10" class="box dash"/>
+  <text x="752" y="206" class="b">profile `tools`</text>
+  <text x="752" y="228" class="m">seed (one-shot)</text>
+  <text x="752" y="248" class="m">same backend image</text>
+
+  <!-- backends -->
+  <rect x="180" y="320" width="250" height="80" rx="10" class="box"/>
+  <text x="195" y="346" class="b">backend-1 :3100</text>
+  <text x="195" y="368" class="m">Fastify REST + WS gateway</text>
+  <text x="195" y="388" class="m">limit 1 CPU / 512 MiB, user node</text>
+
+  <rect x="540" y="320" width="250" height="80" rx="10" class="box"/>
+  <text x="555" y="346" class="b">backend-2 :3100</text>
+  <text x="555" y="368" class="m">identical; differs by INSTANCE_ID</text>
+  <text x="555" y="388" class="m">limit 1 CPU / 512 MiB, user node</text>
+
+  <path d="M480,260 L330,320" class="ln"/>
+  <path d="M560,260 L640,320" class="ln"/>
+  <text x="472" y="298" class="a">least_conn</text>
+
+  <!-- data stores -->
+  <rect x="60" y="460" width="250" height="80" rx="10" class="box"/>
+  <text x="75" y="486" class="b">postgres :5432</text>
+  <text x="75" y="508" class="m">postgis/postgis:17-3.5-alpine</text>
+  <text x="75" y="528" class="m">volume pgdata, tuned flags</text>
+
+  <rect x="355" y="460" width="250" height="80" rx="10" class="box"/>
+  <text x="370" y="486" class="b">redis :6379 (critical)</text>
+  <text x="370" y="508" class="m">noeviction, 512 MB, pub/sub</text>
+  <text x="370" y="528" class="m">tickets, presence, locks, limits</text>
+
+  <rect x="650" y="460" width="250" height="80" rx="10" class="box"/>
+  <text x="665" y="486" class="b">redis-cache :6379</text>
+  <text x="665" y="508" class="m">allkeys-lru, 256 MB</text>
+  <text x="665" y="528" class="m">L2 bbox bodies (disposable)</text>
+
+  <!-- backend -> stores -->
+  <path d="M260,400 L200,460" class="ln"/>
+  <path d="M320,400 L440,460" class="ln"/>
+  <path d="M380,400 L700,460" class="ln"/>
+  <path d="M600,400 L290,460" class="ln"/>
+  <path d="M660,400 L520,460" class="ln"/>
+  <path d="M720,400 L760,460" class="ln"/>
+  <!-- migrate -> postgres: routed down the left margin (x < 180) so it never crosses backend-1 -->
+  <path d="M240,260 L150,296 L150,460" class="dim"/>
+  <text x="58" y="345" class="m">schema first</text>
+
+  <!-- boot order strip -->
+  <text x="30" y="586" class="b">Boot order (depends_on conditions)</text>
+  <rect x="30" y="598" width="205" height="56" rx="28" class="pill"/>
+  <text x="44" y="622" class="m">1 postgres, redis healthy;</text>
+  <text x="44" y="640" class="m">   redis-cache started</text>
+  <path d="M235,626 L250,626" class="ln"/>
+  <rect x="250" y="598" width="150" height="56" rx="28" class="pill"/>
+  <text x="264" y="622" class="m">2 migrate up</text>
+  <text x="264" y="640" class="m">   completed OK</text>
+  <path d="M400,626 L415,626" class="ln"/>
+  <rect x="415" y="598" width="180" height="56" rx="28" class="pill"/>
+  <text x="429" y="622" class="m">3 backend-1/2 answer</text>
+  <text x="429" y="640" class="m">   /health/ready 200</text>
+  <path d="M595,626 L610,626" class="ln"/>
+  <rect x="610" y="598" width="170" height="56" rx="28" class="pill"/>
+  <text x="624" y="622" class="m">4 nginx starts;</text>
+  <text x="624" y="640" class="m">   :5173 opens</text>
+
+  <text x="30" y="672" class="m">Figure 9.3 - The compose topology. Only nginx is reachable from the host; the backends are stateless replicas.</text>
+</svg>

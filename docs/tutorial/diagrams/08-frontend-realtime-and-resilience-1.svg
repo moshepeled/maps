@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" role="img" aria-labelledby="title1">
+  <title id="title1">Two channels from one browser tab: REST for every command, one WebSocket for events, both through nginx to two backend replicas joined by Redis pub/sub</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="560" fill="#111418"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="15" fill="#e8ebf0">
+    <text x="480" y="36" text-anchor="middle" font-size="18" font-weight="600">One browser tab, two channels, one origin (http://localhost:5173)</text>
+
+    <!-- Browser -->
+    <rect x="30" y="90" width="270" height="330" rx="14" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="165" y="118" text-anchor="middle" font-weight="600">Browser tab</text>
+    <text x="165" y="138" text-anchor="middle" font-size="13" fill="#8b95a4">React, zustand stores, Leaflet</text>
+    <rect x="50" y="160" width="230" height="80" rx="10" fill="#1c232c" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="165" y="186" text-anchor="middle" font-weight="600">HttpClient (REST)</text>
+    <text x="165" y="206" text-anchor="middle" font-size="13" fill="#8b95a4">api/http.ts, api/areas.ts</text>
+    <text x="165" y="224" text-anchor="middle" font-size="13" fill="#8b95a4">writes, reads, change feed, tickets</text>
+    <rect x="50" y="260" width="230" height="80" rx="10" fill="#1c232c" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="165" y="286" text-anchor="middle" font-weight="600">RealtimeClient (WS)</text>
+    <text x="165" y="306" text-anchor="middle" font-size="13" fill="#8b95a4">realtime/RealtimeClient.ts</text>
+    <text x="165" y="324" text-anchor="middle" font-size="13" fill="#8b95a4">events, drafts, presence, locks</text>
+    <text x="165" y="372" text-anchor="middle" font-size="13" fill="#8b95a4">stores -> MapController -> layers</text>
+    <text x="165" y="392" text-anchor="middle" font-size="13" fill="#8b95a4">(one render per animation frame)</text>
+
+    <!-- nginx -->
+    <rect x="410" y="190" width="160" height="120" rx="14" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="490" y="222" text-anchor="middle" font-weight="600">nginx :5173</text>
+    <text x="490" y="246" text-anchor="middle" font-size="13" fill="#8b95a4">/api/v1/* -> proxy</text>
+    <text x="490" y="266" text-anchor="middle" font-size="13" fill="#8b95a4">/ws -> upgrade</text>
+    <text x="490" y="286" text-anchor="middle" font-size="13" fill="#8b95a4">least_conn</text>
+
+    <!-- REST arrow (labels sit above the nginx box top edge, y = 190) -->
+    <path d="M280 200 L410 230" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr)"/>
+    <text x="305" y="162" font-size="13" fill="#22d3ee">POST /auth/ws-ticket, POST/PATCH/DELETE /areas</text>
+    <text x="305" y="180" font-size="13" fill="#22d3ee">GET /areas, /areas/changes, /presence</text>
+
+    <!-- WS arrow (two-way); labels stay left of the nginx→backend-2 arrow -->
+    <path d="M280 300 L410 270" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr)" marker-start="url(#arr)"/>
+    <text x="305" y="330" font-size="13" fill="#22d3ee">GET /ws?ticket=... (snapland.v1)</text>
+    <text x="305" y="348" font-size="13" fill="#22d3ee">↑ viewport.set, presence.update,</text>
+    <text x="305" y="366" font-size="13" fill="#22d3ee">   draft.*, lock.*, ping</text>
+    <text x="305" y="384" font-size="13" fill="#22d3ee">↓ welcome, area.changed, draft.updated,</text>
+    <text x="305" y="402" font-size="13" fill="#22d3ee">   presence.*, lock.*, ack / error</text>
+
+    <!-- backends -->
+    <rect x="680" y="90" width="250" height="110" rx="14" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="805" y="120" text-anchor="middle" font-weight="600">backend-1 (Fastify :3100)</text>
+    <text x="805" y="144" text-anchor="middle" font-size="13" fill="#8b95a4">REST routes + WS gateway</text>
+    <text x="805" y="164" text-anchor="middle" font-size="13" fill="#8b95a4">per-connection viewport interest</text>
+    <text x="805" y="184" text-anchor="middle" font-size="13" fill="#8b95a4">welcome.instanceId = "backend-1"</text>
+
+    <rect x="680" y="330" width="250" height="110" rx="14" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="805" y="360" text-anchor="middle" font-weight="600">backend-2 (Fastify :3100)</text>
+    <text x="805" y="384" text-anchor="middle" font-size="13" fill="#8b95a4">REST routes + WS gateway</text>
+    <text x="805" y="404" text-anchor="middle" font-size="13" fill="#8b95a4">a reconnect may land here</text>
+    <text x="805" y="424" text-anchor="middle" font-size="13" fill="#8b95a4">welcome.instanceId = "backend-2"</text>
+
+    <rect x="720" y="235" width="170" height="60" rx="10" fill="#1c232c" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="805" y="259" text-anchor="middle" font-weight="600">Redis pub/sub</text>
+    <text x="805" y="279" text-anchor="middle" font-size="13" fill="#8b95a4">at-most-once fan-out</text>
+    <path d="M805 200 L805 235" stroke="#8b95a4" stroke-width="1.5" fill="none" marker-end="url(#arrm)" marker-start="url(#arrm)"/>
+    <path d="M805 295 L805 330" stroke="#8b95a4" stroke-width="1.5" fill="none" marker-end="url(#arrm)" marker-start="url(#arrm)"/>
+
+    <path d="M570 230 L680 150" stroke="#8b95a4" stroke-width="1.5" fill="none" marker-end="url(#arrm)"/>
+    <path d="M570 270 L680 380" stroke="#8b95a4" stroke-width="1.5" fill="none" marker-end="url(#arrm)"/>
+
+    <!-- footer -->
+    <rect x="30" y="460" width="900" height="70" rx="10" fill="#161b22" stroke="#22d3ee" stroke-width="1" stroke-dasharray="4 4"/>
+    <text x="480" y="486" text-anchor="middle" font-size="14">A durable write never travels over the socket. If /ws dies, only "liveness" degrades: the app still reads and saves over REST,</text>
+    <text x="480" y="508" text-anchor="middle" font-size="14">polls GET /areas/changes every 5 s, and the change feed repairs anything pub/sub lost (ADR-0004, SPEC section 10.6).</text>
+  </g>
+</svg>

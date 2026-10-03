@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="960" height="620" role="img" aria-labelledby="t5 d5">
+  <title id="t5">Soft delete, retention and the purge watermark</title>
+  <desc id="d5">Top: a live row becomes a tombstone on DELETE and is hard-deleted by the retention job after 30 days. Middle: two backend replicas wake up; only the one that wins pg_try_advisory_lock(7210002) runs the purge, in batches of at most 200 areas, each in its own transaction with a 60 second timeout; the purge CTE raises the change-feed watermark in the same statement. Bottom: a client asking for changes older than the watermark gets 410 and reloads; latestChangeSeq never falls below the watermark.</desc>
+  <defs>
+    <marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="m5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="620" fill="#111418"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#e8ebf0">
+    <text x="480" y="36" font-size="20" text-anchor="middle" font-weight="600">Soft delete, retention and the purge watermark</text>
+
+    <!-- lifecycle strip -->
+    <rect x="30" y="60" width="270" height="96" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="165" y="84" font-size="14" text-anchor="middle" font-weight="600">Live row</text>
+    <text x="165" y="106" font-size="12" text-anchor="middle" fill="#8b95a4">deleted_at NULL, deleted_by NULL</text>
+    <text x="165" y="124" font-size="12" text-anchor="middle" fill="#8b95a4">in areas_geom_live_gist</text>
+    <text x="165" y="142" font-size="12" text-anchor="middle" fill="#8b95a4">returned by bbox pages</text>
+    <line x1="300" y1="108" x2="343" y2="108" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+    <text x="322" y="98" font-size="11" text-anchor="middle" fill="#8b95a4">DELETE</text>
+
+    <rect x="345" y="60" width="270" height="96" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="480" y="84" font-size="14" text-anchor="middle" font-weight="600">Tombstone (soft delete)</text>
+    <text x="480" y="106" font-size="12" text-anchor="middle" fill="#8b95a4">deleted_at, deleted_by set, version + 1</text>
+    <text x="480" y="124" font-size="12" text-anchor="middle" fill="#8b95a4">version row op = delete, left the GiST</text>
+    <text x="480" y="142" font-size="12" text-anchor="middle" fill="#8b95a4">history readable, restore = the inverse</text>
+    <line x1="615" y1="108" x2="658" y2="108" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+    <text x="637" y="98" font-size="11" text-anchor="middle" fill="#8b95a4">30 days</text>
+
+    <rect x="660" y="60" width="270" height="96" rx="10" fill="#1a1f26" stroke="#2c333d"/>
+    <text x="795" y="84" font-size="14" text-anchor="middle" font-weight="600">Hard-deleted by retention</text>
+    <text x="795" y="106" font-size="12" text-anchor="middle" fill="#8b95a4">AREA_PURGE_AFTER_DAYS = 30</text>
+    <text x="795" y="124" font-size="12" text-anchor="middle" fill="#8b95a4">found via areas_deleted_at_idx</text>
+    <text x="795" y="142" font-size="12" text-anchor="middle" fill="#8b95a4">area_versions rows cascade</text>
+
+    <!-- replicas and the lock -->
+    <rect x="30" y="196" width="190" height="70" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="125" y="220" font-size="14" text-anchor="middle" font-weight="600">backend-1</text>
+    <text x="125" y="242" font-size="12" text-anchor="middle" fill="#8b95a4">timer: every 1 h +/- 10 %</text>
+    <line x1="220" y1="231" x2="293" y2="252" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+
+    <rect x="30" y="296" width="190" height="70" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="125" y="320" font-size="14" text-anchor="middle" font-weight="600">backend-2</text>
+    <text x="125" y="342" font-size="12" text-anchor="middle" fill="#8b95a4">timer: every 1 h +/- 10 %</text>
+    <line x1="220" y1="331" x2="293" y2="300" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#m5)"/>
+
+    <rect x="295" y="196" width="210" height="170" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="400" y="220" font-size="14" text-anchor="middle" font-weight="600">PostgreSQL</text>
+    <text x="400" y="244" font-size="12" text-anchor="middle">pg_try_advisory_lock(7210002)</text>
+    <text x="400" y="264" font-size="12" text-anchor="middle" fill="#8b95a4">session lock, dedicated client</text>
+    <text x="400" y="292" font-size="12" text-anchor="middle" fill="#22d3ee">backend-1: true -> runs</text>
+    <text x="400" y="312" font-size="12" text-anchor="middle" fill="#8b95a4">backend-2: false -> skipped</text>
+    <text x="400" y="340" font-size="11" text-anchor="middle" fill="#8b95a4">unlock in finally; if it fails,</text>
+    <text x="400" y="356" font-size="11" text-anchor="middle" fill="#8b95a4">client destroyed (release(err))</text>
+    <line x1="505" y1="250" x2="538" y2="250" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+
+    <!-- batches -->
+    <rect x="540" y="196" width="390" height="112" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="555" y="218" font-size="13" font-weight="600">Batch 1: <= 200 areas, own transaction, 60 s timeout</text>
+    <text x="555" y="240" font-size="12" fill="#8b95a4">doomed: deleted_at &lt; now() − 30 d, FOR UPDATE SKIP LOCKED</text>
+    <text x="555" y="258" font-size="12" fill="#8b95a4">wm: max(change_seq) of their area_versions</text>
+    <text x="555" y="276" font-size="12" fill="#8b95a4">upd: system_state watermark = GREATEST(old, wm)</text>
+    <text x="555" y="294" font-size="12" fill="#8b95a4">DELETE FROM areas ... RETURNING a.id (versions cascade)</text>
+    <line x1="735" y1="308" x2="735" y2="322" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+    <rect x="540" y="324" width="390" height="42" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="735" y="350" font-size="12" text-anchor="middle" fill="#8b95a4">Batch 2, 3, ... until a batch is shorter than its size</text>
+
+    <!-- client side -->
+    <text x="30" y="404" font-size="12" fill="#8b95a4">After a purge, a client that was offline resumes:</text>
+    <rect x="30" y="414" width="270" height="70" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="165" y="438" font-size="14" text-anchor="middle">GET /areas/changes?since=N</text>
+    <text x="165" y="460" font-size="12" text-anchor="middle" fill="#8b95a4">N &lt; change_feed_purge_watermark</text>
+    <line x1="300" y1="449" x2="343" y2="449" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+
+    <rect x="345" y="414" width="270" height="70" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="480" y="438" font-size="14" text-anchor="middle">410 CHANGE_FEED_EXPIRED</text>
+    <text x="480" y="460" font-size="12" text-anchor="middle" fill="#8b95a4">{ watermark } -> client reloads viewport</text>
+    <line x1="615" y1="449" x2="658" y2="449" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+
+    <rect x="660" y="414" width="270" height="70" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="795" y="438" font-size="14" text-anchor="middle">asOfChangeSeq >= watermark</text>
+    <text x="795" y="460" font-size="11" text-anchor="middle" fill="#8b95a4">latestChangeSeq = GREATEST(max, watermark)</text>
+
+    <rect x="30" y="500" width="900" height="44" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="480" y="527" font-size="12" text-anchor="middle" fill="#22d3ee">Without GREATEST: purge the newest changes -> max(change_seq) &lt; watermark -> reload -> same since -> 410 -> reload ... forever.</text>
+
+    <text x="480" y="590" font-size="14" text-anchor="middle" fill="#8b95a4">Figure 5 - One replica purges at a time; the watermark makes stale clients reload instead of missing history.</text>
+  </g>
+</svg>

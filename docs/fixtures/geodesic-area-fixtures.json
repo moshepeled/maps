@@ -1,0 +1,822 @@
+{
+  "description": "Reference fixtures for geodesic polygon area on the WGS84 ellipsoid. Coordinates are GeoJSON [lng, lat] (EPSG:4326), RFC 7946 winding (exterior CCW, holes CW). Units: km^2 and km.",
+  "source": {
+    "generator": "PostGIS ST_Area/ST_Perimeter on geography (docker image postgis/postgis:16-3.4)",
+    "generated_at": "2026-09-27T13:57:36.094Z",
+    "postgres_version": "16.4 (Debian 16.4-1.pgdg110+2)",
+    "postgis_full_version": "POSTGIS=\"3.4.3 e365945\" [EXTENSION] PGSQL=\"160\" GEOS=\"3.9.0-CAPI-1.16.2\" PROJ=\"7.2.1 NETWORK_ENABLED=OFF URL_ENDPOINT=https://cdn.proj.org USER_WRITABLE_DIRECTORY=/var/lib/postgresql/.local/share/proj DATABASE_PATH=/usr/share/proj/proj.db\" LIBXML=\"2.9.10\" LIBJSON=\"0.15\" LIBPROTOBUF=\"1.3.3\" WAGYU=\"0.5.0 (Internal)\" TOPOLOGY",
+    "spheroid": "WGS 84 (a=6378137, 1/f=298.257223563)",
+    "epsg_4326_srtext": "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4326\"]]",
+    "fields": {
+      "area_km2_spheroid": "ST_Area(geom::geography) / 1e6  (ellipsoidal, default use_spheroid=true) -- the authoritative value",
+      "area_km2_sphere": "ST_Area(geom::geography, false) / 1e6  (sphere of radius 6371008.8 m)",
+      "perimeter_km": "ST_Perimeter(geom::geography) / 1000 (ellipsoidal)",
+      "valid": "ST_IsValid(geom)",
+      "invalid_reason": "ST_IsValidReason(geom), or the parser error if ST_GeomFromGeoJSON rejects the input",
+      "area_km2_webmercator_planar_WRONG": "ST_Area(ST_Transform(geom, 3857)) / 1e6 -- included only as a negative example",
+      "geographiclib_area_km2": "geographiclib-geodesic (Karney) Geodesic.WGS84 PolygonArea, cross-check"
+    },
+    "cross_check": {
+      "library": "geographiclib-geodesic (npm)",
+      "max_relative_area_diff_vs_postgis_spheroid": 9.54914951010825e-13,
+      "max_relative_perimeter_diff": 7.069514271044832e-12
+    },
+    "suggested_tolerance": {
+      "relative_area_vs_spheroid": 0.000001,
+      "note": "geodesic implementations (geographiclib, PostGIS) agree to ~1e-9 or better; turf.area / spherical formulas differ from the spheroid value by up to ~0.5% and must be compared against area_km2_sphere with a looser tolerance"
+    }
+  },
+  "polygons": [
+    {
+      "name": "tel_aviv_1km_square",
+      "description": "~1 km x 1 km square in central Tel Aviv (32.08N)",
+      "expected_valid": true,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.78,
+              32.08
+            ],
+            [
+              34.7906,
+              32.08
+            ],
+            [
+              34.7906,
+              32.089
+            ],
+            [
+              34.78,
+              32.089
+            ],
+            [
+              34.78,
+              32.08
+            ]
+          ]
+        ]
+      },
+      "area_km2_spheroid": 0.9987007904701233,
+      "area_km2_sphere": 0.9964697347779274,
+      "perimeter_km": 3.997404413206023,
+      "valid": true,
+      "invalid_reason": null,
+      "area_km2_webmercator_planar_WRONG": 1.3953115827629967,
+      "webmercator_overestimate_ratio": 1.3971267431421326,
+      "geographiclib_area_km2": 0.998700790471077,
+      "geographiclib_perimeter_km": 3.9974044132067283,
+      "rel_diff_area_geographiclib_vs_postgis": 9.54914951010825e-13
+    },
+    {
+      "name": "negev_large_2deg",
+      "description": "Large quadrilateral spanning ~2 degrees across the Negev, Israel",
+      "expected_valid": true,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.3,
+              29.6
+            ],
+            [
+              35.4,
+              29.55
+            ],
+            [
+              35.45,
+              31.3
+            ],
+            [
+              34.25,
+              31.35
+            ],
+            [
+              34.3,
+              29.6
+            ]
+          ]
+        ]
+      },
+      "area_km2_spheroid": 21422.58815494457,
+      "area_km2_sphere": 21374.73099121002,
+      "perimeter_km": 609.2055110260352,
+      "valid": true,
+      "invalid_reason": null,
+      "area_km2_webmercator_planar_WRONG": 28931.00516532806,
+      "webmercator_overestimate_ratio": 1.3504906576216127,
+      "geographiclib_area_km2": 21422.588154944453,
+      "geographiclib_perimeter_km": 609.2055110260344,
+      "rel_diff_area_geographiclib_vs_postgis": 5.342067781027465e-15
+    },
+    {
+      "name": "norway_high_lat_70N",
+      "description": "High-latitude polygon near Tromso/Hammerfest, Norway (~70N)",
+      "expected_valid": true,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              19,
+              69.5
+            ],
+            [
+              24,
+              69.5
+            ],
+            [
+              24,
+              70.5
+            ],
+            [
+              19,
+              70.5
+            ],
+            [
+              19,
+              69.5
+            ]
+          ]
+        ]
+      },
+      "area_km2_spheroid": 21278.2651093208,
+      "area_km2_sphere": 21230.73035721924,
+      "perimeter_km": 604.8676628010212,
+      "valid": true,
+      "invalid_reason": null,
+      "area_km2_webmercator_planar_WRONG": 181196.3720776066,
+      "webmercator_overestimate_ratio": 8.515561355527746,
+      "geographiclib_area_km2": 21278.265109321288,
+      "geographiclib_perimeter_km": 604.8676628010212,
+      "rel_diff_area_geographiclib_vs_postgis": 2.2947418292392254e-14
+    },
+    {
+      "name": "equatorial_1deg",
+      "description": "1 x 1 degree square straddling the equator (Gabon/Congo longitudes)",
+      "expected_valid": true,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              10,
+              -0.5
+            ],
+            [
+              11,
+              -0.5
+            ],
+            [
+              11,
+              0.5
+            ],
+            [
+              10,
+              0.5
+            ],
+            [
+              10,
+              -0.5
+            ]
+          ]
+        ]
+      },
+      "area_km2_spheroid": 12309.234582502959,
+      "area_km2_sphere": 12281.736268545685,
+      "perimeter_km": 443.77916872272795,
+      "valid": true,
+      "invalid_reason": null,
+      "area_km2_webmercator_planar_WRONG": 12392.186317964359,
+      "webmercator_overestimate_ratio": 1.0067389840453047,
+      "geographiclib_area_km2": 12309.234582502957,
+      "geographiclib_perimeter_km": 443.7791687227284,
+      "rel_diff_area_geographiclib_vs_postgis": 1.5495265932487087e-16
+    },
+    {
+      "name": "square_with_hole",
+      "description": "Polygon with an interior ring (hole); exterior CCW, hole CW (Jerusalem area)",
+      "expected_valid": true,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              35.18,
+              31.74
+            ],
+            [
+              35.26,
+              31.74
+            ],
+            [
+              35.26,
+              31.81
+            ],
+            [
+              35.18,
+              31.81
+            ],
+            [
+              35.18,
+              31.74
+            ]
+          ],
+          [
+            [
+              35.2,
+              31.76
+            ],
+            [
+              35.2,
+              31.79
+            ],
+            [
+              35.24,
+              31.79
+            ],
+            [
+              35.24,
+              31.76
+            ],
+            [
+              35.2,
+              31.76
+            ]
+          ]
+        ]
+      },
+      "area_km2_spheroid": 46.21397874682045,
+      "area_km2_sphere": 46.11073865595817,
+      "perimeter_km": 44.91013234984599,
+      "valid": true,
+      "invalid_reason": null,
+      "area_km2_webmercator_planar_WRONG": 64.13773603386586,
+      "webmercator_overestimate_ratio": 1.3878427647452574,
+      "geographiclib_area_km2": 46.21397874681282,
+      "geographiclib_perimeter_km": 44.91013234984393,
+      "rel_diff_area_geographiclib_vs_postgis": 1.650884589064928e-13
+    },
+    {
+      "name": "thin_sliver",
+      "description": "Very thin sliver: ~10 km long, ~1 m wide (Haifa latitude)",
+      "expected_valid": true,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.98,
+              32.8
+            ],
+            [
+              35.0866,
+              32.8
+            ],
+            [
+              35.0866,
+              32.800009
+            ],
+            [
+              34.98,
+              32.800009
+            ],
+            [
+              34.98,
+              32.8
+            ]
+          ]
+        ]
+      },
+      "area_km2_spheroid": 0.00996563860321045,
+      "area_km2_sphere": 0.009943375778198243,
+      "perimeter_km": 19.971050469971402,
+      "valid": true,
+      "invalid_reason": null,
+      "area_km2_webmercator_planar_WRONG": 0.014143927698426666,
+      "webmercator_overestimate_ratio": 1.4192695783559894,
+      "geographiclib_area_km2": 0.00996563860321045,
+      "geographiclib_perimeter_km": 19.971050469971406,
+      "rel_diff_area_geographiclib_vs_postgis": 0
+    },
+    {
+      "name": "field_1_hectare",
+      "description": "~100 m x 100 m agricultural field (~1 ha) near Beer Sheva",
+      "expected_valid": true,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.8,
+              31.25
+            ],
+            [
+              34.80105,
+              31.25
+            ],
+            [
+              34.80105,
+              31.2509
+            ],
+            [
+              34.8,
+              31.2509
+            ],
+            [
+              34.8,
+              31.25
+            ]
+          ]
+        ]
+      },
+      "area_km2_spheroid": 0.00998028006362915,
+      "area_km2_sphere": 0.009957984536409378,
+      "perimeter_km": 0.3996056714788159,
+      "valid": true,
+      "invalid_reason": null,
+      "area_km2_webmercator_planar_WRONG": 0.01369793033338453,
+      "webmercator_overestimate_ratio": 1.372499593804337,
+      "geographiclib_area_km2": 0.00998028006362915,
+      "geographiclib_perimeter_km": 0.3996056714759909,
+      "rel_diff_area_geographiclib_vs_postgis": 0
+    },
+    {
+      "name": "circle_50_vertices",
+      "description": "50-vertex geodesic circle of radius 5 km around Haifa (vertices placed with WGS84 Direct)",
+      "expected_valid": true,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.993306034,
+              32.844729445
+            ],
+            [
+              34.986717793,
+              32.843668001
+            ],
+            [
+              34.980339327,
+              32.841917564
+            ],
+            [
+              34.974271357,
+              32.839505778
+            ],
+            [
+              34.968609678,
+              32.83647073
+            ],
+            [
+              34.963443648,
+              32.832860344
+            ],
+            [
+              34.958854767,
+              32.828731624
+            ],
+            [
+              34.954915393,
+              32.824149748
+            ],
+            [
+              34.951687605,
+              32.819187037
+            ],
+            [
+              34.94922222,
+              32.813921813
+            ],
+            [
+              34.947558004,
+              32.808437156
+            ],
+            [
+              34.946721061,
+              32.802819595
+            ],
+            [
+              34.946724438,
+              32.797157738
+            ],
+            [
+              34.947567922,
+              32.791540876
+            ],
+            [
+              34.949238057,
+              32.786057574
+            ],
+            [
+              34.951708365,
+              32.780794274
+            ],
+            [
+              34.954939772,
+              32.775833937
+            ],
+            [
+              34.958881232,
+              32.771254734
+            ],
+            [
+              34.963470538,
+              32.76712882
+            ],
+            [
+              34.968635302,
+              32.763521196
+            ],
+            [
+              34.974294105,
+              32.760488691
+            ],
+            [
+              34.980357771,
+              32.758079072
+            ],
+            [
+              34.986730773,
+              32.756330287
+            ],
+            [
+              34.993312734,
+              32.755269877
+            ],
+            [
+              35,
+              32.754914542
+            ],
+            [
+              35.006687266,
+              32.755269877
+            ],
+            [
+              35.013269227,
+              32.756330287
+            ],
+            [
+              35.019642229,
+              32.758079072
+            ],
+            [
+              35.025705895,
+              32.760488691
+            ],
+            [
+              35.031364698,
+              32.763521196
+            ],
+            [
+              35.036529462,
+              32.76712882
+            ],
+            [
+              35.041118768,
+              32.771254734
+            ],
+            [
+              35.045060228,
+              32.775833937
+            ],
+            [
+              35.048291635,
+              32.780794274
+            ],
+            [
+              35.050761943,
+              32.786057574
+            ],
+            [
+              35.052432078,
+              32.791540876
+            ],
+            [
+              35.053275562,
+              32.797157738
+            ],
+            [
+              35.053278939,
+              32.802819595
+            ],
+            [
+              35.052441996,
+              32.808437156
+            ],
+            [
+              35.05077778,
+              32.813921813
+            ],
+            [
+              35.048312395,
+              32.819187037
+            ],
+            [
+              35.045084607,
+              32.824149748
+            ],
+            [
+              35.041145233,
+              32.828731624
+            ],
+            [
+              35.036556352,
+              32.832860344
+            ],
+            [
+              35.031390322,
+              32.83647073
+            ],
+            [
+              35.025728643,
+              32.839505778
+            ],
+            [
+              35.019660673,
+              32.841917564
+            ],
+            [
+              35.013282207,
+              32.843668001
+            ],
+            [
+              35.006693966,
+              32.844729445
+            ],
+            [
+              35,
+              32.845085133
+            ],
+            [
+              34.993306034,
+              32.844729445
+            ]
+          ]
+        ]
+      },
+      "area_km2_spheroid": 78.33326720481932,
+      "area_km2_sphere": 78.15827397022876,
+      "perimeter_km": 31.395256583813065,
+      "valid": true,
+      "invalid_reason": null,
+      "area_km2_webmercator_planar_WRONG": 111.17604701408703,
+      "webmercator_overestimate_ratio": 1.4192698834250477,
+      "geographiclib_area_km2": 78.3332672048111,
+      "geographiclib_perimeter_km": 31.395256583801853,
+      "rel_diff_area_geographiclib_vs_postgis": 1.050057181643746e-13
+    },
+    {
+      "name": "near_antimeridian_fiji",
+      "description": "Polygon east of 179E, close to but NOT crossing the antimeridian (Fiji)",
+      "expected_valid": true,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              179,
+              -17
+            ],
+            [
+              179.95,
+              -17
+            ],
+            [
+              179.95,
+              -16
+            ],
+            [
+              179,
+              -16
+            ],
+            [
+              179,
+              -17
+            ]
+          ]
+        ]
+      },
+      "area_km2_spheroid": 11224.247529058013,
+      "area_km2_sphere": 11199.17303068692,
+      "perimeter_km": 424.1718683766076,
+      "valid": true,
+      "invalid_reason": null,
+      "area_km2_webmercator_planar_WRONG": 12278.22373324885,
+      "webmercator_overestimate_ratio": 1.0939017249452347,
+      "geographiclib_area_km2": 11224.247529057953,
+      "geographiclib_perimeter_km": 424.1718683766016,
+      "rel_diff_area_geographiclib_vs_postgis": 5.437794924959422e-15
+    },
+    {
+      "name": "southern_hemisphere_sydney",
+      "description": "Southern-hemisphere polygon around Sydney, Australia (~34S)",
+      "expected_valid": true,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              150.9,
+              -34
+            ],
+            [
+              151.3,
+              -34
+            ],
+            [
+              151.35,
+              -33.7
+            ],
+            [
+              150.95,
+              -33.65
+            ],
+            [
+              150.9,
+              -34
+            ]
+          ]
+        ]
+      },
+      "area_km2_spheroid": 1347.4687576658403,
+      "area_km2_sphere": 1344.4585689576493,
+      "perimeter_km": 147.15299117429396,
+      "valid": true,
+      "invalid_reason": null,
+      "area_km2_webmercator_planar_WRONG": 1958.0677255621047,
+      "webmercator_overestimate_ratio": 1.4531451764076353,
+      "geographiclib_area_km2": 1347.4687576658403,
+      "geographiclib_perimeter_km": 147.15299117429348,
+      "rel_diff_area_geographiclib_vs_postgis": 0
+    }
+  ],
+  "invalid_polygons": [
+    {
+      "name": "bowtie_self_intersection",
+      "description": "Bow-tie: ring edges cross at the centre",
+      "expected_valid": false,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.78,
+              32.08
+            ],
+            [
+              34.79,
+              32.09
+            ],
+            [
+              34.79,
+              32.08
+            ],
+            [
+              34.78,
+              32.09
+            ],
+            [
+              34.78,
+              32.08
+            ]
+          ]
+        ]
+      },
+      "valid": false,
+      "invalid_reason": "Self-intersection[34.785 32.085]"
+    },
+    {
+      "name": "unclosed_ring",
+      "description": "First and last coordinates differ (ring not closed)",
+      "expected_valid": false,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.78,
+              32.08
+            ],
+            [
+              34.79,
+              32.08
+            ],
+            [
+              34.79,
+              32.09
+            ],
+            [
+              34.78,
+              32.09
+            ]
+          ]
+        ]
+      },
+      "valid": false,
+      "invalid_reason": "IllegalArgumentException: Points of LinearRing do not form a closed linestring"
+    },
+    {
+      "name": "too_few_points",
+      "description": "Closed ring with only 3 positions (<4 required by RFC 7946)",
+      "expected_valid": false,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.78,
+              32.08
+            ],
+            [
+              34.79,
+              32.08
+            ],
+            [
+              34.78,
+              32.08
+            ]
+          ]
+        ]
+      },
+      "valid": false,
+      "invalid_reason": "IllegalArgumentException: Invalid number of points in LinearRing found 3 - must be 0 or >= 4"
+    },
+    {
+      "name": "duplicate_points_only",
+      "description": "Ring made of the same point repeated",
+      "expected_valid": false,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.78,
+              32.08
+            ],
+            [
+              34.78,
+              32.08
+            ],
+            [
+              34.78,
+              32.08
+            ],
+            [
+              34.78,
+              32.08
+            ]
+          ]
+        ]
+      },
+      "valid": false,
+      "invalid_reason": "Too few points in geometry component[34.78 32.08]"
+    },
+    {
+      "name": "spike",
+      "description": "Ring with a zero-width spike (goes out and back along the same line)",
+      "expected_valid": false,
+      "geojson": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              34.78,
+              32.08
+            ],
+            [
+              34.79,
+              32.08
+            ],
+            [
+              34.79,
+              32.09
+            ],
+            [
+              34.8,
+              32.09
+            ],
+            [
+              34.79,
+              32.09
+            ],
+            [
+              34.78,
+              32.09
+            ],
+            [
+              34.78,
+              32.08
+            ]
+          ]
+        ]
+      },
+      "valid": false,
+      "invalid_reason": "Self-intersection[34.79 32.09]"
+    }
+  ],
+  "invalid_polygons_note": "Area/perimeter intentionally omitted: values on invalid geometries are undefined and must not be asserted. Tests should assert valid=false and (optionally) match invalid_reason by prefix."
+}

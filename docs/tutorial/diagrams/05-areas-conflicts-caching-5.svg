@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 770" width="960" height="770" role="img" aria-labelledby="t4 d4">
+  <title id="t4">The bbox cache: what the key contains, the read path through L1 and L2, and the write path that invalidates</title>
+  <desc id="d4">Top: the cache key material v1, level, zoom, limit, cursor, queryBbox, epoch, big and one generation per key tile, with an annotation for each part. Middle: the read path from the request through one MGET of generations, the in-process L1, the gzip L2 on redis-cache and the database loader. Bottom: the write path after COMMIT that increments tile generations before publishing the bus event.</desc>
+  <defs>
+    <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="ar4m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; fill: #e8ebf0; }
+    .m { fill: #8b95a4; font-size: 12.5px; }
+    .c { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 12.5px; }
+    .h { font-size: 19px; font-weight: 600; }
+    .e { font-size: 15px; font-weight: 600; fill: #22d3ee; }
+    .n { font-size: 12px; font-weight: 700; fill: #22d3ee; }
+    .box { fill: #1a1f26; stroke: #2b3340; stroke-width: 1.5; }
+    .seg { fill: #171c23; stroke: #3a4453; stroke-width: 1; }
+    .segh { fill: #141a21; stroke: #22d3ee; stroke-width: 1.5; }
+    .redis { fill: #141a21; stroke: #22d3ee; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .line { stroke: #22d3ee; stroke-width: 1.5; fill: none; }
+    .ml { stroke: #8b95a4; stroke-width: 1.2; fill: none; }
+  </style>
+  <rect width="960" height="770" fill="#111418"/>
+  <text class="h" x="30" y="34">The generation-keyed bbox cache (backend/src/infra/cache/)</text>
+
+  <!-- key material -->
+  <text class="e" x="30" y="72">Key material (key-plan.ts:63-78) -> sha1 -> snap:cache:bbox:&lt;hash&gt;</text>
+  <rect class="seg" x="30" y="86" width="46" height="34" rx="6"/><text class="c" x="53" y="108" text-anchor="middle">v1</text>
+  <text class="m" x="80" y="108">|</text>
+  <rect class="segh" x="90" y="86" width="40" height="34" rx="6"/><text class="c" x="110" y="108" text-anchor="middle">L</text>
+  <text class="m" x="134" y="108">|</text>
+  <rect class="seg" x="144" y="86" width="64" height="34" rx="6"/><text class="c" x="176" y="108" text-anchor="middle">zoom</text>
+  <text class="m" x="212" y="108">|</text>
+  <rect class="seg" x="222" y="86" width="60" height="34" rx="6"/><text class="c" x="252" y="108" text-anchor="middle">limit</text>
+  <text class="m" x="286" y="108">|</text>
+  <rect class="seg" x="296" y="86" width="74" height="34" rx="6"/><text class="c" x="333" y="108" text-anchor="middle">cursor</text>
+  <text class="m" x="374" y="108">|</text>
+  <rect class="segh" x="384" y="86" width="110" height="34" rx="6"/><text class="c" x="439" y="108" text-anchor="middle">queryBbox</text>
+  <text class="m" x="498" y="108">|</text>
+  <rect class="segh" x="508" y="86" width="78" height="34" rx="6"/><text class="c" x="547" y="108" text-anchor="middle">epoch</text>
+  <text class="m" x="590" y="108">|</text>
+  <rect class="segh" x="600" y="86" width="50" height="34" rx="6"/><text class="c" x="625" y="108" text-anchor="middle">big</text>
+  <text class="m" x="654" y="108">|</text>
+  <rect class="segh" x="664" y="86" width="130" height="34" rx="6"/><text class="c" x="729" y="108" text-anchor="middle">x:y=gen,...</text>
+  <text class="n" x="110" y="138" text-anchor="middle">1</text>
+  <text class="n" x="439" y="138" text-anchor="middle">2</text>
+  <text class="n" x="547" y="138" text-anchor="middle">3</text>
+  <text class="n" x="625" y="138" text-anchor="middle">4</text>
+  <text class="n" x="729" y="138" text-anchor="middle">5</text>
+
+  <text class="n" x="30" y="166">1</text><text x="48" y="166">L = clamp(zoom − 2, 0, 14). zoom >= 17 -> level null -> BYPASS (small, full-precision queries).</text>
+  <text class="n" x="30" y="190">2</text><text x="48" y="190">queryBbox = the request bbox snapped outward to level-L tiles; echoed in the response, bound into the cursor.</text>
+  <text class="n" x="30" y="214">3</text><text x="48" y="214">epoch = gen:global, a random 52-bit value. Missing -> BYPASS this read + SET ... NX a fresh one. Never read as 0.</text>
+  <text class="n" x="30" y="238">4</text><text x="48" y="238">big = gen:&lt;L&gt;:big - a writer bumps it instead of more than 16 tile counters at that level.</text>
+  <text class="n" x="30" y="262">5</text><text x="48" y="262">x:y=gen - one counter per key tile of tilesCoveringClosed(queryBbox, L). More than 64 key tiles -> BYPASS.</text>
+
+  <!-- read path -->
+  <text class="e" x="30" y="304">Read path (redis-area-cache.ts:183-207) - one MGET, then L1 -> L2 -> loader</text>
+  <rect class="box" x="30" y="320" width="150" height="60" rx="8"/>
+  <text x="105" y="343" text-anchor="middle">GET /areas?bbox...</text>
+  <text class="m" x="105" y="362" text-anchor="middle">parse, span cap, plan</text>
+  <line class="line" x1="180" y1="350" x2="210" y2="350" marker-end="url(#ar4)"/>
+
+  <rect class="redis" x="210" y="320" width="150" height="60" rx="8"/>
+  <text x="285" y="343" text-anchor="middle">MGET generations</text>
+  <text class="m" x="285" y="362" text-anchor="middle">critical redis (noeviction)</text>
+  <line class="line" x1="360" y1="350" x2="390" y2="350" marker-end="url(#ar4)"/>
+  <text class="m" x="375" y="340" text-anchor="middle">sha1</text>
+
+  <rect class="box" x="390" y="320" width="150" height="60" rx="8"/>
+  <text x="465" y="343" text-anchor="middle">L1 lru-cache</text>
+  <text class="m" x="465" y="362" text-anchor="middle">500 / 50 MiB / 30 s</text>
+  <line class="line" x1="540" y1="350" x2="570" y2="350" marker-end="url(#ar4)"/>
+  <text class="m" x="555" y="340" text-anchor="middle">miss</text>
+
+  <rect class="redis" x="570" y="320" width="150" height="60" rx="8"/>
+  <text x="645" y="343" text-anchor="middle">L2 redis-cache</text>
+  <text class="m" x="645" y="362" text-anchor="middle">GETBUFFER + gunzip, 120 s</text>
+  <line class="line" x1="720" y1="350" x2="750" y2="350" marker-end="url(#ar4)"/>
+  <text class="m" x="735" y="340" text-anchor="middle">miss</text>
+
+  <rect class="box" x="750" y="320" width="180" height="60" rx="8"/>
+  <text x="840" y="343" text-anchor="middle">loader -> PostGIS</text>
+  <text class="m" x="840" y="362" text-anchor="middle">REPEATABLE READ READ ONLY</text>
+
+  <!-- outcomes -->
+  <line class="ml" x1="285" y1="380" x2="285" y2="404" marker-end="url(#ar4m)"/>
+  <text class="c m" x="285" y="420" text-anchor="middle">no Redis / bad counter / no epoch</text>
+  <text class="c m" x="285" y="436" text-anchor="middle">-> BYPASS (from the DB, never an error)</text>
+
+  <line class="ml" x1="465" y1="380" x2="465" y2="404" marker-end="url(#ar4m)"/>
+  <text class="c" x="465" y="420" text-anchor="middle">hit -> HIT-L1</text>
+
+  <line class="ml" x1="645" y1="380" x2="645" y2="404" marker-end="url(#ar4m)"/>
+  <text class="c" x="645" y="420" text-anchor="middle">hit -> HIT-L2</text>
+  <text class="c m" x="645" y="436" text-anchor="middle">(+ stored in L1)</text>
+
+  <line class="ml" x1="840" y1="380" x2="840" y2="404" marker-end="url(#ar4m)"/>
+  <text class="c" x="840" y="420" text-anchor="middle">-> MISS</text>
+  <text class="c m" x="840" y="436" text-anchor="middle">store L1; gzip -> L2 in the</text>
+  <text class="c m" x="840" y="452" text-anchor="middle">bg write if <= 512 KiB gzipped</text>
+
+  <text class="m" x="30" y="486">A reader that starts after a write's INCR computes a different hash, so an old body is simply orphaned and expires (30 s / 120 s).</text>
+
+  <!-- write path -->
+  <text class="e" x="30" y="530">Write path (mutation-effects.ts:103-107) - invalidate first, then publish, both before the reply</text>
+  <rect class="box" x="30" y="548" width="160" height="60" rx="8"/>
+  <text x="110" y="571" text-anchor="middle">COMMIT</text>
+  <text class="m" x="110" y="590" text-anchor="middle">of a create/update/...</text>
+  <line class="line" x1="190" y1="578" x2="220" y2="578" marker-end="url(#ar4)"/>
+
+  <rect class="redis" x="220" y="548" width="330" height="60" rx="8"/>
+  <text x="385" y="571" text-anchor="middle">Lua INVALIDATE: INCR + EXPIRE 24 h</text>
+  <text class="m" x="385" y="590" text-anchor="middle">gen keys of old + new bbox, levels 0...14 (<= 240)</text>
+  <line class="line" x1="550" y1="578" x2="580" y2="578" marker-end="url(#ar4)"/>
+
+  <rect class="box" x="580" y="548" width="170" height="60" rx="8"/>
+  <text x="665" y="571" text-anchor="middle">PUBLISH areas</text>
+  <text class="m" x="665" y="590" text-anchor="middle">bus -> every instance's fan-out</text>
+  <line class="line" x1="750" y1="578" x2="780" y2="578" marker-end="url(#ar4)"/>
+
+  <rect class="box" x="780" y="548" width="150" height="60" rx="8"/>
+  <text x="855" y="571" text-anchor="middle">HTTP reply</text>
+  <text class="m" x="855" y="590" text-anchor="middle">201 / 200</text>
+
+  <line class="ml" x1="385" y1="608" x2="385" y2="632" marker-end="url(#ar4m)"/>
+  <text class="c m" x="385" y="648" text-anchor="middle">INCR failed -> L1 cleared, an epoch bump is owed; this instance's reads BYPASS</text>
+  <text class="c m" x="385" y="664" text-anchor="middle">until BUMP_EPOCH lands (retry every 1 s and on the cmd client's 'ready')</text>
+
+  <text class="m" x="30" y="700">Two Redis roles: the critical redis (noeviction) holds counters, the epoch, limiter and lock keys - never bodies;</text>
+  <text class="m" x="30" y="716">redis-cache (allkeys-lru, no persistence) holds gzip bodies only, so cache churn can never evict a limiter key.</text>
+  <text class="m" x="30" y="742">Figure 5.5 - Generations are read BEFORE the query and bumped AFTER the commit; a missing epoch is never 0.</text>
+  <text class="m" x="30" y="758">Those two rules are the whole correctness argument (SPEC section 10.2 step 6).</text>
+</svg>

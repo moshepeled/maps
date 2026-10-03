@@ -1,0 +1,22 @@
+{
+  "name": "@snapland/e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright end-to-end specs against the compose stack",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "e2e": "playwright test",
+    "demo:record": "playwright test -c demo/playwright.config.ts",
+    "demo:compose": "node --experimental-strip-types demo/compose-demo.ts"
+  },
+  "dependencies": {
+    "@snapland/shared": "1.0.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.20.4",
+    "typescript": "6.0.3"
+  }
+}

@@ -1,0 +1,130 @@
+/* ==========================================================================
+   Auth screens (UX C-01; UI.md v2 section 10.14): the frame colour with a decorative contour pattern, and a centred card - mark 40, title, tagline, error summary, 44 px fields, a full-width primary, the footer link. They follow the
+   stored theme; there is no theme control on these pages. Also the password field shared with the C-21 dialog.
+   ========================================================================== */
+
+.auth-page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: var(--color-bg);
+}
+/* The contour lines are a mask, so they take the theme's hairline colour (a data: SVG cannot read CSS). */
+.auth-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-border-subtle);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' fill='none' stroke='%23000'%3E%3Cpath d='M-20 60c40-30 80 20 120-5s70-40 160 5'/%3E%3Cpath d='M-20 100c50-25 90 25 130 0s70-35 150 10'/%3E%3Cpath d='M-20 150c30-20 70 15 120-5s90-30 160 15'/%3E%3Cpath d='M-20 200c45-20 85 20 125-2s75-28 155 12'/%3E%3C/svg%3E");
+  mask-size: 240px 240px;
+  pointer-events: none;
+}
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--size-auth-card-width);
+  padding: 28px 28px 24px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-3);
+}
+.auth-logo {
+  display: flex;
+  margin-bottom: 16px;
+}
+.auth-title {
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-title);
+}
+.auth-tagline {
+  margin: 4px 0 20px;
+  color: var(--color-text-secondary);
+}
+/* The signed-out note and the error summary sit 16 px above the fields. */
+.auth-card > .banner {
+  margin-bottom: 16px;
+}
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+.auth-card .input {
+  height: var(--size-control-lg);
+}
+.auth-form > .btn-primary {
+  margin-top: 6px;
+}
+.auth-foot {
+  margin-top: 16px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+.auth-foot .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-hit-min);
+}
+.auth-foot .link:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* ------------------------------------------------------------------ password field with Show / Hide inside */
+.pw {
+  position: relative;
+}
+.pw .input {
+  padding-right: 128px;
+}
+.pw-toggle {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  min-width: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 0 calc(var(--radius-md) - 1px) calc(var(--radius-md) - 1px) 0;
+  background: transparent;
+  color: var(--color-accent-text);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+.pw-toggle:hover {
+  background: var(--color-accent-faint);
+}
+.pw-toggle:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 var(--size-focus-ring) var(--color-focus-ring);
+}
+
+@media (max-width: 599.98px) {
+  .auth-page {
+    place-items: start center;
+    padding: 0;
+    background: var(--color-surface);
+  }
+  .auth-page::before {
+    display: none;
+  }
+  /* Phones: the card is the page - full-bleed, no border and no shadow. */
+  .auth-card {
+    max-width: none;
+    min-height: 100%;
+    padding: 24px 16px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}

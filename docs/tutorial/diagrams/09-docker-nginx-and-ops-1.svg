@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t1 d1">
+  <title id="t1">From a Dockerfile to running containers, a network and volumes</title>
+  <desc id="d1">A Dockerfile builds one read-only image; several containers (backend-1, backend-2, migrate) start from it with their own environment; they share a Docker network with DNS names, and durable data lives in named volumes.</desc>
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <style>
+      text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; fill: #e8ebf0; font-size: 15px; }
+      .h { font-size: 20px; font-weight: 600; }
+      .b { font-weight: 600; }
+      .m { fill: #8b95a4; font-size: 14px; }
+      .a { fill: #22d3ee; }
+      .box { fill: #1a1f26; stroke: #3a4250; stroke-width: 1.5; }
+      .acc { stroke: #22d3ee; }
+      .layer { fill: #232a33; stroke: #3a4250; }
+      .ln { stroke: #22d3ee; stroke-width: 2; fill: none; marker-end: url(#ar1); }
+    </style>
+  </defs>
+  <rect width="960" height="540" fill="#111418"/>
+  <text x="30" y="42" class="h">From a recipe to running processes</text>
+
+  <!-- Dockerfile -->
+  <rect x="30" y="90" width="190" height="120" rx="10" class="box"/>
+  <text x="45" y="118" class="b">Dockerfile</text>
+  <text x="45" y="142" class="m">backend/Dockerfile</text>
+  <text x="45" y="166" class="m">FROM, COPY, RUN</text>
+  <text x="45" y="190" class="m">USER, ENTRYPOINT, CMD</text>
+
+  <path d="M220,150 L290,150" class="ln"/>
+  <text x="232" y="142" class="m">build</text>
+
+  <!-- Image -->
+  <rect x="290" y="70" width="280" height="180" rx="10" class="box acc"/>
+  <text x="305" y="96" class="b">Image  <tspan class="a">snapland-backend:local</tspan></text>
+  <rect x="305" y="108" width="250" height="28" rx="6" class="layer"/>
+  <text x="315" y="127" class="m">node:22.23.3-alpine3.23 + tini</text>
+  <rect x="305" y="142" width="250" height="28" rx="6" class="layer"/>
+  <text x="315" y="161" class="m">production node_modules</text>
+  <rect x="305" y="176" width="250" height="28" rx="6" class="layer"/>
+  <text x="315" y="195" class="m">dist/ + migrations/ (root-owned)</text>
+  <text x="305" y="234" class="m">read-only, no .env inside, no npm</text>
+
+  <!-- Containers -->
+  <path d="M570,150 L640,80" class="ln"/>
+  <path d="M570,160 L640,180" class="ln"/>
+  <path d="M570,170 L640,280" class="ln"/>
+  <text x="470" y="272" class="m">docker compose up</text>
+
+  <rect x="640" y="40" width="290" height="80" rx="10" class="box"/>
+  <text x="655" y="66" class="b">container backend-1</text>
+  <text x="655" y="88" class="m">INSTANCE_ID=backend-1, PORT=3100</text>
+  <text x="655" y="108" class="m">writable: only /tmp (tmpfs 64 MiB)</text>
+
+  <rect x="640" y="140" width="290" height="80" rx="10" class="box"/>
+  <text x="655" y="166" class="b">container backend-2</text>
+  <text x="655" y="188" class="m">same image, INSTANCE_ID=backend-2</text>
+  <text x="655" y="208" class="m">same DATABASE_URL, REDIS_URL</text>
+
+  <rect x="640" y="240" width="290" height="80" rx="10" class="box"/>
+  <text x="655" y="266" class="b">container migrate (one-shot)</text>
+  <text x="655" y="288" class="m">node dist/scripts/migrate.js up</text>
+  <text x="655" y="308" class="m">exits 0 when nothing is pending</text>
+
+  <!-- Network -->
+  <rect x="30" y="360" width="580" height="60" rx="10" class="box"/>
+  <text x="45" y="386" class="b">Network <tspan class="a">snapland_default</tspan></text>
+  <text x="45" y="408" class="m">DNS names: postgres, redis, redis-cache, backend-1, backend-2, nginx</text>
+
+  <!-- Ports -->
+  <rect x="30" y="440" width="580" height="60" rx="10" class="box"/>
+  <text x="45" y="466" class="b">Published ports (host -> container), 127.0.0.1 only</text>
+  <text x="45" y="488" class="m">5173 -> nginx:80, 55432 -> postgres, 56379 -> redis, 56380 -> redis-cache</text>
+
+  <!-- Volumes -->
+  <rect x="640" y="360" width="290" height="140" rx="10" class="box"/>
+  <text x="655" y="386" class="b">Named volumes</text>
+  <text x="655" y="410" class="m">pgdata -> /var/lib/postgresql/data</text>
+  <text x="655" y="432" class="m">(the only named volume)</text>
+  <text x="655" y="456" class="m">survive `docker compose down`</text>
+  <text x="655" y="478" class="m">deleted only by `down -v`</text>
+
+  <text x="30" y="528" class="m">Figure 9.1 - One image, several containers. Names live in the network, durable state lives in volumes.</text>
+</svg>

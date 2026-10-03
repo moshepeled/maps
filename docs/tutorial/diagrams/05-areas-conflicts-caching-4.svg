@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 690" width="960" height="690" role="img" aria-labelledby="t5 d5">
+  <title id="t5">The change feed: why nextval needs the advisory lock, and how the purge watermark keeps resync safe</title>
+  <desc id="d5">Three panels. Panel one shows two transactions taking sequence values 100 and 101 where 101 commits first and a reader at since 99 advances past 100 forever. Panel two shows the advisory lock making transaction two wait, so commit order equals sequence order. Panel three shows a number line with the purge watermark at 340: a client with since 120 gets 410 and reloads, a client with since 400 gets 200, and latestChangeSeq is never below the watermark.</desc>
+  <defs>
+    <marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="ar5m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; fill: #e8ebf0; }
+    .m { fill: #8b95a4; font-size: 12.5px; }
+    .c { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 13px; }
+    .h { font-size: 19px; font-weight: 600; }
+    .e { font-size: 15px; font-weight: 600; fill: #22d3ee; }
+    .bar { fill: #1a1f26; stroke: #2b3340; stroke-width: 1.5; }
+    .wait { fill: none; stroke: #8b95a4; stroke-width: 1.5; stroke-dasharray: 4 4; }
+    .axis { stroke: #8b95a4; stroke-width: 1.5; }
+    .line { stroke: #22d3ee; stroke-width: 1.5; fill: none; }
+    .bad { fill: #171c23; stroke: #8b95a4; stroke-width: 1; }
+    .good { fill: #141a21; stroke: #22d3ee; stroke-width: 1.5; }
+  </style>
+  <rect width="960" height="690" fill="#111418"/>
+  <text class="h" x="30" y="34">The change feed: gap-free numbering, and a watermark instead of silent loss</text>
+
+  <!-- Panel A -->
+  <text class="e" x="30" y="70">A - Without the lock (what would go wrong)</text>
+  <rect class="bar" x="120" y="86" width="580" height="28" rx="6"/>
+  <text class="c" x="130" y="105">T1: nextval -> 100 .................. (slow client, big polygon) .................. COMMIT</text>
+  <rect class="bar" x="250" y="124" width="220" height="28" rx="6"/>
+  <text class="c" x="260" y="143">T2: nextval -> 101 ... COMMIT</text>
+  <text class="c m" x="560" y="143">100 commits later, below the cursor:</text>
+  <text class="c m" x="560" y="159">skipped forever</text>
+  <line class="axis" x1="60" y1="190" x2="900" y2="190" marker-end="url(#ar5m)"/>
+  <text class="m" x="880" y="182">time</text>
+  <line class="line" x1="520" y1="160" x2="520" y2="188"/>
+  <text class="c" x="530" y="176">reader since=99 -> sees only 101 -> nextSince = 101</text>
+
+  <!-- Panel B -->
+  <text class="e" x="30" y="236">B - With pg_advisory_xact_lock(7210001) held from nextval to COMMIT (areas.lockChangeFeed)</text>
+  <rect class="bar" x="120" y="252" width="340" height="28" rx="6"/>
+  <text class="c" x="130" y="271">T1: lock -> nextval 100 ... COMMIT (unlock)</text>
+  <rect class="wait" x="250" y="290" width="210" height="28" rx="6"/>
+  <text class="c m" x="260" y="309">T2: waits for the lock</text>
+  <rect class="bar" x="460" y="290" width="200" height="28" rx="6"/>
+  <text class="c" x="470" y="309">nextval 101 ... COMMIT</text>
+  <line class="axis" x1="60" y1="356" x2="900" y2="356" marker-end="url(#ar5m)"/>
+  <line class="line" x1="660" y1="326" x2="660" y2="354"/>
+  <text class="c" x="670" y="336">reader since=99 -> 100, 101 in order</text>
+  <text class="c m" x="670" y="352">commit order = sequence order</text>
+  <text class="m" x="30" y="384">The lock is held only for the last few statements (the write, its version snapshot and the reload - milliseconds). It caps</text>
+  <text class="m" x="30" y="400">commits at hundreds per second, ample under 50 actions per minute per user (ADR-0003); the upgrade path there is an xid8 snapshot horizon.</text>
+
+  <!-- Panel C -->
+  <text class="e" x="30" y="438">C - Retention purged old versions: the watermark tells a stale client to reload</text>
+  <rect x="80" y="496" width="440" height="18" fill="#1a1f26" stroke="#3a4453"/>
+  <text class="m" x="300" y="488" text-anchor="middle">versions with change_seq <= 340 were purged (with their areas)</text>
+  <line class="axis" x1="60" y1="530" x2="900" y2="530" marker-end="url(#ar5m)"/>
+  <line class="axis" x1="80" y1="522" x2="80" y2="538"/><text class="c m" x="80" y="556" text-anchor="middle">0</text>
+  <line class="axis" x1="260" y1="522" x2="260" y2="538"/><text class="c m" x="260" y="556" text-anchor="middle">120</text>
+  <line class="line" x1="520" y1="516" x2="520" y2="544"/><text class="c" x="520" y="562" text-anchor="middle">340 = watermark</text>
+  <line class="axis" x1="610" y1="522" x2="610" y2="538"/><text class="c m" x="610" y="556" text-anchor="middle">400</text>
+  <line class="axis" x1="760" y1="522" x2="760" y2="538"/><text class="c m" x="760" y="556" text-anchor="middle">512 = max(change_seq)</text>
+
+  <rect class="bad" x="80" y="580" width="400" height="56" rx="8"/>
+  <text class="c" x="92" y="600">client A: since=120 -> 410 CHANGE_FEED_EXPIRED</text>
+  <text class="c m" x="92" y="618">{ watermark: 340 } -> FeedExpiredError -> reload</text>
+  <line class="line" x1="260" y1="538" x2="260" y2="578" marker-end="url(#ar5)"/>
+
+  <rect class="good" x="530" y="580" width="400" height="56" rx="8"/>
+  <text class="c" x="542" y="600">client B: since=400 -> 200, items 401...512</text>
+  <text class="c m" x="542" y="618">reload: asOfChangeSeq = GREATEST(max, wm) >= 340</text>
+  <line class="line" x1="610" y1="538" x2="610" y2="578" marker-end="url(#ar5)"/>
+
+  <text class="m" x="30" y="662">Figure 5.4 - latestChangeSeq is GREATEST(max(change_seq), watermark): after purging the newest changes, max alone could</text>
+  <text class="m" x="30" y="678">fall below the watermark, and a client would loop 410 -> reload -> the same since -> 410 (directory/queries.ts:40-50).</text>
+</svg>

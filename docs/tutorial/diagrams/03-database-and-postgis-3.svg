@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" role="img" aria-labelledby="t3 d3">
+  <title id="t3">Three lines of defence against invalid shapes</title>
+  <desc id="d3">A polygon passes the transport schema (400 on failure), then the shared validator stages 1 to 12 (runs in the browser and on the server), then the PostGIS GEOS pre-check inside the write transaction, then the CHECK constraints of the areas table. Every domain failure is a 422 with a sub-code; a CHECK violation is translated, never a 500.</desc>
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <rect width="960" height="540" fill="#111418"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#e8ebf0">
+    <text x="480" y="36" font-size="20" text-anchor="middle" font-weight="600">Three lines of defence against invalid shapes</text>
+
+    <!-- stage 0 -->
+    <rect x="20" y="110" width="150" height="200" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="95" y="138" font-size="14" text-anchor="middle" font-weight="600">Stage 0, transport</text>
+    <text x="95" y="162" font-size="12" text-anchor="middle" fill="#8b95a4">zod PolygonGeometryIn</text>
+    <text x="95" y="182" font-size="12" text-anchor="middle" fill="#8b95a4">JSON shape, abuse caps</text>
+    <text x="95" y="202" font-size="12" text-anchor="middle" fill="#8b95a4">(<= 10,000 positions)</text>
+    <text x="95" y="240" font-size="13" text-anchor="middle">400</text>
+    <text x="95" y="258" font-size="13" text-anchor="middle">VALIDATION_FAILED</text>
+    <line x1="170" y1="210" x2="198" y2="210" stroke="#22d3ee" stroke-width="2" marker-end="url(#a3)"/>
+
+    <!-- line 1 -->
+    <rect x="200" y="90" width="220" height="240" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="2"/>
+    <text x="310" y="118" font-size="15" text-anchor="middle" font-weight="600">Line 1, shared validator</text>
+    <text x="310" y="140" font-size="12" text-anchor="middle" fill="#8b95a4">validatePolygon - stages 1-12</text>
+    <text x="310" y="162" font-size="12" text-anchor="middle" fill="#8b95a4">structure, ranges, closure</text>
+    <text x="310" y="180" font-size="12" text-anchor="middle" fill="#8b95a4">7 dp, dedupe, ring simplicity</text>
+    <text x="310" y="198" font-size="12" text-anchor="middle" fill="#8b95a4">holes, winding, geodesic area</text>
+    <text x="310" y="226" font-size="13" text-anchor="middle">same code in the browser (live)</text>
+    <text x="310" y="244" font-size="13" text-anchor="middle">and on the server (final say)</text>
+    <text x="310" y="276" font-size="13" text-anchor="middle">422 INVALID_GEOMETRY</text>
+    <text x="310" y="294" font-size="13" text-anchor="middle">e.g. SELF_INTERSECTION</text>
+    <line x1="420" y1="210" x2="448" y2="210" stroke="#22d3ee" stroke-width="2" marker-end="url(#a3)"/>
+
+    <!-- line 2 -->
+    <rect x="450" y="90" width="220" height="240" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="2"/>
+    <text x="560" y="118" font-size="15" text-anchor="middle" font-weight="600">Line 2, PostGIS (GEOS)</text>
+    <text x="560" y="140" font-size="12" text-anchor="middle" fill="#8b95a4">areas.checkGeometry - stage 13</text>
+    <text x="560" y="162" font-size="12" text-anchor="middle" fill="#8b95a4">ST_IsValid, ST_IsValidReason</text>
+    <text x="560" y="180" font-size="12" text-anchor="middle" fill="#8b95a4">ST_Area(g::geography) / 1e6</text>
+    <text x="560" y="226" font-size="13" text-anchor="middle">inside the write transaction,</text>
+    <text x="560" y="244" font-size="13" text-anchor="middle">before the change-feed lock</text>
+    <text x="560" y="276" font-size="13" text-anchor="middle">422 GEOS_INVALID + reason</text>
+    <text x="560" y="294" font-size="13" text-anchor="middle">AREA_TOO_SMALL / TOO_LARGE</text>
+    <line x1="670" y1="210" x2="698" y2="210" stroke="#22d3ee" stroke-width="2" marker-end="url(#a3)"/>
+
+    <!-- line 3 -->
+    <rect x="700" y="90" width="240" height="240" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="2"/>
+    <text x="820" y="118" font-size="15" text-anchor="middle" font-weight="600">Line 3, CHECK constraints</text>
+    <text x="820" y="140" font-size="12" text-anchor="middle" fill="#8b95a4">migration 0004, INSERT / UPDATE</text>
+    <text x="820" y="162" font-size="12" text-anchor="middle" fill="#8b95a4">areas_geom_valid_ck (ST_IsValid)</text>
+    <text x="820" y="180" font-size="12" text-anchor="middle" fill="#8b95a4">areas_geom_npoints_ck: <= 2000</text>
+    <text x="820" y="198" font-size="12" text-anchor="middle" fill="#8b95a4">areas_area_range_ck: 1e-6...1e5 km²</text>
+    <text x="820" y="226" font-size="13" text-anchor="middle">SQLSTATE 23514 on table areas</text>
+    <text x="820" y="244" font-size="13" text-anchor="middle">-> translateCheckViolation</text>
+    <text x="820" y="276" font-size="13" text-anchor="middle">422 GEOS_INVALID (constraint)</text>
+    <text x="820" y="294" font-size="13" text-anchor="middle">never a 500</text>
+
+    <!-- principle + example -->
+    <rect x="20" y="360" width="920" height="60" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="480" y="384" font-size="13" text-anchor="middle">Principle (SPEC section 9): line 1 must be at least as strict as GEOS. Lines 2 and 3 are second and third opinions - </text>
+    <text x="480" y="406" font-size="13" text-anchor="middle">they should never fire, but when they do the client still gets a 422 with a reason, not a stack trace.</text>
+
+    <rect x="20" y="436" width="920" height="54" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="480" y="458" font-size="13" text-anchor="middle" fill="#22d3ee">Example: the bowtie fixture (edges cross at the centre)</text>
+    <text x="480" y="478" font-size="12" text-anchor="middle" fill="#8b95a4">line 1: SELF_INTERSECTION at [34.785, 32.085], GEOS: Self-intersection[34.785 32.085], CHECK: areas_geom_valid_ck</text>
+
+    <text x="480" y="520" font-size="14" text-anchor="middle" fill="#8b95a4">Figure 3 - Validation in depth: the same rule is checked three times, each time by a different engine.</text>
+  </g>
+</svg>

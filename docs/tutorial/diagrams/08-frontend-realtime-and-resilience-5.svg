@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 672" width="960" height="672" role="img" aria-labelledby="title5">
+  <title id="title5">A save with baseVersion 4 while Dana saved v5: auto-merge on disjoint fields, the conflict panel on overlapping fields with its four exits, and the deleted-while-editing dialog</title>
+  <defs>
+    <marker id="arr5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrm5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="672" fill="#111418"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e8ebf0">
+    <text x="480" y="34" text-anchor="middle" font-size="18" font-weight="600">Save conflict: I reshape v4, Dana saved v5 first (editFlow -> conflictFlow)</text>
+
+    <!-- save -->
+    <rect x="330" y="60" width="300" height="56" rx="12" fill="#1c232c" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="480" y="84" text-anchor="middle" font-weight="600">PATCH /areas/{id}</text>
+    <text x="480" y="104" text-anchor="middle" font-size="13">{ baseVersion: 4, geometry: mine }</text>
+
+    <path d="M480 116 L480 150" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr5)"/>
+    <rect x="380" y="150" width="200" height="48" rx="24" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="480" y="179" text-anchor="middle" font-weight="600">server three-way merge</text>
+
+    <!-- branch 1: merged -->
+    <path d="M380 174 L160 174 L160 230" stroke="#8b95a4" stroke-width="1.5" fill="none" marker-end="url(#arrm5)"/>
+    <text x="258" y="166" text-anchor="middle" font-size="13" fill="#8b95a4">disjoint fields (Dana only renamed)</text>
+    <rect x="20" y="230" width="280" height="88" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="160" y="254" text-anchor="middle" font-weight="600">200 { merged: true }</text>
+    <text x="160" y="274" text-anchor="middle" font-size="13">serverChangedFields: ['name']</text>
+    <text x="160" y="292" text-anchor="middle" font-size="13">my geometry + Dana's name -> v6</text>
+    <text x="160" y="310" text-anchor="middle" font-size="13" fill="#8b95a4">toast: both changes saved (v6)</text>
+
+    <!-- branch 2: conflict -->
+    <path d="M480 198 L480 230" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr5)"/>
+    <text x="500" y="220" font-size="13" fill="#22d3ee">same field (Dana reshaped too)</text>
+    <rect x="330" y="230" width="300" height="88" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="480" y="254" text-anchor="middle" font-weight="600">409 VERSION_CONFLICT</text>
+    <text x="480" y="274" text-anchor="middle" font-size="13">current: the v5 AreaDto, currentVersion: 5</text>
+    <text x="480" y="292" text-anchor="middle" font-size="13">conflictingFields: ['geometry']</text>
+    <text x="480" y="310" text-anchor="middle" font-size="13">serverChangedFields: ['geometry']</text>
+
+    <!-- branch 3: deleted -->
+    <path d="M580 174 L790 174 L790 230" stroke="#8b95a4" stroke-width="1.5" fill="none" marker-end="url(#arrm5)"/>
+    <text x="690" y="166" text-anchor="middle" font-size="13" fill="#8b95a4">area deleted meanwhile</text>
+    <rect x="650" y="230" width="280" height="88" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="790" y="254" text-anchor="middle" font-weight="600">409 AREA_DELETED { current }</text>
+    <text x="790" y="274" text-anchor="middle" font-size="13">C-20 dialog:</text>
+    <text x="790" y="292" text-anchor="middle" font-size="13">Restore it with my changes /</text>
+    <text x="790" y="310" text-anchor="middle" font-size="13">Save as a new area / Discard my changes</text>
+
+    <!-- panel -->
+    <path d="M480 318 L480 356" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr5)"/>
+    <rect x="150" y="356" width="660" height="100" rx="12" fill="#0f2a30" stroke="#22d3ee" stroke-width="2"/>
+    <text x="480" y="382" text-anchor="middle" font-weight="600">ConflictFlow.open -> mode 'resolving-conflict', panel 'conflict'</text>
+    <text x="480" y="404" text-anchor="middle" font-size="13">store gets v5 (applyArea); choices default to 'mine'; focus moves to the heading</text>
+    <text x="480" y="424" text-anchor="middle" font-size="13">screen readers hear "Save conflict." (copy.sr.conflictAlert)</text>
+    <text x="480" y="444" text-anchor="middle" font-size="13">map: my shape solid, theirs dashed in Dana's colour (MapController -> decorations)</text>
+
+    <!-- four exits -->
+    <path d="M300 456 L122 506" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr5)"/>
+    <path d="M420 456 L360 506" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr5)"/>
+    <path d="M540 456 L600 506" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr5)"/>
+    <path d="M660 456 L838 506" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr5)"/>
+
+    <rect x="12" y="506" width="220" height="110" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="122" y="530" text-anchor="middle" font-weight="600">Keep mine</text>
+    <text x="122" y="552" text-anchor="middle" font-size="13">bodyFor(() =&gt; 'mine')</text>
+    <text x="122" y="572" text-anchor="middle" font-size="13">PATCH baseVersion 5 + my fields</text>
+    <text x="122" y="592" text-anchor="middle" font-size="13" fill="#8b95a4">Dana's v5 stays in history</text>
+
+    <rect x="250" y="506" width="220" height="110" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="360" y="530" text-anchor="middle" font-weight="600">Take theirs</text>
+    <text x="360" y="552" text-anchor="middle" font-size="13">edit.exit('cancelled'), show v5</text>
+    <text x="360" y="572" text-anchor="middle" font-size="13">undo toast for 10 s</text>
+    <text x="360" y="592" text-anchor="middle" font-size="13" fill="#8b95a4">Undo re-opens my shape on v5</text>
+
+    <rect x="490" y="506" width="220" height="110" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="600" y="530" text-anchor="middle" font-weight="600">Review differences</text>
+    <text x="600" y="552" text-anchor="middle" font-size="13">radio per conflicting field</text>
+    <text x="600" y="572" text-anchor="middle" font-size="13">Save merged -> bodyFor(choices)</text>
+    <text x="600" y="592" text-anchor="middle" font-size="13" fill="#8b95a4">all theirs -> acts as Take theirs</text>
+
+    <rect x="728" y="506" width="220" height="110" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="838" y="530" text-anchor="middle" font-weight="600">Decide later / Esc</text>
+    <text x="838" y="552" text-anchor="middle" font-size="13">back to 'editing-shape'</text>
+    <text x="838" y="572" text-anchor="middle" font-size="13">my points intact, unsaved</text>
+    <text x="838" y="592" text-anchor="middle" font-size="13" fill="#8b95a4">early-warning banner stays</text>
+
+    <text x="480" y="650" text-anchor="middle" font-size="13" fill="#8b95a4">A 409 during resolution (a third user saved v6) re-opens the panel with the newest "theirs" and changedAgain = true.</text>
+  </g>
+</svg>

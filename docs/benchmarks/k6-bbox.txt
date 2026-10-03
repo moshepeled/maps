@@ -1,0 +1,74 @@
+
+
+  █ THRESHOLDS 
+
+    burst_created
+    ✓ 'count==50' count=50
+
+    burst_rate_limited
+    ✓ 'count==10' count=10
+
+    checks
+    ✓ 'rate>0.99' rate=100.00%
+
+    http_req_duration{scenario:bbox}
+    ✓ 'p(95)<500' p(95)=151.13ms
+
+    http_req_duration{scenario:writes}
+    ✓ 'p(95)<300' p(95)=60.53ms
+
+    http_req_failed{scenario:bbox}
+    ✓ 'rate<0.01' rate=0.00%
+
+    http_req_failed{scenario:writes}
+    ✓ 'rate<0.01' rate=0.00%
+
+    http_reqs{scenario:bbox}
+    ✓ 'count>0' count=1294
+
+    http_reqs{scenario:writes}
+    ✓ 'count>0' count=121
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 1425    7.839566/s
+    checks_succeeded...: 100.00% 1425 out of 1425
+    checks_failed......: 0.00%   0 out of 1425
+
+    ✓ create 201
+    ✓ bbox 200
+    ✓ burst 429 has Retry-After
+
+    CUSTOM
+    burst_created..................: 50     0.275072/s
+    burst_rate_limited.............: 10     0.055014/s
+    x_cache_bypass.................: 1      0.005501/s
+    x_cache_hit_l1.................: 21     0.11553/s
+    x_cache_hit_l2.................: 31     0.170545/s
+    x_cache_miss...................: 1241   6.827299/s
+
+    HTTP
+    http_req_duration..............: avg=89.1ms   min=2.01ms med=98.76ms  p(95)=147.64ms p(99)=178.42ms max=348.64ms
+      { expected_response:true }...: avg=89.1ms   min=2.01ms med=98.76ms  p(95)=147.64ms p(99)=178.42ms max=348.64ms
+      { scenario:bbox }............: avg=99.53ms  min=9.91ms med=102.54ms p(95)=151.13ms p(99)=179.11ms max=348.64ms
+      { scenario:writes }..........: avg=26.07ms  min=8.38ms med=16.62ms  p(95)=60.53ms  p(99)=112.25ms max=177.53ms
+    http_req_failed................: 0.00%  0 out of 1496
+      { scenario:bbox }............: 0.00%  0 out of 1294
+      { scenario:writes }..........: 0.00%  0 out of 121
+    http_reqs......................: 1496   8.230169/s
+      { scenario:bbox }............: 1294   7.118876/s
+      { scenario:writes }..........: 121    0.665675/s
+
+    EXECUTION
+    iteration_duration.............: avg=283.65ms min=8.64ms med=198.75ms p(95)=701.46ms p(99)=816.49ms max=970.18ms
+    iterations.....................: 482    2.651699/s
+    vus............................: 0      min=0         max=3 
+    vus_max........................: 25     min=25        max=25
+
+    NETWORK
+    data_received..................: 424 MB 2.3 MB/s
+    data_sent......................: 1.0 MB 5.6 kB/s
+
+
+

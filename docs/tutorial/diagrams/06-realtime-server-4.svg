@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 630" width="960" height="630" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="14">
+  <title>Per-connection outbound queue: two lanes, one flusher, slow-consumer close</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f87171"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="630" fill="#111418"/>
+  <text x="480" y="34" text-anchor="middle" fill="#e8ebf0" font-size="18" font-weight="600">Backpressure: every socket has a two-lane bounded queue and one flusher</text>
+
+  <!-- producers -->
+  <rect x="20" y="80" width="200" height="120" rx="10" fill="#1a1f26" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="120" y="106" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">Producers</text>
+  <text x="120" y="130" text-anchor="middle" fill="#8b95a4">Fanout (bus events)</text>
+  <text x="120" y="150" text-anchor="middle" fill="#8b95a4">dispatch (ack, error, pong)</text>
+  <text x="120" y="170" text-anchor="middle" fill="#8b95a4">gateway (welcome, snapshots)</text>
+  <text x="120" y="190" text-anchor="middle" fill="#8b95a4">each message serialised ONCE</text>
+
+  <line x1="220" y1="120" x2="250" y2="120" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="220" y1="170" x2="250" y2="360" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- critical lane -->
+  <rect x="250" y="70" width="420" height="220" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="460" y="96" text-anchor="middle" fill="#22d3ee" font-size="15" font-weight="600">CRITICAL lane - FIFO, never dropped or coalesced</text>
+  <text x="460" y="118" text-anchor="middle" fill="#e8ebf0">welcome, ack, error, pong</text>
+  <text x="460" y="136" text-anchor="middle" fill="#e8ebf0">presence.snapshot, lock.snapshot</text>
+  <text x="460" y="154" text-anchor="middle" fill="#e8ebf0">area.changed, draft.ended</text>
+  <text x="460" y="172" text-anchor="middle" fill="#e8ebf0">lock.acquired, resync.required</text>
+  <g>
+    <rect x="270" y="186" width="60" height="28" rx="5" fill="#1a1f26" stroke="#2a313b"/>
+    <text x="300" y="205" text-anchor="middle" fill="#8b95a4" font-size="12">ack</text>
+    <rect x="338" y="186" width="100" height="28" rx="5" fill="#1a1f26" stroke="#2a313b"/>
+    <text x="388" y="205" text-anchor="middle" fill="#8b95a4" font-size="12">area.changed</text>
+    <rect x="446" y="186" width="92" height="28" rx="5" fill="#1a1f26" stroke="#2a313b"/>
+    <text x="492" y="205" text-anchor="middle" fill="#8b95a4" font-size="12">draft.ended</text>
+    <rect x="546" y="186" width="60" height="28" rx="5" fill="#1a1f26" stroke="#2a313b"/>
+    <text x="576" y="205" text-anchor="middle" fill="#8b95a4" font-size="12">...</text>
+  </g>
+  <text x="460" y="236" text-anchor="middle" fill="#8b95a4">bound: 500 messages / 1 MiB</text>
+  <text x="460" y="258" text-anchor="middle" fill="#f87171">overflow => the client is too slow => close 1013</text>
+  <text x="460" y="276" text-anchor="middle" fill="#f87171">(it resyncs after reconnecting)</text>
+
+  <!-- ephemeral lane -->
+  <rect x="250" y="308" width="420" height="200" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="460" y="334" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">EPHEMERAL lane - Map, latest wins per key</text>
+  <text x="460" y="356" text-anchor="middle" fill="#e8ebf0">draft.updated -> draft:&lt;id&gt;, lock.changed -> lock:&lt;areaId&gt;</text>
+  <text x="460" y="374" text-anchor="middle" fill="#e8ebf0">presence.joined/updated/left -> presence:&lt;connId&gt;</text>
+  <g>
+    <rect x="270" y="390" width="150" height="28" rx="5" fill="#1a1f26" stroke="#2a313b"/>
+    <text x="345" y="409" text-anchor="middle" fill="#8b95a4" font-size="12">presence:9f31... (drawing)</text>
+    <rect x="428" y="390" width="150" height="28" rx="5" fill="#1a1f26" stroke="#2a313b"/>
+    <text x="503" y="409" text-anchor="middle" fill="#8b95a4" font-size="12">draft:4b0e... (rev 12)</text>
+  </g>
+  <text x="460" y="440" text-anchor="middle" fill="#8b95a4">Map.set on an existing key keeps its position:</text>
+  <text x="460" y="458" text-anchor="middle" fill="#8b95a4">newer state replaces older, order preserved</text>
+  <text x="460" y="478" text-anchor="middle" fill="#8b95a4">bound: 500 keys (oldest dropped, counted "overflow")</text>
+  <text x="460" y="496" text-anchor="middle" fill="#8b95a4">coalesced replacements are counted, never sent</text>
+
+  <!-- supersedes arrow -->
+  <path d="M 530 214 C 720 214, 720 404, 578 404" fill="none" stroke="#f87171" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arrow-red)"/>
+  <text x="655" y="300" text-anchor="end" fill="#f87171" font-size="13">supersedes: drops pending draft:&lt;id&gt;</text>
+
+  <!-- flusher -->
+  <rect x="700" y="150" width="245" height="230" rx="12" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="822" y="176" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">flush() - once per burst</text>
+  <text x="822" y="200" text-anchor="middle" fill="#8b95a4">scheduled with setImmediate</text>
+  <text x="822" y="224" text-anchor="middle" fill="#e8ebf0">critical first, then ephemeral</text>
+  <text x="822" y="248" text-anchor="middle" fill="#e8ebf0">pack into one batch frame <= 64 KiB</text>
+  <text x="822" y="270" text-anchor="middle" fill="#8b95a4">(string concatenation of JSON)</text>
+  <text x="822" y="298" text-anchor="middle" fill="#e8ebf0">stop while bufferedAmount >= 256 KiB</text>
+  <text x="822" y="320" text-anchor="middle" fill="#8b95a4">poll <= 50 ms until drained</text>
+  <text x="822" y="348" text-anchor="middle" fill="#f87171">blocked &gt; 10 s => close 1013</text>
+  <line x1="670" y1="190" x2="700" y2="210" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="670" y1="400" x2="700" y2="330" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- socket -->
+  <rect x="742" y="440" width="160" height="60" rx="10" fill="#1a1f26" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="822" y="465" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">ws socket</text>
+  <text x="822" y="486" text-anchor="middle" fill="#8b95a4">socket.send(frame)</text>
+  <line x1="822" y1="380" x2="822" y2="440" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- client side note -->
+  <rect x="20" y="520" width="650" height="80" rx="10" fill="#161b22" stroke="#2a313b"/>
+  <text x="36" y="546" fill="#e8ebf0" font-weight="600">Browser side of the same contract</text>
+  <text x="36" y="568" fill="#8b95a4">parseServerMessage flattens a batch into its inner messages; unknown types are ignored.</text>
+  <text x="36" y="588" fill="#8b95a4">After a 1013: wait >= 2 s (closeCodeFloorMs), reconnect, pull the change feed after welcome.</text>
+
+  <text x="480" y="618" text-anchor="middle" fill="#8b95a4" font-size="13">Sources: backend/src/modules/realtime/outbound-queue.ts, messages.ts, connection.ts; packages/shared/src/protocol/server-messages.ts</text>
+</svg>

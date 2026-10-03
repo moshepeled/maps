@@ -1,0 +1,211 @@
+/* ==========================================================================
+   The Studio frame (user decision D-4; UX section 3.2; UI.md v2 section 4, section 11): a CSS grid that places the regions while the
+   DOM keeps the UX section 8.2 tab order. Three layouts (SPEC section 8.6 breakpoints 600 / 1,200, `data-layout` on .app):
+
+     docked  >= 1200   title 44, [rail 52, options bar 44 over the map, inspector 352], status 26
+     overlay 600-1199  the same, with the inspector floating over the right of the map
+     phone   < 600     title 48, docked HUD 58 (Drawing / EditingShape / preview), map, bottom bar 72
+
+   The map is a grid cell with fixed tracks around it, so it never resizes when a mode, section, strip, notice,
+   toast, sheet or theme changes; the only resize is the phone HUD row, compensated in map/mapInstance.ts.
+   Everything drawn ON the map (controls, notices, attribution, toasts, the overlay inspector, the sheet) shares the
+   map's grid area and never changes its size.
+   ========================================================================== */
+
+.app {
+  /* Frame tracks. The options bar is 44 at every width >= 600 px (UX C-05; SPEC section 8.6 rules 600 as the phone
+     breakpoint, while tokens.css still sizes --size-options-bar for UI.md's 900 split), and grows once on coarse
+     pointers to fit 44 px targets. */
+  --frame-topbar: var(--size-topbar);
+  --frame-rail: var(--size-rail-width);
+  --frame-optbar: 44px;
+  --frame-inspector: var(--size-panel-width);
+  --frame-status: var(--size-status-bar);
+  --frame-phone-hud: 58px;
+  --frame-bottom-bar: calc(var(--size-bottom-bar) + env(safe-area-inset-bottom));
+  /* The overlay inspector (UI.md section 10.8.8): 340 wide, 10 from the map's edges, ending above the attribution. */
+  --overlay-width: 340px;
+  --overlay-gap: 10px;
+
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: var(--frame-rail) minmax(0, 1fr) var(--frame-inspector);
+  grid-template-rows: var(--frame-topbar) var(--frame-optbar) minmax(0, 1fr) var(--frame-status);
+  grid-template-areas:
+    'title title title'
+    'rail optbar inspector'
+    'rail map inspector'
+    'status status status';
+  background: var(--color-bg);
+}
+
+@media (pointer: coarse) {
+  .app {
+    --frame-optbar: 52px;
+  }
+}
+
+.app[data-layout='overlay'] {
+  grid-template-columns: var(--frame-rail) minmax(0, 1fr);
+  grid-template-areas:
+    'title title'
+    'rail optbar'
+    'rail map'
+    'status status';
+}
+
+.app[data-layout='phone'] {
+  --phone-hud-row: 0px;
+  --phone-bar-row: 0px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--frame-topbar) var(--phone-hud-row) minmax(0, 1fr) var(--phone-bar-row);
+  grid-template-areas:
+    'title'
+    'optbar'
+    'map'
+    'bottom';
+}
+.app[data-layout='phone'][data-phone-hud='true'] {
+  --phone-hud-row: var(--frame-phone-hud);
+}
+.app[data-layout='phone'][data-bottom-bar='true'] {
+  --phone-bar-row: var(--frame-bottom-bar);
+}
+
+/* ------------------------------------------------------------------ region placement */
+.titlebar {
+  grid-area: title;
+}
+.rail {
+  grid-area: rail;
+}
+.statusbar {
+  grid-area: status;
+}
+.bottombar {
+  grid-area: bottom;
+}
+
+/* `main` holds the options bar (or phone HUD), the map and the notice slot: the options bar row and the map row. */
+.stage {
+  grid-column: map;
+  grid-row: optbar-start / map-end;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--frame-optbar) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+.app[data-layout='phone'] .stage {
+  grid-template-rows: var(--phone-hud-row) minmax(0, 1fr);
+}
+.stage > .optbar,
+.stage > .phone-hud {
+  grid-row: 1;
+  grid-column: 1;
+  min-width: 0;
+}
+
+.map-frame {
+  grid-row: 2;
+  grid-column: 1;
+  position: relative;
+  z-index: var(--z-map);
+  isolation: isolate;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The notice slot: top-centre of the map, clear of the top-left control column and the overlay inspector. */
+.notice-slot {
+  grid-row: 2;
+  grid-column: 1;
+  align-self: start;
+  justify-self: stretch;
+  z-index: var(--z-hud);
+  display: flex;
+  justify-content: center;
+  margin-top: calc(var(--map-inset-top) + var(--map-gutter));
+  padding-inline: calc(var(--map-controls-w) + 2 * var(--map-gutter))
+    max(calc(var(--map-controls-w) + 2 * var(--map-gutter)), var(--map-inset-right));
+  pointer-events: none;
+  min-width: 0;
+}
+.notice-slot > * {
+  pointer-events: auto;
+  max-width: var(--size-notice-max-width);
+  min-width: 0;
+}
+.app[data-layout='phone'] .notice-slot {
+  padding-inline: var(--map-gutter);
+}
+/* Overlay layout with the inspector open (tablets, 600-1199 px): the strip between the control column and the
+   inspector is too narrow for a notice, so the notice drops below the control column and uses the width left of
+   the inspector. */
+.app[data-layout='overlay'][data-inspector-open='true'] .notice-slot {
+  margin-top: calc(var(--map-inset-top) + var(--map-gutter) + var(--map-controls-h) + var(--map-gutter));
+  padding-inline-start: var(--map-gutter);
+}
+
+/* The inspector: a docked column, or a card floating over the right of the map. */
+.inspector {
+  grid-area: inspector;
+  min-height: 0;
+}
+.app[data-layout='overlay'] .inspector {
+  grid-area: map;
+  justify-self: end;
+  align-self: stretch;
+  width: min(var(--overlay-width), calc(100% - 2 * var(--overlay-gap)));
+  margin: var(--overlay-gap) var(--overlay-gap) max(34px, calc(var(--map-attribution-h) + 12px));
+  z-index: var(--z-panel);
+}
+
+/* Map controls: the top-left column at >= 600 px; the control row above the attribution on phones. */
+.map-controls {
+  grid-area: map;
+  align-self: start;
+  justify-self: start;
+  z-index: var(--z-chrome);
+  margin: calc(var(--map-inset-top) + var(--map-gutter)) 0 0 var(--map-gutter);
+}
+.app[data-layout='phone'] .map-controls {
+  align-self: end;
+  justify-self: stretch;
+  margin: 0 var(--map-gutter) calc(var(--map-inset-bottom) + var(--map-attribution-h) + 8px);
+}
+
+.attribution {
+  grid-area: map;
+  align-self: end;
+  justify-self: end;
+  z-index: var(--z-chrome);
+  margin-bottom: var(--map-inset-bottom);
+}
+
+/* One bottom-centre toast lane over the map (UX C-18 v2), left of an open overlay inspector, above the attribution;
+   on phones above the control row. */
+.toasts {
+  grid-area: map;
+  align-self: end;
+  justify-self: stretch;
+  z-index: var(--z-toast);
+  margin: 0 var(--map-inset-right) max(36px, calc(var(--map-attribution-h) + 12px)) 0;
+  padding: 0 var(--map-gutter);
+  pointer-events: none;
+}
+.app[data-layout='phone'] .toasts {
+  margin: 0 0 calc(var(--map-inset-bottom) + var(--map-attribution-h) + 8px + var(--size-control-lg) + 12px);
+}
+
+/* The phone sheet covers the bottom bar and rides over the lower part of the map. */
+.sheet {
+  grid-column: 1;
+  grid-row: map-start / bottom-end;
+  align-self: end;
+  z-index: var(--z-panel);
+  min-width: 0;
+}

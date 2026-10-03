@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" role="img" aria-labelledby="t1 d1">
+  <title id="t1">One stored truth, many views</title>
+  <desc id="d1">Polygons are stored once as geometry(Polygon, 4326). Writes parse GeoJSON with ST_GeomFromGeoJSON, ST_SetSRID and ST_ForcePolygonCCW; reads emit ST_AsGeoJSON; measurement casts to geography on the WGS84 ellipsoid; display projections are derived in the browser.</desc>
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="540" fill="#111418"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#e8ebf0">
+    <text x="480" y="36" font-size="20" text-anchor="middle" font-weight="600">One stored truth, many views</text>
+
+    <!-- left: write -->
+    <rect x="20" y="150" width="160" height="150" rx="10" fill="#1a1f26" stroke="#2c333d"/>
+    <text x="100" y="180" font-size="15" text-anchor="middle" font-weight="600">Write (REST)</text>
+    <text x="100" y="204" font-size="14" text-anchor="middle">GeoJSON Polygon</text>
+    <text x="100" y="224" font-size="12" text-anchor="middle" fill="#8b95a4">[lng, lat], EPSG:4326</text>
+    <text x="100" y="250" font-size="12" text-anchor="middle" fill="#8b95a4">shared validator:</text>
+    <text x="100" y="268" font-size="12" text-anchor="middle" fill="#8b95a4">7 dp, dedupe, winding</text>
+
+    <!-- arrow in -->
+    <line x1="180" y1="240" x2="338" y2="240" stroke="#22d3ee" stroke-width="2" marker-end="url(#a1)"/>
+    <text x="260" y="180" font-size="12" text-anchor="middle" fill="#22d3ee">ST_GeomFromGeoJSON</text>
+    <text x="260" y="198" font-size="12" text-anchor="middle" fill="#22d3ee">ST_SetSRID(..., 4326)</text>
+    <text x="260" y="216" font-size="12" text-anchor="middle" fill="#22d3ee">ST_ForcePolygonCCW</text>
+
+    <!-- center: storage -->
+    <rect x="340" y="150" width="280" height="150" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="2"/>
+    <text x="480" y="180" font-size="16" text-anchor="middle" font-weight="600">areas.geom</text>
+    <text x="480" y="204" font-size="15" text-anchor="middle">geometry(Polygon, 4326)</text>
+    <text x="480" y="228" font-size="12" text-anchor="middle" fill="#8b95a4">WGS84 lng/lat, exterior CCW, 7 decimals</text>
+    <text x="480" y="252" font-size="12" text-anchor="middle" fill="#8b95a4">planar: GiST R-tree + all GEOS functions</text>
+    <text x="480" y="276" font-size="12" text-anchor="middle" fill="#8b95a4">CHECK (ST_IsValid(geom))</text>
+
+    <!-- arrow out -->
+    <line x1="620" y1="240" x2="778" y2="240" stroke="#22d3ee" stroke-width="2" marker-end="url(#a1)"/>
+    <text x="700" y="198" font-size="12" text-anchor="middle" fill="#22d3ee">ST_AsGeoJSON(geom, 7)</text>
+    <text x="700" y="216" font-size="12" text-anchor="middle" fill="#22d3ee">4-7 digits by zoom</text>
+
+    <!-- right: read -->
+    <rect x="780" y="150" width="160" height="150" rx="10" fill="#1a1f26" stroke="#2c333d"/>
+    <text x="860" y="180" font-size="15" text-anchor="middle" font-weight="600">Read (REST / WS)</text>
+    <text x="860" y="204" font-size="14" text-anchor="middle">AreaDto.geometry</text>
+    <text x="860" y="224" font-size="12" text-anchor="middle" fill="#8b95a4">GeoJSON, still 4326</text>
+    <text x="860" y="250" font-size="12" text-anchor="middle" fill="#8b95a4">client stores keep</text>
+    <text x="860" y="268" font-size="12" text-anchor="middle" fill="#8b95a4">lng/lat, never pixels</text>
+
+    <!-- right top: display CRS -->
+    <rect x="770" y="50" width="180" height="60" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="860" y="74" font-size="14" text-anchor="middle">Display: EPSG:3857</text>
+    <text x="860" y="94" font-size="12" text-anchor="middle" fill="#8b95a4">Leaflet, OSM / GovMap</text>
+    <line x1="860" y1="150" x2="860" y2="112" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#m1)"/>
+
+    <!-- right bottom: ITM readout -->
+    <rect x="770" y="340" width="180" height="60" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="860" y="364" font-size="13" text-anchor="middle">Readout: EPSG:2039 (ITM)</text>
+    <text x="860" y="384" font-size="12" text-anchor="middle" fill="#8b95a4">proj4 in the browser</text>
+    <line x1="860" y1="300" x2="860" y2="338" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#m1)"/>
+
+    <!-- bottom: geography measurement -->
+    <line x1="480" y1="300" x2="480" y2="368" stroke="#22d3ee" stroke-width="2" marker-end="url(#a1)"/>
+    <text x="492" y="340" font-size="13" fill="#22d3ee">geom::geography</text>
+    <rect x="270" y="370" width="420" height="100" rx="10" fill="#1a1f26" stroke="#2c333d"/>
+    <text x="480" y="396" font-size="15" text-anchor="middle" font-weight="600">Measure on the WGS84 ellipsoid</text>
+    <text x="480" y="416" font-size="12" text-anchor="middle" fill="#8b95a4">a = 6378137 m, 1/f = 298.257223563, Karney's algorithm</text>
+    <text x="480" y="440" font-size="13" text-anchor="middle">ST_Area(g::geography) / 1e6 -> area_km2 (stored)</text>
+    <text x="480" y="460" font-size="13" text-anchor="middle">ST_Perimeter(g::geography) / 1e3 -> perimeter_km (stored)</text>
+
+    <!-- the mistake this design avoids -->
+    <text x="30" y="392" font-size="12" fill="#8b95a4">Never measured this way:</text>
+    <text x="30" y="412" font-size="12" fill="#8b95a4">ST_Area(ST_Transform(geom, 3857))</text>
+    <text x="30" y="432" font-size="12" fill="#8b95a4">is 1.40 x too large in Tel Aviv</text>
+    <text x="30" y="452" font-size="12" fill="#8b95a4">and 8.5 x at 70° N (fixtures)</text>
+
+    <text x="480" y="515" font-size="14" text-anchor="middle" fill="#8b95a4">Figure 1 - One stored CRS (EPSG:4326); display projections and ellipsoid measurements derive from it, never the reverse.</text>
+  </g>
+</svg>

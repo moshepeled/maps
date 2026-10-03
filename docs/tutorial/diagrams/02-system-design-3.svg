@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640" role="img" aria-labelledby="t3 d3">
+  <title id="t3">Inside one backend instance: composition root, modules and layers</title>
+  <desc id="d3">main.ts loads config, creates the Container (the composition root), builds the Fastify app, installs the shutdown handlers, listens and then starts the seven modules' background work. Each module is layered routes to service to repository, and only infra adapters touch PostgreSQL or Redis.</desc>
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="640" fill="#111418"/>
+  <g font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#e8ebf0">
+    <text x="480" y="34" text-anchor="middle" font-size="20" font-weight="600">Inside one backend instance (backend/src)</text>
+
+    <!-- main.ts -->
+    <rect x="30" y="64" width="250" height="210" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="46" y="90" font-size="16" font-weight="600">main.ts (process entry)</text>
+    <text x="46" y="116" font-size="14">1. loadConfigFromEnv(), fail fast</text>
+    <text x="46" y="138" font-size="14">2. createContainer(config)</text>
+    <text x="46" y="160" font-size="14">3. buildApp(container)</text>
+    <text x="46" y="182" font-size="14">4. install shutdown handlers</text>
+    <text x="46" y="204" font-size="14">5. app.listen(host, port)</text>
+    <text x="46" y="226" font-size="14">6. snap.start(): module timers</text>
+    <text x="46" y="250" font-size="13" fill="#8b95a4">only src/ entry point that exits</text>
+    <text x="46" y="266" font-size="13" fill="#8b95a4">the process (CLI scripts aside)</text>
+
+    <!-- container -->
+    <rect x="300" y="64" width="320" height="210" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="316" y="90" font-size="16" font-weight="600">Container - composition root</text>
+    <text x="316" y="110" font-size="13" fill="#8b95a4">container.ts: the only place that wires things</text>
+    <text x="316" y="132" font-size="14">config, logger, clock, metrics</text>
+    <text x="316" y="150" font-size="14">db (pg Pool), redis (cmd, sub, cache)</text>
+    <text x="316" y="168" font-size="14">keys, events (bus), limiter, areaCache</text>
+    <text x="316" y="186" font-size="14">audit, tokens, wsTickets, revocations</text>
+    <text x="316" y="204" font-size="14">read ports: sessions, users -</text>
+    <text x="316" y="222" font-size="14">areasReader, drafts</text>
+    <text x="316" y="244" font-size="13" fill="#8b95a4">no process-global state: two containers can</text>
+    <text x="316" y="260" font-size="13" fill="#8b95a4">share one process (two-instances.int.test.ts)</text>
+
+    <!-- modules -->
+    <rect x="640" y="64" width="290" height="210" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="656" y="90" font-size="16" font-weight="600">APP_MODULES (app.ts)</text>
+    <text x="656" y="110" font-size="13" fill="#8b95a4">each index.ts exports one ModuleFactory</text>
+    <text x="656" y="134" font-size="14">health, meta, auth, areas</text>
+    <text x="656" y="154" font-size="14">realtime, admin, retention</text>
+    <text x="656" y="180" font-size="14">register(app) before listen()</text>
+    <text x="656" y="200" font-size="14">start() after listen()</text>
+    <text x="656" y="220" font-size="14">stop() in reverse order on shutdown</text>
+    <text x="656" y="254" font-size="13" fill="#8b95a4">modules never reach into each other</text>
+
+    <line x1="280" y1="150" x2="298" y2="150" stroke="#8b95a4" stroke-width="2" marker-end="url(#m3)"/>
+    <line x1="620" y1="150" x2="638" y2="150" stroke="#22d3ee" stroke-width="2" marker-end="url(#a3)"/>
+    <text x="629" y="294" text-anchor="middle" font-size="12" fill="#8b95a4">-> each factory(container) returns one AppModule</text>
+
+    <!-- zoom: areas module layers -->
+    <text x="30" y="318" font-size="15" font-weight="600" fill="#22d3ee">Zoom into one module: modules/areas (the same shape in auth, realtime, admin, ...)</text>
+    <rect x="30" y="334" width="900" height="190" rx="12" fill="none" stroke="#8b95a4" stroke-width="1" stroke-dasharray="6 4"/>
+
+    <rect x="50" y="354" width="270" height="150" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="66" y="380" font-size="16" font-weight="600">routes (transport)</text>
+    <text x="66" y="400" font-size="13" fill="#8b95a4">areas.routes.ts</text>
+    <text x="66" y="424" font-size="14">zod transport schemas -> 400</text>
+    <text x="66" y="444" font-size="14">app.authenticate, drawRateLimit</text>
+    <text x="66" y="464" font-size="14">DTO mapping, HTTP status codes</text>
+    <text x="66" y="490" font-size="13" fill="#8b95a4">no SQL, no business rules</text>
+
+    <rect x="345" y="354" width="270" height="150" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="361" y="380" font-size="16" font-weight="600">service (domain)</text>
+    <text x="361" y="400" font-size="13" fill="#8b95a4">areas.service.ts, merge.ts (pure)</text>
+    <text x="361" y="422" font-size="14">transactions, domain rules -> 422</text>
+    <text x="361" y="440" font-size="14">merge, events after commit, audit</text>
+    <text x="361" y="458" font-size="14">in: AreasActor (from the route's</text>
+    <text x="361" y="476" font-size="14">ActorContext), never the request</text>
+    <text x="361" y="496" font-size="13" fill="#8b95a4">decides which statement runs</text>
+
+    <rect x="640" y="354" width="270" height="150" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="656" y="380" font-size="16" font-weight="600">repository (SQL)</text>
+    <text x="656" y="400" font-size="13" fill="#8b95a4">areas.repository.ts</text>
+    <text x="656" y="424" font-size="14">NamedSql {name, text} per statement</text>
+    <text x="656" y="444" font-size="14">$n placeholders only, typed rows</text>
+    <text x="656" y="464" font-size="14">only this module's own tables</text>
+    <text x="656" y="490" font-size="13" fill="#8b95a4">no business decisions</text>
+
+    <line x1="320" y1="429" x2="343" y2="429" stroke="#22d3ee" stroke-width="2" marker-end="url(#a3)"/>
+    <line x1="615" y1="429" x2="638" y2="429" stroke="#22d3ee" stroke-width="2" marker-end="url(#a3)"/>
+
+    <!-- infra bar -->
+    <rect x="30" y="546" width="900" height="50" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="480" y="567" text-anchor="middle" font-size="14" font-weight="600">infra/ - technical adapters with no business rules</text>
+    <text x="480" y="587" text-anchor="middle" font-size="13" fill="#8b95a4">db, redis, events, ratelimit, cache, audit, auth, http, metrics, directory (read ports), drafts, shutdown</text>
+
+    <text x="480" y="624" text-anchor="middle" font-size="14" fill="#8b95a4">Dependencies flow one way: modules receive infra through the Container; a route never sees SQL, a repository never decides.</text>
+  </g>
+</svg>

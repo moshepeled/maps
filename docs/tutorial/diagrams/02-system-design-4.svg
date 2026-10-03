@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-labelledby="t4 d4">
+  <title id="t4">The shared contracts package</title>
+  <desc id="d4">@snapland/shared holds zod schemas, error codes, limits, polygon validation, geodesic area and the WebSocket protocol. The backend validates requests and generates OpenAPI from it; the frontend parses responses and computes the live area with it. In development the package resolves to its TypeScript source through the @snapland/source condition; in production to dist. The package's exports map exposes only its index, so deep imports cannot resolve, and a dependency audit script enforces the R45 ban list.</desc>
+  <defs>
+    <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <rect width="960" height="600" fill="#111418"/>
+  <g font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#e8ebf0">
+    <text x="480" y="34" text-anchor="middle" font-size="20" font-weight="600">One contract, two runtimes: @snapland/shared (ADR-0001)</text>
+
+    <!-- backend -->
+    <rect x="30" y="70" width="250" height="220" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="46" y="96" font-size="16" font-weight="600">backend uses it for</text>
+    <text x="46" y="122" font-size="14">request validation (fastify-</text>
+    <text x="46" y="140" font-size="14">type-provider-zod) -> 400</text>
+    <text x="46" y="164" font-size="14">OpenAPI /docs from the schemas</text>
+    <text x="46" y="188" font-size="14">ERROR_STATUS -> problem+json</text>
+    <text x="46" y="212" font-size="14">validatePolygon() -> 422 codes</text>
+    <text x="46" y="236" font-size="14">GET /api/v1/config serves LIMITS</text>
+    <text x="46" y="260" font-size="14">WS messages parsed (strict)</text>
+
+    <!-- shared -->
+    <rect x="310" y="70" width="340" height="220" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="326" y="96" font-size="15" font-weight="600">@snapland/shared (packages/shared/src)</text>
+    <text x="326" y="120" font-size="14">zod schemas: REST DTOs + WS protocol</text>
+    <text x="326" y="140" font-size="14">error codes with their HTTP status</text>
+    <text x="326" y="160" font-size="14">LIMITS, RATE_LIMITS, REALTIME, palette</text>
+    <text x="326" y="180" font-size="14">polygon normalize / validate</text>
+    <text x="326" y="200" font-size="14">geodesic area (geographiclib, Karney)</text>
+    <text x="326" y="220" font-size="14">Web Mercator + tile math, sanitizeText</text>
+    <text x="326" y="250" font-size="13" fill="#8b95a4">no I/O, no Node or DOM APIs</text>
+    <text x="326" y="270" font-size="13" fill="#8b95a4">deps: zod, geographiclib-geodesic only</text>
+
+    <!-- frontend -->
+    <rect x="680" y="70" width="250" height="220" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="696" y="96" font-size="16" font-weight="600">frontend uses it for</text>
+    <text x="696" y="122" font-size="14">parsing every response and</text>
+    <text x="696" y="140" font-size="14">WS message (loose, forward-safe)</text>
+    <text x="696" y="164" font-size="14">z.infer types for stores/props</text>
+    <text x="696" y="188" font-size="14">live km² = geodesicArea(points)</text>
+    <text x="696" y="212" font-size="14">validatePolygon while drawing</text>
+    <text x="696" y="236" font-size="14">limits fallback until /config</text>
+    <text x="696" y="260" font-size="14">answers; protocol close codes</text>
+
+    <line x1="310" y1="180" x2="282" y2="180" stroke="#22d3ee" stroke-width="2" marker-end="url(#a4)"/>
+    <line x1="650" y1="180" x2="678" y2="180" stroke="#22d3ee" stroke-width="2" marker-end="url(#a4)"/>
+
+    <!-- resolution -->
+    <rect x="30" y="330" width="440" height="130" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="46" y="356" font-size="15" font-weight="600" fill="#22d3ee">Development and tests: "live source"</text>
+    <text x="46" y="382" font-size="14">exports["."]["@snapland/source"] -> src/index.ts</text>
+    <text x="46" y="404" font-size="14">tsconfig customConditions, tsx --conditions</text>
+    <text x="46" y="426" font-size="14">Vite/Vitest alias -> the TypeScript source</text>
+    <text x="46" y="448" font-size="13" fill="#8b95a4">a contract edit is one edit, type-checked on both sides at once</text>
+
+    <rect x="490" y="330" width="440" height="130" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="506" y="356" font-size="15" font-weight="600">Production builds</text>
+    <text x="506" y="382" font-size="14">npm run build -w @snapland/shared -> dist/index.js</text>
+    <text x="506" y="404" font-size="14">backend/Dockerfile builds shared first, resolves dist</text>
+    <text x="506" y="426" font-size="14">docker/nginx/Dockerfile bundles it into the SPA</text>
+    <text x="506" y="448" font-size="13" fill="#8b95a4">exports["."]["default"] -> ./dist/index.js</text>
+
+    <!-- guard rails -->
+    <rect x="30" y="486" width="900" height="80" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="480" y="508" text-anchor="middle" font-size="14" font-weight="600">Guard rails: the package boundary and the R45 ban list</text>
+    <text x="480" y="530" text-anchor="middle" font-size="13" fill="#8b95a4">exports["."] is the only entry -> a deep import cannot resolve (Node: ERR_PACKAGE_PATH_NOT_EXPORTED; TS: moduleResolution NodeNext)</text>
+    <text x="480" y="550" text-anchor="middle" font-size="13" fill="#8b95a4">R45 ban list (yjs, socket.io, leaflet-draw, ...): scripts/check-banned-deps.mjs walks the installed tree - npm run check:deps</text>
+
+    <text x="480" y="590" text-anchor="middle" font-size="14" fill="#8b95a4">Client preview and server validation run the same code, so they agree by construction; fixtures prove it against PostGIS.</text>
+  </g>
+</svg>

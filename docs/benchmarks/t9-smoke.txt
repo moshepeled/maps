@@ -1,0 +1,37 @@
+PASS users on different backend instances {"alice":"t9-a","bob":"t9-b"}
+PASS (d) presence before the first click = viewing {"status":"viewing"}
+PASS empty-hint hidden while drawing {"visibleAtStart":false}
+PASS (a) corner 1 placed within 1 px {"distancePx":0,"placed":[34.7799897,32.0799929],"corner":[34.78,32.08]}
+PASS (d) presence drawing ≤ 2 s after the first click {"ms":9}
+PASS (a) corner 2 placed within 1 px {"distancePx":0,"placed":[34.7905898,32.0799929],"corner":[34.7906,32.08]}
+PASS (a) corner 3 placed within 1 px {"distancePx":0,"placed":[34.7905898,32.0889921],"corner":[34.7906,32.089]}
+PASS (b) live readout = geodesicArea(quantize7(points + provisional)) ≤ 1e-9 {"readout":0.9986215183076859,"expected":0.9986215183076859,"rel":0}
+PASS (b) live readout within 5e-3 of the fixture {"readout":0.9986215183076859,"fixture":0.9987007904701233,"rel":0.00007937528756746033}
+PASS (c) remote draft visible to Bob ≤ 2 s {"ms":2}
+PASS (c) chip = geodesicArea(relayed vertices + cursor) ≤ 1e-9 {"chip":0.9985899040870666,"expected":0.9985899040865898,"rel":4.775141297995307e-13}
+PASS (c) chip within 5e-4 of Alice's readout {"rel":0.00003165786040023779}
+PASS Aerial mid-draw keeps every point {"baseLayer":"govmap-itm","points":3,"ownDraftDataPoints":"3"}
+PASS coord-readout shows ITM on the Aerial (ITM) map {"e":"179384.62445632063","n":"665267.0138713125","text":"32.079988, 34.780009 · ITM E 179384.6 N 665267.0"}
+PASS Map → Aerial → Map keeps every point {"points":3}
+PASS ITM round trip restores center (±1e-6°) and zoom; projected delta ≤ 1 px {"viewBefore":{"center":{"lat":32.085,"lng":34.78530000000001},"zoom":16},"viewAfter":{"center":{"lat":32.085,"lng":34.78530000000001},"zoom":16},"maxPxDelta":0}
+PASS (e) Naming readout = geodesicArea(quantize7(points)) ≤ 1e-9 {"mode":"naming","readout":0.9986215183076859,"expected":0.9986215183076859,"rel":0}
+pausing 72000 ms in Naming…
+PASS draft still visible to Bob after a 72 s pause in Naming {"remoteDraftVisible":true,"drafts":[{"userId":"b7226523-5d4e-4e0d-a41a-06c6aed5023a","points":4,"idle":true}]}
+PASS (e) POST /api/v1/areas → 201 {"status":201,"id":"ae60109e-096e-400d-95ea-bd3f334a3539"}
+PASS (e) saved areaKm2 = Naming readout ≤ 1e-9 {"areaKm2":0.9986215183067322,"readout":0.9986215183076859,"rel":9.549980254472847e-13}
+PASS (d) presence viewing again ≤ 2 s after the save {"ms":84}
+PASS (f) Bob's areasInView has the area with the same areaKm2 (≤ 1e-9) {"ms":4,"bob":0.9986215183067322,"saved":0.9986215183067322}
+PASS (f) Bob's remote-draft is gone {"ms":1}
+PASS (f) analysis-summary count +1 and total +areaKm2 (±1e-9) {"before":{"count":9,"total":4.203378730881214},"after":{"count":10,"total":5.202000249187947},"areaKm2":0.9986215183067322}
+PASS empty-hint hidden after saving an area in view {}
+PASS (f) area-panel-perimeter shows on Bob's page after selecting the area {"perimeter":"4.00 km","selectedOnBob":"ae60109e-096e-400d-95ea-bd3f334a3539","perimeterKm":3.997246034312771}
+PASS blocking /ws → connection-status limited {"msAfterReload":10402}
+PASS limited mode: REST save → 201 {"status":201,"areaKm2":0.04177853153085709}
+PASS limited-mode save reaches Bob (live) ≤ 3 s {"ms":2}
+PASS Bob's save while Alice is limited → 201 {"status":201}
+PASS limited client gets the other user's change via polling ≤ 7 s {"ms":2691}
+PASS unblocking /ws → live again {"ms":25385}
+PASS coord-readout ITM within ±1 m of (179383.784, 665268.335) at z18 {"e":179383.8270615936,"n":665268.5505915267,"text":"32.080002, 34.780000 · ITM E 179383.8 N 665268.6"}
+PASS no uncaught page errors {"consoleErrors":[]}
+
+34/34 checks passed

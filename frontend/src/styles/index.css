@@ -1,0 +1,30 @@
+/* ==========================================================================
+   Snapland SPA styles (UI.md v2 "Studio"), after fonts.css, Leaflet's CSS and docs/design/tokens.css (main.tsx).
+   One file per region, so regions can be restyled independently; order matters only between the shared layers
+   (base -> controls) and the regions that build on them.
+   ========================================================================== */
+
+/* Shared layers */
+@import './base.css';
+@import './controls.css';
+
+/* The frame (D-4): grid placement, then its regions */
+@import './shell.css';
+@import './titlebar.css';
+@import './rail.css';
+@import './optionsbar.css';
+@import './statusbar.css';
+
+/* Inspector, its content and the phone sheet */
+@import './inspector.css';
+@import './presence.css';
+@import './panels.css';
+
+/* Over the map and over the page */
+@import './map.css';
+@import './notices.css';
+@import './toasts.css';
+@import './dialogs.css';
+
+/* Signed-out pages */
+@import './auth.css';

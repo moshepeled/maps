@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-labelledby="t3 d3">
+  <title id="t3">What docker compose up starts</title>
+  <desc id="d3">The browser reaches nginx on localhost 5173. nginx proxies to backend-1 and backend-2 on internal port 3100. Both backends use postgres, redis and redis-cache. One one-shot job, migrate, runs once postgres is healthy and before the backends start.</desc>
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: #e8ebf0; }
+    .title { font-size: 20px; font-weight: 600; }
+    .label { font-size: 15px; font-weight: 600; }
+    .b { font-size: 14px; }
+    .small { font-size: 13px; fill: #8b95a4; }
+    .mono { font-family: ui-monospace, Consolas, monospace; font-size: 13px; fill: #22d3ee; }
+    .box { fill: #181c22; stroke: #5c6676; stroke-width: 1.5; rx: 10; }
+    .edge { fill: #181c22; stroke: #22d3ee; stroke-width: 2; rx: 10; }
+    .store { fill: #181c22; stroke: #8b95a4; stroke-width: 1.5; rx: 10; }
+    .job { fill: #14171c; stroke: #8b95a4; stroke-width: 1.5; stroke-dasharray: 6 4; rx: 10; }
+    .flow { stroke: #22d3ee; stroke-width: 2; fill: none; }
+    .dep { stroke: #8b95a4; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+  </style>
+  <rect width="960" height="600" fill="#111418"/>
+  <text x="32" y="40" class="title">What `docker compose up -d --build` starts</text>
+
+  <!-- Browser -->
+  <rect x="380" y="70" width="200" height="50" class="box"/>
+  <text x="400" y="92" class="label">Your browser</text>
+  <text x="400" y="110" class="mono">http://localhost:5173</text>
+
+  <!-- nginx -->
+  <path d="M480,120 L480,150" class="flow" marker-end="url(#a3)"/>
+  <rect x="300" y="152" width="360" height="74" class="edge"/>
+  <text x="320" y="176" class="label">nginx <tspan class="small"> - the only way to the app, 127.0.0.1:5173 -> 80</tspan></text>
+  <text x="320" y="196" class="b">serves the built React app (static files)</text>
+  <text x="320" y="214" class="b">proxies /api, /ws, /docs, /health to both backends (least_conn)</text>
+
+  <!-- backends -->
+  <path d="M420,226 L300,270" class="flow" marker-end="url(#a3)"/>
+  <path d="M540,226 L660,270" class="flow" marker-end="url(#a3)"/>
+  <rect x="150" y="272" width="280" height="72" class="box"/>
+  <text x="170" y="296" class="label">backend-1</text>
+  <text x="170" y="316" class="b">Fastify API + WebSocket gateway</text>
+  <text x="170" y="334" class="small">port 3100, internal network only</text>
+
+  <rect x="530" y="272" width="280" height="72" class="box"/>
+  <text x="550" y="296" class="label">backend-2</text>
+  <text x="550" y="316" class="b">identical image, INSTANCE_ID differs</text>
+  <text x="550" y="334" class="small">port 3100, internal network only</text>
+
+  <!-- stores -->
+  <path d="M230,344 L200,400" class="flow" marker-end="url(#a3)"/>
+  <path d="M310,344 L440,400" class="flow" marker-end="url(#a3)"/>
+  <path d="M360,344 L700,400" class="flow" marker-end="url(#a3)"/>
+  <path d="M610,344 L250,400" class="flow" marker-end="url(#a3)"/>
+  <path d="M660,344 L500,400" class="flow" marker-end="url(#a3)"/>
+  <path d="M730,344 L740,400" class="flow" marker-end="url(#a3)"/>
+
+  <rect x="60" y="402" width="270" height="84" class="store"/>
+  <text x="80" y="426" class="label">postgres</text>
+  <text x="80" y="446" class="b">PostgreSQL 17 + PostGIS 3.5</text>
+  <text x="80" y="464" class="small">durable data, 127.0.0.1:55432 for tools</text>
+
+  <rect x="350" y="402" width="270" height="84" class="store"/>
+  <text x="370" y="426" class="label">redis</text>
+  <text x="370" y="446" class="b">critical state, never evicted</text>
+  <text x="370" y="464" class="small">pub/sub, presence, limits, 127.0.0.1:56379</text>
+
+  <rect x="640" y="402" width="270" height="84" class="store"/>
+  <text x="660" y="426" class="label">redis-cache</text>
+  <text x="660" y="446" class="b">disposable L2 cache, LRU-evicted</text>
+  <text x="660" y="464" class="small">bbox response bodies, 127.0.0.1:56380</text>
+
+  <!-- one-shot jobs -->
+  <rect x="32" y="152" width="230" height="40" class="job"/>
+  <text x="48" y="177" class="b">migrate <tspan class="small">(one-shot, then exits 0)</tspan></text>
+  <path d="M147,192 L147,270" class="dep" marker-end="url(#m3)"/>
+  <text x="32" y="140" class="small">runs first, once postgres is healthy:</text>
+
+  <!-- Caption -->
+  <line x1="32" y1="516" x2="928" y2="516" stroke="#5c6676"/>
+  <text x="32" y="542" class="small">Caption: the app is reached only through nginx. The backends never publish a host port; the three data stores publish</text>
+  <text x="32" y="562" class="small">theirs on 127.0.0.1 so local tools (integration tests, npm run migrate) can reach them. The dashed box exits once its job is done.</text>
+  <text x="32" y="582" class="small">Source: docker-compose.yml. Chapter 9 explains every setting; Chapter 2 adds the protocols and Redis pub/sub between replicas.</text>
+</svg>

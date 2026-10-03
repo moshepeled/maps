@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="960" height="620" role="img" aria-labelledby="t2 d2">
+  <title id="t2">Four goals collect the assignment's bullets</title>
+  <desc id="d2">Four cards: Real-time, Accuracy, Scalability and Security. Each lists the assignment bullets it collects and the chapters of this course that teach it.</desc>
+  <style>
+    text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: #e8ebf0; }
+    .title { font-size: 20px; font-weight: 600; }
+    .h { font-size: 17px; font-weight: 600; fill: #22d3ee; }
+    .b { font-size: 14px; }
+    .small { font-size: 13px; fill: #8b95a4; }
+    .card { fill: #181c22; stroke: #5c6676; stroke-width: 1.5; rx: 12; }
+    .chip { fill: #20252d; stroke: #22d3ee; stroke-width: 1; rx: 6; }
+  </style>
+  <rect width="960" height="620" fill="#111418"/>
+  <text x="32" y="40" class="title">Four goals collect the assignment's bullets</text>
+  <text x="32" y="64" class="small">Every bullet of instractions.md lands in one of these four goals. The chapter numbers are where this course teaches it.</text>
+
+  <!-- Real-time -->
+  <rect x="32" y="90" width="440" height="230" class="card"/>
+  <text x="52" y="120" class="h">Real-time</text>
+  <text x="52" y="148" class="b">- WebSocket server for real-time updates</text>
+  <text x="52" y="170" class="b">- Show other users' drawing actions live</text>
+  <text x="52" y="192" class="b">- Show active users viewing / drawing</text>
+  <text x="52" y="214" class="b">- Handle concurrent drawing from multiple users</text>
+  <text x="52" y="236" class="b">- Graceful degradation when WebSocket fails</text>
+  <text x="52" y="258" class="b">- Optimize WebSocket messages</text>
+  <rect x="52" y="278" width="150" height="26" class="chip"/>
+  <text x="62" y="296" class="b">Chapters 6 and 8</text>
+
+  <!-- Accuracy -->
+  <rect x="488" y="90" width="440" height="230" class="card"/>
+  <text x="508" y="120" class="h">Accuracy</text>
+  <text x="508" y="148" class="b">- Area in km², considering Earth's curvature</text>
+  <text x="508" y="170" class="b">- Area shown live while the polygon is drawn</text>
+  <text x="508" y="192" class="b">- Coordinate transformations between projections</text>
+  <text x="508" y="214" class="b">- Drawn elements stay in place across layer switches</text>
+  <text x="508" y="236" class="b">- Validate polygon coordinates, reject invalid shapes</text>
+  <text x="508" y="258" class="b">- OpenStreetMap + GovMap aerial base layers</text>
+  <rect x="508" y="278" width="170" height="26" class="chip"/>
+  <text x="518" y="296" class="b">Chapters 3, 5 and 7</text>
+
+  <!-- Scalability -->
+  <rect x="32" y="340" width="440" height="230" class="card"/>
+  <text x="52" y="370" class="h">Scalability</text>
+  <text x="52" y="398" class="b">- Spatial indexing for bbox queries</text>
+  <text x="52" y="420" class="b">- Caching layer for frequent geographic data</text>
+  <text x="52" y="442" class="b">- 10,000+ polygons per map region</text>
+  <text x="52" y="464" class="b">- Connection pooling, message queuing</text>
+  <text x="52" y="486" class="b">- Horizontal scaling: multiple server instances</text>
+  <text x="52" y="508" class="b">- Health checks, telemetry, performance metrics</text>
+  <rect x="52" y="528" width="170" height="26" class="chip"/>
+  <text x="62" y="546" class="b">Chapters 3, 5 and 9</text>
+
+  <!-- Security -->
+  <rect x="488" y="340" width="440" height="230" class="card"/>
+  <text x="508" y="370" class="h">Security</text>
+  <text x="508" y="398" class="b">- Authentication and session management</text>
+  <text x="508" y="420" class="b">- Secure WebSocket connections with tokens</text>
+  <text x="508" y="442" class="b">- Rate limit: 50 drawing actions / minute / user</text>
+  <text x="508" y="464" class="b">- Input sanitization, CORS, request timeouts</text>
+  <text x="508" y="486" class="b">- Audit trail of every user action</text>
+  <text x="508" y="508" class="b">- Versioning, conflicts, soft deletes: saved work is never lost</text>
+  <rect x="508" y="528" width="170" height="26" class="chip"/>
+  <text x="518" y="546" class="b">Chapters 4, 5 and 10</text>
+
+  <text x="32" y="600" class="small">Caption: the same bullets, regrouped by the question they answer. SPEC.md section 1 keeps the exact bullet-to-file-to-test map (R0...R45).</text>
+</svg>

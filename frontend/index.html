@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- interactive-widget: the phone naming sheet stays above the on-screen keyboard (UX §3.2, UX-AC-83). -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <!--
+      Theme (user decision D-5, UI.md §13): no color-scheme meta, so the browser never follows the OS scheme for the
+      canvas before the CSS loads; the stored theme is applied by this same-origin classic script before the first
+      paint (the CSP forbids inline scripts). color-scheme itself comes from tokens.css.
+    -->
+    <script src="/theme-boot.js"></script>
+    <meta name="description" content="Snapland: draw and measure areas on the map, together, in real time." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- The tab title stays "Snapland" on every screen (user decision D-3, UX.md §F-01 notes). -->
+    <title>Snapland</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

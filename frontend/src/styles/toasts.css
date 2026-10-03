@@ -1,0 +1,174 @@
+/* ==========================================================================
+   Toasts (UX C-18 v2; UI.md v2 section 10.11): one bottom-centre lane over the map (placed by shell.css) holding the
+   collaboration queue above my own. Elevated surface, a leading icon (or the actor's avatar), the action, dismiss,
+   and a 2 px Undo countdown along the bottom edge.
+   ========================================================================== */
+
+.toasts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.toasts .lane {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.toasts .lane:empty {
+  display: none;
+}
+.toasts .lane > * {
+  pointer-events: auto;
+}
+.toast {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: min(var(--size-toast-min-width), 100%);
+  max-width: min(var(--size-toast-max-width), 100%);
+  min-height: 48px;
+  padding: 6px 6px 6px 12px;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--color-elevated);
+  color: var(--color-text);
+  box-shadow: var(--shadow-3);
+  animation: toast-in var(--duration-toast-in) var(--ease-enter);
+}
+@keyframes toast-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+
+/* Leading icon: the undone action's own icon in secondary; states in their semantic icon colour. */
+.toast__icon {
+  color: var(--color-text-secondary);
+}
+.toast__icon--success {
+  color: var(--color-success-icon);
+}
+.toast__icon--info {
+  color: var(--color-info-icon);
+}
+.toast__icon--warning {
+  color: var(--color-warning-icon);
+}
+.toast__icon--danger {
+  color: var(--color-danger-icon);
+}
+/* Collaboration toasts lead with the actor's 24 px avatar. */
+.toast .avatar {
+  --avatar-ring: var(--color-elevated);
+  width: 24px;
+  height: 24px;
+}
+
+.toast .msg {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+/* ", 0.84 km²" after the message: the value in secondary mono (UI.md section 10.11). */
+.toast .msg__value {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-regular);
+}
+.toast .t-action {
+  flex: none;
+  height: var(--size-control-md);
+  min-height: var(--size-hit-min);
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent-text);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+.toast .t-action:hover {
+  background: var(--color-accent-faint);
+}
+.toast .t-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--size-control-md);
+  height: var(--size-control-md);
+  min-width: var(--size-hit-min);
+  min-height: var(--size-hit-min);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+.toast .t-close:hover {
+  background: var(--color-elevated-hover);
+  color: var(--color-text);
+}
+.toast .t-action:focus-visible,
+.toast .t-close:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: var(--size-focus-offset);
+}
+
+/* The time left of the Undo (UX C-18 v2): a hairline track with the accent fill shrinking to the left. The fill
+   freezes with the toast's timer through animation-play-state (inline). */
+.toast-timer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--color-border-subtle);
+}
+.toast-countdown {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+  transform-origin: left;
+  animation: toast-countdown var(--toast-duration, 10s) linear forwards;
+}
+@keyframes toast-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* Phone frame: the toast spans the lane; collaboration toasts keep to one line (UX C-18). */
+.app[data-layout='phone'] .toast {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+.app[data-layout='phone'] .toast--collab .msg {
+  -webkit-line-clamp: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+  /* A static full bar would lie about the time left, so the countdown is hidden (UI.md section 8). */
+  .toast-timer {
+    display: none;
+  }
+  /* Nothing may keep animating out of sight either (UX-AC-123: animation and transition durations are 0). */
+  .toast-countdown {
+    animation: none;
+  }
+}

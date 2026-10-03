@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-labelledby="t5 d5">
+  <title id="t5">Theme and map tone: how a stored choice reaches the page before first paint, and how overlay colours follow the base layer</title>
+  <desc id="d5">Top row: the localStorage key snapland.theme is read by theme-boot.js in the head, which sets html data-theme, which selects the dark or light token set in tokens.css. Second row: the user menu writes the theme through the theme controller, whose store re-renders React and makes the MapController re-read the canvas tokens. Bottom: a two-by-two table of theme against base layer, showing which map tone applies.</desc>
+  <defs>
+    <marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="600" fill="#111418"/>
+  <g font-family="ui-sans-serif, system-ui, sans-serif" fill="#e8ebf0" font-size="14">
+    <text x="480" y="34" text-anchor="middle" font-size="20" font-weight="600">Theme is a per-browser choice; map tone follows the theme AND the base layer</text>
+
+    <!-- row 1: boot path -->
+    <g fill="#1a1e25" stroke="#3a414c" stroke-width="1.4">
+      <rect x="40" y="66" width="190" height="74" rx="10"/>
+      <rect x="270" y="66" width="190" height="74" rx="10"/>
+      <rect x="500" y="66" width="190" height="74" rx="10" stroke="#22d3ee"/>
+      <rect x="730" y="66" width="190" height="74" rx="10"/>
+    </g>
+    <g text-anchor="middle">
+      <text x="135" y="88" font-weight="600">localStorage</text>
+      <text x="135" y="106" font-family="ui-monospace, Menlo, Consolas, monospace">'snapland.theme'</text>
+      <text x="135" y="124" fill="#8b95a4">anything else -> dark</text>
+      <text x="365" y="88" font-weight="600">/theme-boot.js</text>
+      <text x="365" y="106">classic script in head</text>
+      <text x="365" y="124" fill="#8b95a4">CSP forbids inline</text>
+      <text x="595" y="88" font-weight="600">&lt;html data-theme=...&gt;</text>
+      <text x="595" y="106">set before first paint</text>
+      <text x="595" y="124" fill="#8b95a4">OS scheme ignored</text>
+      <text x="825" y="88" font-weight="600">tokens.css</text>
+      <text x="825" y="106" font-family="ui-monospace, Menlo, Consolas, monospace">:root = dark</text>
+      <text x="825" y="124" font-family="ui-monospace, Menlo, Consolas, monospace">[data-theme="light"]</text>
+    </g>
+    <g stroke="#8b95a4" stroke-width="1.6" fill="none" marker-end="url(#a5)">
+      <line x1="230" y1="103" x2="270" y2="103"/>
+      <line x1="460" y1="103" x2="500" y2="103"/>
+      <line x1="690" y1="103" x2="730" y2="103"/>
+    </g>
+
+    <!-- row 2: user path -->
+    <g fill="#1a1e25" stroke="#3a414c" stroke-width="1.4">
+      <rect x="40" y="190" width="250" height="64" rx="10"/>
+      <rect x="330" y="190" width="250" height="64" rx="10"/>
+      <rect x="620" y="190" width="300" height="64" rx="10" stroke="#22d3ee"/>
+    </g>
+    <g text-anchor="middle">
+      <text x="165" y="212" font-weight="600">UserMenu, menuitemradio</text>
+      <text x="165" y="232" font-family="ui-monospace, Menlo, Consolas, monospace">themeController().set(theme)</text>
+      <text x="165" y="248" fill="#8b95a4">apply first, store second</text>
+      <text x="455" y="212" font-weight="600">theme.ts store (zustand)</text>
+      <text x="455" y="232">useTheme() re-renders React</text>
+      <text x="455" y="248" fill="#8b95a4">'storage' event: other tabs</text>
+      <text x="770" y="212" font-weight="600">MapController subscribes</text>
+      <text x="770" y="232" font-family="ui-monospace, Menlo, Consolas, monospace">this.tokens = this.readTokens()</text>
+      <text x="770" y="248" fill="#8b95a4">the canvas cannot read CSS</text>
+    </g>
+    <g stroke="#8b95a4" stroke-width="1.6" fill="none" marker-end="url(#a5)">
+      <line x1="290" y1="222" x2="330" y2="222"/>
+      <line x1="580" y1="222" x2="620" y2="222"/>
+      <line x1="100" y1="190" x2="100" y2="140" stroke-dasharray="5 4"/>
+    </g>
+    <text x="108" y="168" fill="#8b95a4">write (best effort)</text>
+
+    <!-- tone matrix -->
+    <text x="60" y="300" fill="#8b95a4">Map tone (UI.md section 2.5): the --ov-* overlay tokens resolve on the map element</text>
+    <g fill="#161a20" stroke="#2e343e">
+      <rect x="60" y="312" width="140" height="40" rx="6"/>
+      <rect x="200" y="312" width="340" height="40" rx="6"/>
+      <rect x="540" y="312" width="340" height="40" rx="6"/>
+      <rect x="60" y="352" width="140" height="74" rx="6"/>
+      <rect x="60" y="426" width="140" height="74" rx="6"/>
+    </g>
+    <g fill="#1a1e25" stroke="#3a414c">
+      <rect x="200" y="352" width="340" height="74" rx="6"/>
+      <rect x="540" y="352" width="340" height="74" rx="6"/>
+      <rect x="200" y="426" width="340" height="74" rx="6" stroke="#22d3ee"/>
+      <rect x="540" y="426" width="340" height="74" rx="6"/>
+    </g>
+    <g text-anchor="middle">
+      <text x="370" y="337" font-weight="600">Map (OSM tiles)</text>
+      <text x="710" y="337" font-weight="600">Aerial (imagery)</text>
+      <text x="130" y="393" font-weight="600">Dark theme</text>
+      <text x="130" y="467" font-weight="600">Light theme</text>
+      <text x="370" y="376">DARK tone</text>
+      <text x="370" y="396" fill="#8b95a4">OSM tinted: invert, hue-rotate,</text>
+      <text x="370" y="412" fill="#8b95a4">brightness .9, saturate .5</text>
+      <text x="710" y="376">DARK tone</text>
+      <text x="710" y="396" fill="#8b95a4">imagery dimmed ~26 %, never inverted</text>
+      <text x="710" y="412" fill="#8b95a4">bright cores on dark casings</text>
+      <text x="370" y="450" fill="#22d3ee">LIGHT tone - the only light case</text>
+      <text x="370" y="470" fill="#8b95a4">OSM untouched; dark cores, white casings</text>
+      <text x="370" y="486" fill="#8b95a4">selector: tokens.css line 579</text>
+      <text x="710" y="450">DARK tone</text>
+      <text x="710" y="470" fill="#8b95a4">same dimmed imagery as the dark theme</text>
+      <text x="710" y="486" fill="#8b95a4">collaborators keep neon cores</text>
+    </g>
+    <text x="480" y="536" text-anchor="middle" fill="#8b95a4">Filters sit on each tile layer (className snap-tiles--osm / snap-tiles--imagery), never on the tile pane:</text>
+    <text x="480" y="556" text-anchor="middle" fill="#8b95a4">overlays stay unfiltered, and an outgoing layer keeps its look during a cross-fade.</text>
+  </g>
+</svg>

@@ -1,0 +1,193 @@
+/* ==========================================================================
+   Dialogs (UX C-20 - C-23; UI.md v2 section 10.12): scrim, elevated box (440; shortcuts 560), 18/24 title, secondary body,
+   right-aligned footer; stacked full-width buttons on phones. The shortcuts dialog: switch row and key groups.
+   ========================================================================== */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scrim);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--color-scrim);
+}
+.dialog {
+  z-index: var(--z-dialog);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: min(var(--size-dialog-width), calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 20px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--color-elevated);
+  color: var(--color-text);
+  box-shadow: var(--shadow-4);
+  outline: none;
+  animation: dialog-in var(--duration-base) var(--ease-enter);
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+.dialog.wide {
+  max-width: min(560px, calc(100vw - 32px));
+  max-height: 80vh;
+}
+/* The long shortcuts list scrolls under a pinned footer: Close (the initial focus) is visible without scrolling the
+   dialog to its end, so the title and the switch stay in view when it opens. */
+.dialog.wide .foot {
+  position: sticky;
+  bottom: -20px;
+  margin: 0 -24px -20px;
+  padding: 12px 24px 20px;
+  background: var(--color-elevated);
+  box-shadow: 0 -1px 0 var(--color-border-subtle);
+}
+.dialog-title {
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-title);
+  overflow-wrap: anywhere;
+}
+.dialog-body {
+  margin-top: -4px;
+  color: var(--color-text-secondary);
+}
+.dialog .foot {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+/* C-20: every choice is a full-width button, in the UX order (the primary first). */
+.dialog .foot--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+.dialog .banner {
+  margin: 0;
+}
+.dialog .auth-form {
+  display: grid;
+  gap: 14px;
+}
+/* C-21: "Sign in as someone else, Sign out instead" as accent text links. */
+.dialog-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-tertiary);
+}
+.dialog-links .link {
+  min-height: var(--size-hit-min);
+  font-size: inherit;
+}
+.dialog-links .link:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* ------------------------------------------------------------------ keyboard shortcuts (C-23) */
+/* The single-key switch row: the label on the left, the switch on the right; the whole row toggles it. */
+.switch-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-inset);
+  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+  cursor: pointer;
+}
+.switch-row__text {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+.switch-row b {
+  font-weight: var(--font-weight-semibold);
+}
+/* The native checkbox stays in place (role, state, keyboard) but is drawn by the .switch track beside it. */
+.switch-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+.switch-input:focus-visible + .switch {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: var(--size-focus-offset);
+}
+.sc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px 24px;
+}
+.sc-group h3 {
+  margin-bottom: 6px;
+  font-size: var(--font-size-2xs);
+  line-height: var(--line-height-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-caps);
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+.sc-group dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+/* Rows: the description on the left, the key chips right-aligned (the dt stays first in the DOM). */
+.sc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+}
+.sc-row dt {
+  grid-column: 2;
+  grid-row: 1;
+}
+.sc-row dd {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+}
+
+@media (max-width: 599.98px) {
+  .dialog {
+    padding: 20px 16px;
+  }
+  /* Phones: footer buttons stack at full width, the primary (last in the DOM) on top. */
+  .dialog .foot {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .dialog .foot--stack {
+    flex-direction: column;
+  }
+  .dialog .foot .btn {
+    height: var(--size-control-lg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog {
+    animation: none;
+  }
+}

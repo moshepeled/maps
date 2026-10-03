@@ -1,0 +1,50 @@
+# Build context of backend/Dockerfile and docker/nginx/Dockerfile (both build from the repository root). Allow-list:
+# deny everything, then re-admit exactly what the Dockerfiles COPY, so .env, keys, .git and test output never reach an
+# image layer. A new file an image needs must be added here on purpose.
+*
+
+# Root: workspace manifest, lockfile, npm settings (no tokens), shared compiler options.
+!package.json
+!package-lock.json
+!.npmrc
+!tsconfig.base.json
+
+# Workspace manifests of the packages the images build. `npm ci -w ...` needs only the manifests of the selected
+# workspaces, so e2e/ stays out entirely.
+!packages/shared/package.json
+!backend/package.json
+!frontend/package.json
+
+# @snapland/shared (compiled for the backend; the SPA bundles it from source).
+!packages/shared/tsconfig.build.json
+!packages/shared/src
+
+# @snapland/backend: sources, build config, SQL migrations.
+!backend/tsconfig.build.json
+!backend/src
+!backend/migrations
+
+# @snapland/frontend: index.html, public/, src/, vite.config.ts, tsconfig*.json.
+!frontend
+
+# Design tokens: the single source of truth (SPEC section 6.2). frontend/src/main.tsx imports it directly, so the SPA build needs it.
+!docs/design/tokens.css
+
+# nginx configuration.
+!docker/nginx
+
+# Re-exclude generated, secret or test-only files inside the admitted directories. The last matching rule wins.
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.log
+**/*.stackdump
+**/*.test.ts
+**/*.test.tsx
+**/.DS_Store
+**/Thumbs.db

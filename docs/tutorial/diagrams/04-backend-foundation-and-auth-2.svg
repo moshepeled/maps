@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" width="960" height="720" role="img" aria-label="One HTTP request through the Fastify hook chain">
+  <title>One HTTP request through the Fastify hook chain</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b95a4"/>
+    </marker>
+    <style>
+      text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; fill: #e8ebf0; font-size: 15px; }
+      .title { font-size: 21px; font-weight: 600; }
+      .h { font-size: 16px; font-weight: 600; }
+      .m { fill: #8b95a4; font-size: 14px; }
+      .s { fill: #8b95a4; font-size: 13px; }
+      .a { fill: #22d3ee; }
+      .code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 14px; }
+      .box { fill: #1a1f26; stroke: #3a4250; stroke-width: 1.5; }
+      .hi { stroke: #22d3ee; }
+      .ln { stroke: #22d3ee; stroke-width: 2; fill: none; marker-end: url(#arr); }
+      .lm { stroke: #8b95a4; stroke-width: 1.5; fill: none; marker-end: url(#arrm); }
+    </style>
+  </defs>
+  <rect width="960" height="720" fill="#111418"/>
+  <text x="24" y="38" class="title">One HTTP request through the Fastify hook chain</text>
+
+  <!-- Stage 1: onRequest -->
+  <rect x="24" y="70" width="160" height="60" rx="10" class="box hi"/>
+  <text x="104" y="106" text-anchor="middle" class="h code">onRequest</text>
+  <rect x="204" y="70" width="506" height="60" rx="10" class="box"/>
+  <text x="220" y="94">x-request-id, in-flight gauge, timeout safety net, audit tracker</text>
+  <text x="220" y="116" class="m">IP-keyed limits (auth, refresh, ws_upgrade), app.authenticate</text>
+
+  <!-- Stage 2: preValidation -->
+  <rect x="24" y="160" width="160" height="60" rx="10" class="box"/>
+  <text x="104" y="196" text-anchor="middle" class="h code">preValidation</text>
+  <rect x="204" y="160" width="506" height="60" rx="10" class="box"/>
+  <text x="220" y="184">WS upgrade only: Origin -> subprotocol -> ticket GETDEL -> session</text>
+  <text x="220" y="206" class="m">-> capacity; each rejection is problem+json before the 101 (diagram 4)</text>
+
+  <!-- Stage 3: validation -->
+  <rect x="24" y="250" width="160" height="60" rx="10" class="box"/>
+  <text x="104" y="281" text-anchor="middle" class="h code">validation</text>
+  <text x="104" y="300" text-anchor="middle" class="s">zod route schema</text>
+  <rect x="204" y="250" width="506" height="60" rx="10" class="box"/>
+  <text x="220" y="274">transport schema from @snapland/shared: body, params, query</text>
+  <text x="220" y="296" class="m">any failure -> 400 VALIDATION_FAILED (domain rules never live here)</text>
+
+  <!-- Stage 4: preHandler -->
+  <rect x="24" y="340" width="160" height="60" rx="10" class="box"/>
+  <text x="104" y="376" text-anchor="middle" class="h code">preHandler</text>
+  <rect x="204" y="340" width="506" height="60" rx="10" class="box"/>
+  <text x="220" y="364">user-keyed limits (api, client_errors), requireRole('admin') -> DB</text>
+  <text x="220" y="386" class="m">drawRateLimit(kind): one drawing action per call (chapter 5)</text>
+
+  <!-- Stage 5: handler -->
+  <rect x="24" y="430" width="160" height="60" rx="10" class="box"/>
+  <text x="104" y="466" text-anchor="middle" class="h code">handler</text>
+  <rect x="204" y="430" width="506" height="60" rx="10" class="box"/>
+  <text x="220" y="454">route -> service(request.actor()) -> repository (parameterised SQL)</text>
+  <text x="220" y="476" class="m">routes never import pg; services never see FastifyRequest</text>
+
+  <!-- Stage 6: onSend -->
+  <rect x="24" y="520" width="160" height="60" rx="10" class="box"/>
+  <text x="104" y="556" text-anchor="middle" class="h code">onSend</text>
+  <rect x="204" y="520" width="506" height="60" rx="10" class="box"/>
+  <text x="220" y="544">Strict-Transport-Security only when the request arrived over https</text>
+  <text x="220" y="566" class="m">helmet's other headers were set at registration time (global)</text>
+
+  <!-- Stage 7: onResponse -->
+  <rect x="24" y="610" width="160" height="60" rx="10" class="box"/>
+  <text x="104" y="646" text-anchor="middle" class="h code">onResponse</text>
+  <rect x="204" y="610" width="506" height="60" rx="10" class="box"/>
+  <text x="220" y="634">completion log line + duration histogram, audit row for >= 400</text>
+  <text x="220" y="656" class="m">clear the safety-net timer, in-flight gauge decremented</text>
+
+  <!-- Down arrows -->
+  <line x1="104" y1="130" x2="104" y2="158" class="ln"/>
+  <line x1="104" y1="220" x2="104" y2="248" class="ln"/>
+  <line x1="104" y1="310" x2="104" y2="338" class="ln"/>
+  <line x1="104" y1="400" x2="104" y2="428" class="ln"/>
+  <line x1="104" y1="490" x2="104" y2="518" class="ln"/>
+  <line x1="104" y1="580" x2="104" y2="608" class="ln"/>
+
+  <!-- Error path -->
+  <rect x="740" y="250" width="196" height="240" rx="12" class="box hi"/>
+  <text x="838" y="280" text-anchor="middle" class="h">any throw</text>
+  <text x="838" y="312" text-anchor="middle" class="code">setErrorHandler</text>
+  <text x="838" y="340" text-anchor="middle" class="code">toAppError(error)</text>
+  <text x="838" y="368" text-anchor="middle" class="code">buildProblem(...)</text>
+  <text x="838" y="404" text-anchor="middle" class="a">application/problem+json</text>
+  <text x="838" y="430" text-anchor="middle" class="m">code, status, detail</text>
+  <text x="838" y="452" text-anchor="middle" class="m">instance, requestId</text>
+  <text x="838" y="474" text-anchor="middle" class="m">5xx: no internals in the body</text>
+
+  <line x1="710" y1="100" x2="738" y2="290" class="lm"/>
+  <line x1="710" y1="280" x2="738" y2="340" class="lm"/>
+  <line x1="710" y1="370" x2="738" y2="380" class="lm"/>
+  <line x1="710" y1="460" x2="738" y2="420" class="lm"/>
+
+  <text x="24" y="700" class="m">Hooks are attached once in buildApp(); the timeout safety net is inserted per route by an onRoute hook, first in that route's onRequest chain.</text>
+</svg>

@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 848" width="960" height="848" role="img" aria-labelledby="t3 d3">
+  <title id="t3">Two concurrent PATCHes with the same baseVersion: the row lock serialises them and the three-way merge decides</title>
+  <desc id="d3">Sequence diagram. Alice and Bob both send PATCH with baseVersion 3. Alice's transaction takes the row lock, applies her rename as version 4 and commits. Bob's transaction waits, re-reads version 4 in a second statement, loads the base snapshot of version 3 and the fields changed since (name), finds no overlap with his geometry change and commits version 5 with merged true. A variant box shows the conflict case.</desc>
+  <defs>
+    <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; fill: #e8ebf0; }
+    .m { fill: #8b95a4; font-size: 12.5px; }
+    .c { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 12.5px; }
+    .h { font-size: 19px; font-weight: 600; }
+    .e { font-size: 15px; font-weight: 600; fill: #22d3ee; }
+    .box { fill: #1a1f26; stroke: #2b3340; stroke-width: 1.5; }
+    .note { fill: #171c23; stroke: #3a4453; stroke-width: 1; }
+    .plan { fill: #141a21; stroke: #22d3ee; stroke-width: 1.5; }
+    .life { stroke: #3a4453; stroke-width: 1.5; stroke-dasharray: 4 4; }
+    .msg { stroke: #22d3ee; stroke-width: 1.5; }
+    .wait { stroke: #8b95a4; stroke-width: 1.5; stroke-dasharray: 3 3; }
+    .st { fill: #111418; font-weight: 600; }
+  </style>
+  <rect width="960" height="848" fill="#111418"/>
+  <text class="h" x="30" y="34">Two PATCHes, same baseVersion 3: row lock, then a three-way merge per field</text>
+
+  <!-- lifeline headers -->
+  <rect class="box" x="30" y="56" width="170" height="36" rx="8"/>
+  <text x="115" y="80" text-anchor="middle">Alice - PATCH name</text>
+  <rect class="box" x="395" y="56" width="170" height="36" rx="8"/>
+  <text x="480" y="80" text-anchor="middle">PostgreSQL (areas row)</text>
+  <rect class="box" x="760" y="56" width="170" height="36" rx="8"/>
+  <text x="845" y="80" text-anchor="middle">Bob - PATCH geometry</text>
+  <line class="life" x1="115" y1="92" x2="115" y2="690"/>
+  <line class="life" x1="480" y1="92" x2="480" y2="690"/>
+  <line class="life" x1="845" y1="92" x2="845" y2="690"/>
+
+  <!-- both requests -->
+  <text class="c" x="130" y="112">{ baseVersion: 3, name: 'Park' }</text>
+  <line class="msg" x1="115" y1="120" x2="470" y2="120" marker-end="url(#ar3)"/>
+  <text class="c" x="590" y="112">{ baseVersion: 3, geometry: G' }</text>
+  <line class="msg" x1="845" y1="120" x2="490" y2="120" marker-end="url(#ar3)"/>
+
+  <!-- state v3 -->
+  <rect x="440" y="134" width="80" height="24" rx="6" fill="#22d3ee"/>
+  <text class="st" x="480" y="151" text-anchor="middle">row v3</text>
+
+  <!-- tx A lock / tx B waits -->
+  <rect class="note" x="130" y="170" width="340" height="44" rx="8"/>
+  <text class="c" x="142" y="188">tx A: SELECT id ... FOR UPDATE -> lock held</text>
+  <text class="c m" x="142" y="206">base 3 = current 3 -> apply ['name']</text>
+  <rect class="note" x="495" y="170" width="340" height="44" rx="8"/>
+  <text class="c" x="507" y="188">tx B: SELECT id ... FOR UPDATE</text>
+  <text class="c m" x="507" y="206">-> blocks until tx A commits (no lost update)</text>
+  <line class="wait" x1="845" y1="214" x2="845" y2="340"/>
+
+  <!-- tx A write -->
+  <rect class="note" x="130" y="228" width="340" height="60" rx="8"/>
+  <text class="c" x="142" y="246">lockChangeFeed -> UPDATE areas SET name,</text>
+  <text class="c" x="142" y="262">  version = 4, change_seq = nextval(...)</text>
+  <text class="c m" x="142" y="280">INSERT v4 snapshot ['name'] -> COMMIT</text>
+
+  <rect x="440" y="300" width="80" height="24" rx="6" fill="#22d3ee"/>
+  <text class="st" x="480" y="317" text-anchor="middle">row v4</text>
+  <line class="msg" x1="470" y1="312" x2="125" y2="312" marker-end="url(#ar3)"/>
+  <text class="c" x="130" y="336">200 { area: v4, merged: false }</text>
+
+  <!-- tx B continues -->
+  <rect class="note" x="495" y="342" width="340" height="44" rx="8"/>
+  <text class="c" x="507" y="360">tx B: lock granted -> 2nd statement findById</text>
+  <text class="c m" x="507" y="378">reads v4 in a fresh snapshot, not v3</text>
+
+  <rect class="note" x="495" y="398" width="340" height="76" rx="8"/>
+  <text class="c" x="507" y="416">behind (3 &lt; 4):</text>
+  <text class="c" x="507" y="432">  base = versionSnapshot(id, 3)</text>
+  <text class="c" x="507" y="448">  serverChanged = changedFieldsBetween(3, 4)</text>
+  <text class="c" x="507" y="464">                = ['name']</text>
+
+  <rect class="plan" x="495" y="486" width="340" height="76" rx="8"/>
+  <text class="e" x="507" y="506">planUpdate (merge.ts)</text>
+  <text class="c" x="507" y="524">clientChanged = ['geometry']  (G' != base)</text>
+  <text class="c" x="507" y="540">conflicting = ['geometry'] ∩ ['name'] = ∅</text>
+  <text class="c" x="507" y="556">-> apply ['geometry'], merged: true</text>
+
+  <!-- tx B write (Bob's side, continued from the plan) -->
+  <line class="msg" x1="665" y1="562" x2="665" y2="572" marker-end="url(#ar3)"/>
+  <rect class="note" x="495" y="574" width="340" height="76" rx="8"/>
+  <text class="c" x="507" y="592">tx B, continued:</text>
+  <text class="c" x="507" y="608">mergeState -> Alice's name + Bob's G'</text>
+  <text class="c" x="507" y="624">UPDATE ... version = 5, change_seq = nextval</text>
+  <text class="c m" x="507" y="642">INSERT v5 snapshot (merged) -> COMMIT</text>
+
+  <!-- v5 -->
+  <rect x="440" y="664" width="80" height="24" rx="6" fill="#22d3ee"/>
+  <text class="st" x="480" y="681" text-anchor="middle">row v5</text>
+  <line class="msg" x1="490" y1="676" x2="835" y2="676" marker-end="url(#ar3)"/>
+  <text class="c" x="495" y="700">200 { v5, merged: true, serverChangedFields: ['name'] }</text>
+
+  <!-- variant -->
+  <rect class="box" x="30" y="716" width="900" height="80" rx="10" stroke="#3a4453"/>
+  <text class="e" x="44" y="738">Variant - SPEC section 10.3 scenario 2: Alice's v4 had changed the geometry</text>
+  <text class="c" x="44" y="758">serverChanged = ['geometry'], G' != current -> conflicting = ['geometry'] -> 409 VERSION_CONFLICT</text>
+  <text class="c" x="44" y="774">{ baseVersion: 3, currentVersion: 4, conflictingFields: ['geometry'], serverChangedFields: ['geometry'], current: v4 }</text>
+  <text class="c m" x="44" y="790">no version written, audit row area.conflict, UI: Keep mine / Take theirs / Review differences</text>
+
+  <text class="m" x="30" y="818">Figure 5.3 - A field conflicts only when both sides changed it to different values. Disjoint edits merge, and the reply</text>
+  <text class="m" x="30" y="834">tells the client which fields the server kept (serverChangedFields), so the UI can say what happened.</text>
+</svg>

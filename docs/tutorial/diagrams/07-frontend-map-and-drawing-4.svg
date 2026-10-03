@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640" role="img" aria-labelledby="t4 d4">
+  <title id="t4">The cross-CRS switch: a second Leaflet map in EPSG:2039, stacked over the EPSG:3857 map</title>
+  <desc id="d4">Map A in Web Mercator on the left, Map B in Israel TM Grid on the right. Between them, what is carried across: the centre as lat/lng, the zoom as the nearest ground resolution with a round-trip memory, and the overlays rebuilt from the stores. Below, the formula and a three-step timeline: at t = 0 create B at opacity 0, give it input and swap data-base-layer, tokens and attribution at once; fade the container in after load or 1.5 s; destroy A after B loaded (cap 5 s).</desc>
+  <defs>
+    <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#8b95a4"/>
+    </marker>
+    <marker id="c4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <rect width="960" height="640" fill="#111418"/>
+  <g font-family="ui-sans-serif, system-ui, sans-serif" fill="#e8ebf0" font-size="14">
+    <text x="480" y="34" text-anchor="middle" font-size="20" font-weight="600">Map <-> Aerial is a real projection switch: a second Leaflet map, stacked</text>
+
+    <!-- map A -->
+    <rect x="40" y="66" width="330" height="200" rx="12" fill="#1a1e25" stroke="#3a414c" stroke-width="1.4"/>
+    <text x="205" y="94" text-anchor="middle" font-weight="600" font-size="16">Map A, EPSG:3857 (Web Mercator)</text>
+    <text x="205" y="120" text-anchor="middle">OSM tiles, zoom 15, L.CRS.EPSG3857</text>
+    <text x="205" y="142" text-anchor="middle">centre 32.08 N, 34.78 E (lat/lng)</text>
+    <text x="205" y="164" text-anchor="middle">tiles {z}/{x}/{y}.png</text>
+    <text x="205" y="196" text-anchor="middle" fill="#8b95a4">overlays projected with the</text>
+    <text x="205" y="214" text-anchor="middle" fill="#8b95a4">spherical Mercator formula</text>
+    <text x="205" y="246" text-anchor="middle" fill="#22d3ee">data-base-layer="map"</text>
+
+    <!-- map B -->
+    <rect x="590" y="66" width="330" height="200" rx="12" fill="#1a1e25" stroke="#22d3ee" stroke-width="1.4"/>
+    <text x="755" y="94" text-anchor="middle" font-weight="600" font-size="16">Map B, EPSG:2039 (Israel TM Grid)</text>
+    <text x="755" y="120" text-anchor="middle">GovMap 2022 cache, L7, L.Proj.CRS</text>
+    <text x="755" y="142" text-anchor="middle">same centre, 13-level ladder</text>
+    <text x="755" y="164" text-anchor="middle">tiles L07/R{row:08x}/C{col:08x}.jpg</text>
+    <text x="755" y="196" text-anchor="middle" fill="#8b95a4">overlays: proj4leaflet applies tmerc</text>
+    <text x="755" y="214" text-anchor="middle" fill="#8b95a4">and the 7-parameter datum shift</text>
+    <text x="755" y="246" text-anchor="middle" fill="#22d3ee">data-base-layer="govmap-itm"</text>
+
+    <!-- carried items -->
+    <g fill="#20252d" stroke="#3a414c">
+      <rect x="400" y="76" width="160" height="48" rx="8"/>
+      <rect x="400" y="136" width="160" height="62" rx="8"/>
+      <rect x="400" y="210" width="160" height="48" rx="8"/>
+    </g>
+    <g text-anchor="middle">
+      <text x="480" y="95" font-weight="600">centre</text>
+      <text x="480" y="113" fill="#8b95a4">lat/lng, not pixels</text>
+      <text x="480" y="155" font-weight="600">zoom</text>
+      <text x="480" y="172" fill="#8b95a4">nearest resolution</text>
+      <text x="480" y="188" fill="#8b95a4">memory: L7 -> z15</text>
+      <text x="480" y="229" font-weight="600">overlays</text>
+      <text x="480" y="247" fill="#8b95a4">rebuilt from stores</text>
+    </g>
+    <g stroke="#8b95a4" stroke-width="1.6" fill="none" marker-end="url(#a4)">
+      <line x1="370" y1="100" x2="400" y2="100"/>
+      <line x1="560" y1="100" x2="590" y2="100"/>
+      <line x1="370" y1="167" x2="400" y2="167"/>
+      <line x1="560" y1="167" x2="590" y2="167"/>
+      <line x1="370" y1="234" x2="400" y2="234"/>
+      <line x1="560" y1="234" x2="590" y2="234"/>
+    </g>
+
+    <!-- formula -->
+    <rect x="40" y="290" width="880" height="86" rx="10" fill="#161a20" stroke="#2e343e"/>
+    <text x="60" y="314" fill="#8b95a4">crs.ts (SPEC section 8.4)</text>
+    <g font-family="ui-monospace, Menlo, Consolas, monospace" font-size="14">
+      <text x="60" y="338">mpp = 156543.03, cos(lat) / 2^zoom      level = argmin |log2(RES[i]) − log2(mpp)|</text>
+      <text x="60" y="362">back: round(log2(156543.03, cos(lat) / RES[L])) - unless CrsZoomMemory still holds {fromZoom, toLevel}</text>
+    </g>
+
+    <!-- timeline -->
+    <g fill="#1a1e25" stroke="#3a414c" stroke-width="1.4">
+      <rect x="40" y="410" width="270" height="160" rx="10"/>
+      <rect x="345" y="410" width="270" height="160" rx="10"/>
+      <rect x="650" y="410" width="270" height="160" rx="10"/>
+    </g>
+    <g text-anchor="middle">
+      <text x="175" y="436" font-weight="600">t = 0, the switch</text>
+      <text x="175" y="458">Map B created at opacity 0</text>
+      <text x="175" y="478">B takes input at once;</text>
+      <text x="175" y="496">data-base-layer, tokens and</text>
+      <text x="175" y="514">attribution swap at once</text>
+      <text x="175" y="538" fill="#8b95a4">A stays visible underneath</text>
+      <text x="175" y="556" fill="#8b95a4">clamped zoom -> info toast</text>
+
+      <text x="480" y="436" font-weight="600">B fires load (or 1500 ms)</text>
+      <text x="480" y="458">container fades in, 250 ms</text>
+      <text x="480" y="478" fill="#8b95a4">same-CRS tile fades instead swap</text>
+      <text x="480" y="496" fill="#8b95a4">those three at the fade midpoint</text>
+      <text x="480" y="538" fill="#8b95a4">reduced motion: instant</text>
+
+      <text x="785" y="436" font-weight="600">B loaded (cap 5000 ms)</text>
+      <text x="785" y="458">Map A is destroyed</text>
+      <text x="785" y="478">never a frame without tiles</text>
+      <text x="785" y="538" fill="#8b95a4">a second switch completes</text>
+      <text x="785" y="556" fill="#8b95a4">the running one: latest wins</text>
+    </g>
+    <g stroke="#22d3ee" stroke-width="1.6" fill="none" marker-end="url(#c4)">
+      <line x1="310" y1="490" x2="345" y2="490"/>
+      <line x1="615" y1="490" x2="650" y2="490"/>
+    </g>
+    <text x="480" y="606" text-anchor="middle" fill="#8b95a4">Same-CRS switches (Map <-> Esri World Imagery in a build without the ITM layer) use the same BaseLayerCrossfade</text>
+    <text x="480" y="626" text-anchor="middle" fill="#8b95a4">class on tile layers instead of whole map containers (crossfade.ts, the FadeLayer interface).</text>
+  </g>
+</svg>

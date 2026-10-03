@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 660" width="960" height="660" role="img" aria-label="WebSocket handshake with a one-time ticket">
+  <title>WebSocket handshake with a one-time ticket</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b95a4"/>
+    </marker>
+    <style>
+      text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; fill: #e8ebf0; font-size: 15px; }
+      .title { font-size: 21px; font-weight: 600; }
+      .h { font-size: 16px; font-weight: 600; }
+      .m { fill: #8b95a4; font-size: 14px; }
+      .a { fill: #22d3ee; }
+      .code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 14px; }
+      .box { fill: #1a1f26; stroke: #3a4250; stroke-width: 1.5; }
+      .hi { stroke: #22d3ee; }
+      .lane { fill: #161a20; stroke: #2a313b; stroke-width: 1; }
+      .ln { stroke: #22d3ee; stroke-width: 2; fill: none; marker-end: url(#arr); }
+      .lm { stroke: #8b95a4; stroke-width: 1.5; fill: none; marker-end: url(#arrm); }
+    </style>
+  </defs>
+  <rect width="960" height="660" fill="#111418"/>
+  <text x="24" y="38" class="title">WebSocket handshake with a one-time ticket</text>
+
+  <!-- Column headers -->
+  <rect x="24" y="60" width="180" height="34" rx="17" class="lane"/>
+  <text x="114" y="82" text-anchor="middle" class="h">Browser</text>
+  <rect x="260" y="60" width="340" height="34" rx="17" class="lane"/>
+  <text x="430" y="82" text-anchor="middle" class="h">Backend replica (any of the two)</text>
+  <rect x="640" y="60" width="150" height="34" rx="17" class="lane"/>
+  <text x="715" y="82" text-anchor="middle" class="h">Redis</text>
+  <rect x="810" y="60" width="126" height="34" rx="17" class="lane"/>
+  <text x="873" y="82" text-anchor="middle" class="h">PostgreSQL</text>
+
+  <!-- Step 1: get a ticket -->
+  <rect x="24" y="120" width="180" height="56" rx="10" class="box hi"/>
+  <text x="40" y="144" class="h">1  POST ws-ticket</text>
+  <text x="40" y="164" class="m">Authorization: Bearer</text>
+
+  <rect x="260" y="120" width="340" height="56" rx="10" class="box"/>
+  <text x="276" y="144" class="code">issueWsTicket(actor)</text>
+  <text x="276" y="164" class="m">active session + current profile read from the DB</text>
+
+  <rect x="810" y="120" width="126" height="56" rx="10" class="box"/>
+  <text x="873" y="144" text-anchor="middle" class="code">sessions ⋈ users</text>
+  <text x="873" y="164" text-anchor="middle" class="m">active only</text>
+
+  <rect x="640" y="196" width="150" height="70" rx="10" class="box"/>
+  <text x="656" y="220" class="code">SET wsticket:</text>
+  <text x="656" y="238" class="code">&lt;sha256&gt; claims</text>
+  <text x="656" y="256" class="code a">EX 30 NX</text>
+
+  <rect x="260" y="196" width="340" height="56" rx="10" class="box"/>
+  <text x="276" y="220" class="code">201 { ticket (43 chars), expiresAt }</text>
+  <text x="276" y="240" class="m">Cache-Control: no-store; the ticket is never logged</text>
+
+  <rect x="24" y="196" width="180" height="56" rx="10" class="box"/>
+  <text x="40" y="220">ticket kept in memory</text>
+  <text x="40" y="240" class="m">used at once</text>
+
+  <line x1="204" y1="148" x2="258" y2="148" class="ln"/>
+  <line x1="600" y1="148" x2="808" y2="148" class="ln"/>
+  <line x1="600" y1="212" x2="638" y2="230" class="ln"/>
+  <line x1="260" y1="230" x2="206" y2="230" class="ln"/>
+
+  <!-- Step 2: upgrade -->
+  <rect x="24" y="300" width="180" height="92" rx="10" class="box hi"/>
+  <text x="40" y="324" class="h">2  GET /ws?ticket=...</text>
+  <text x="40" y="346" class="code">Origin: allowed</text>
+  <text x="40" y="366" class="code">Sec-WebSocket-</text>
+  <text x="40" y="384" class="code">Protocol: snapland.v1</text>
+
+  <text x="24" y="420" class="m">via nginx (least_conn):</text>
+  <text x="24" y="440" class="m">access log has $uri only,</text>
+  <text x="24" y="460" class="m">so the ticket never</text>
+  <text x="24" y="480" class="m">reaches a log line</text>
+
+  <rect x="260" y="300" width="340" height="270" rx="10" class="box"/>
+  <text x="276" y="324" class="code">onRequest: ws_upgrade 60/min per IP -> 429</text>
+  <text x="276" y="350" class="h">preValidation, in this order:</text>
+  <text x="276" y="374" class="code">1 Origin ∈ CORS_ORIGINS   else 403</text>
+  <text x="276" y="396" class="code">2 subprotocol offered     else 400</text>
+  <text x="276" y="418" class="code a">3 GETDEL wsticket -> null  else 401</text>
+  <text x="276" y="440" class="code">4 not revoked + active    else 401</text>
+  <text x="276" y="462" class="code">5 capacity: instance 503, user 429</text>
+  <text x="276" y="494" class="h a">101 Switching Protocols</text>
+  <text x="276" y="518" class="code">welcome, presence.snapshot</text>
+  <text x="276" y="538" class="code">- lock.snapshot</text>
+  <text x="276" y="560" class="m">then presence.joined to the others</text>
+
+  <rect x="640" y="400" width="150" height="50" rx="10" class="box"/>
+  <text x="715" y="422" text-anchor="middle" class="code a">GETDEL</text>
+  <text x="715" y="440" text-anchor="middle" class="m">single use</text>
+
+  <rect x="640" y="470" width="150" height="50" rx="10" class="box"/>
+  <text x="715" y="492" text-anchor="middle" class="code">EXISTS revoked:</text>
+  <text x="715" y="510" text-anchor="middle" class="code">&lt;sid&gt;</text>
+
+  <rect x="810" y="470" width="126" height="50" rx="10" class="box"/>
+  <text x="873" y="492" text-anchor="middle" class="code">getActive(sid)</text>
+  <text x="873" y="510" text-anchor="middle" class="m">read port</text>
+
+  <line x1="204" y1="346" x2="258" y2="346" class="ln"/>
+  <line x1="600" y1="414" x2="638" y2="422" class="ln"/>
+  <line x1="600" y1="436" x2="638" y2="488" class="lm"/>
+  <!-- step 4 also reads the DB: leave from the bottom edge so the arrow clears the Redis column -->
+  <line x1="560" y1="570" x2="873" y2="522" class="lm"/>
+
+  <rect x="24" y="520" width="180" height="50" rx="10" class="box"/>
+  <text x="40" y="542">socket open</text>
+  <text x="40" y="562" class="m">realtime client: chapter 6</text>
+  <line x1="260" y1="545" x2="206" y2="545" class="ln"/>
+
+  <text x="24" y="610" class="m">A ticket works once and for at most 30 s. Later, the socket is closed with 4401 when the session is revoked (bus event or</text>
+  <text x="24" y="632" class="m">the 60 s re-validation round) or when it reaches the absolute expiry carried in the ticket's claims.</text>
+</svg>

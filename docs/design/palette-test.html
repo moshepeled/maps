@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collaborator palette legibility</title>
+<!-- Visual legibility test for the collaborator palette and overlay strokes on OpenStreetMap
+     and on aerial imagery (Esri World Imagery = the backdrop of the "Aerial" layer group, SPEC §8.3;
+     GovMap tiles need the backend proxy). Rendered to palette-legibility.png. Not production code. -->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  html, body { margin: 0; background: var(--color-bg); font-family: var(--font-sans); color: var(--color-text); }
+  h1 { font-size: var(--font-size-lg); line-height: var(--line-height-lg); margin: 0; font-weight: 600; }
+  header { display: flex; align-items: baseline; gap: 16px; padding: 12px 16px 8px; }
+  header p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 16px 16px; }
+  .cell { position: relative; height: 404px; border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-1); }
+  .cell .map { position: absolute; inset: 0; }
+  .tag { position: absolute; left: 8px; top: 8px; z-index: 1000; background: var(--color-surface); border-radius: var(--radius-sm);
+         padding: 2px 8px; font-size: var(--font-size-xs); line-height: 20px; font-weight: 600; box-shadow: var(--shadow-1); }
+  .leaflet-container { background: #dfe3e8; font-family: var(--font-sans); }
+  /* core + casing + outline — the production recipe */
+  .ov-outline { stroke: var(--ov-outline); fill: none; }
+  .ov-casing { stroke: var(--ov-casing); stroke-opacity: var(--ov-casing-opacity); fill: none; }
+  .ov-core { stroke: var(--c); fill: var(--c); }
+  .ov-core.no-fill { fill: none; }
+  .chip { display: inline-flex; align-items: center; height: var(--ov-chip-height); padding: 0 8px; border-radius: var(--radius-full);
+          background: var(--c); color: var(--collab-on); font: 600 var(--font-size-xs)/16px var(--font-sans);
+          box-shadow: var(--ov-chip-ring), var(--shadow-1); white-space: nowrap; transform: translate(-50%, -50%); }
+</style>
+</head>
+<body>
+<header><h1>Collaborator palette legibility</h1><p>Top: OpenStreetMap. Bottom: aerial imagery. Dashed = another user's draft (core over white casing; imagery adds a dark outline). Solid dark = saved area, indigo = my draft, red short-dash = invalid edge.</p></header>
+<div class="grid" id="grid"></div>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const places = [
+    { name: 'Tel Aviv — Yarkon Park', c: [32.1005, 34.8105], z: 15 },
+    { name: 'Jezreel Valley — fields', c: [32.6130, 35.2830], z: 15 },
+    { name: 'Negev — Mitzpe Ramon', c: [30.6100, 34.8010], z: 15 },
+  ];
+  const names = ['tangerine','ochre','moss','leaf','pine','teal','ocean','grape','orchid','plum','rose','cocoa'];
+  const css = getComputedStyle(document.documentElement);
+  const tok = (n, el = document.documentElement) => getComputedStyle(el).getPropertyValue(n).trim();
+  const px = (v) => parseFloat(v);
+  const grid = document.getElementById('grid');
+  const layers = [
+    { label: 'Map', base: 'map', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' },
+    { label: 'Aerial', base: 'aerial', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' },
+  ];
+  function line(map, latlngs, { color, width, dash, fillOpacity = 0, polygon = true, el }) {
+    const outlineExtra = px(tok('--ov-outline-extra', el)), casingExtra = px(tok('--ov-casing-extra', el));
+    const Ctor = polygon ? L.polygon : L.polyline;
+    const common = { interactive: false, lineJoin: 'round', lineCap: 'round' };
+    if (outlineExtra > 0) Ctor(latlngs, { ...common, className: 'ov-outline', weight: width + casingExtra + outlineExtra, fill: false }).addTo(map);
+    Ctor(latlngs, { ...common, className: 'ov-casing', weight: width + casingExtra, fill: false }).addTo(map);
+    const core = Ctor(latlngs, { ...common, className: 'ov-core', weight: width, dashArray: dash, fillOpacity, fill: polygon && fillOpacity > 0 }).addTo(map);
+    core.getElement().style.setProperty('--c', color);
+    return core;
+  }
+  for (const layer of layers) for (const place of places) {
+    const cell = document.createElement('div'); cell.className = 'cell';
+    cell.innerHTML = `<div class="map" data-base-layer="${layer.base}"></div><div class="tag">${layer.label} · ${place.name}</div>`;
+    grid.appendChild(cell);
+    const el = cell.querySelector('.map');
+    const map = L.map(el, { zoomControl: false, attributionControl: false, fadeAnimation: false, zoomAnimation: false }).setView(place.c, place.z);
+    L.tileLayer(layer.url, { maxZoom: 19, crossOrigin: true }).addTo(map);
+    const b = map.getBounds(), s = b.getSouth(), n = b.getNorth(), w = b.getWest(), e = b.getEast();
+    const dy = (n - s), dx = (e - w);
+    // 12 collaborator drafts in a 4 x 3 grid
+    for (let i = 0; i < 12; i++) {
+      const col = i % 4, row = Math.floor(i / 4);
+      const x0 = w + dx * (0.05 + col * 0.235), y0 = n - dy * (0.16 + row * 0.22);
+      const pts = [[y0, x0], [y0 - dy * 0.13, x0 + dx * 0.02], [y0 - dy * 0.1, x0 + dx * 0.19], [y0 + dy * 0.01, x0 + dx * 0.16]];
+      const c = tok(`--collab-${i + 1}`);
+      line(map, pts, { color: c, width: px(tok('--ov-remote-stroke-width', el)), dash: tok('--ov-remote-dash', el), fillOpacity: +tok('--ov-remote-fill-opacity', el), el });
+      L.marker(pts[3], { interactive: false, icon: L.divIcon({ className: '', iconSize: null, html: `<span class="chip" style="--c:${c}">${names[i]}</span>` }) }).addTo(map);
+    }
+    // saved area, my draft, invalid edge along the bottom
+    const yb = s + dy * 0.1;
+    line(map, [[yb + dy * 0.05, w + dx * 0.05], [yb - dy * 0.05, w + dx * 0.06], [yb - dy * 0.04, w + dx * 0.3], [yb + dy * 0.05, w + dx * 0.29]],
+      { color: tok('--ov-area-stroke'), width: px(tok('--ov-area-stroke-width')), fillOpacity: +tok('--ov-area-fill-opacity', el), el });
+    line(map, [[yb + dy * 0.05, w + dx * 0.36], [yb - dy * 0.05, w + dx * 0.37], [yb - dy * 0.04, w + dx * 0.62], [yb + dy * 0.05, w + dx * 0.6]],
+      { color: tok('--ov-own-stroke'), width: px(tok('--ov-own-stroke-width')), fillOpacity: +tok('--ov-own-fill-opacity', el), el });
+    line(map, [[yb + dy * 0.05, w + dx * 0.68], [yb - dy * 0.05, w + dx * 0.95]],
+      { color: tok('--ov-invalid'), width: px(tok('--ov-invalid-stroke-width')), dash: tok('--ov-invalid-dash'), polygon: false, el });
+  }
+</script>
+</body>
+</html>

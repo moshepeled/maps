@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!-- Same artwork as BrandMark (frontend/src/components/Icon.tsx), dark variant (UI.md §10.2). The colours are the
+       dark-theme --brand-mark-* values of docs/design/tokens.css, written out because a favicon cannot read CSS. -->
+  <rect x="0.75" y="0.75" width="22.5" height="22.5" rx="6" fill="#161a20" stroke="#343b46" stroke-width="1" />
+  <path d="M6.5 8.2 15.8 5.9 18 15.4 8.6 18.1Z" fill="rgb(34 211 238 / 0.18)" stroke="#22d3ee" stroke-width="1.5" stroke-linejoin="round" />
+  <rect x="5" y="6.7" width="3" height="3" rx="0.6" fill="#e8ebf0" />
+  <rect x="14.3" y="4.4" width="3" height="3" rx="0.6" fill="#e8ebf0" />
+  <rect x="16.5" y="13.9" width="3" height="3" rx="0.6" fill="#e8ebf0" />
+  <rect x="7.1" y="16.6" width="3" height="3" rx="0.6" fill="#22d3ee" />
+</svg>

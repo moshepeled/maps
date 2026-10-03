@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 780" width="960" height="780" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="14">
+  <title>Opening the live channel: ticket, upgrade gate, 101, welcome</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b95a4"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f87171"/>
+    </marker>
+  </defs>
+  <rect width="960" height="780" fill="#111418"/>
+  <text x="480" y="34" text-anchor="middle" fill="#e8ebf0" font-size="18" font-weight="600">Opening the live channel: one REST call, one HTTP upgrade, six gates, then welcome</text>
+
+  <!-- lanes -->
+  <g>
+    <rect x="40" y="60" width="200" height="56" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="140" y="84" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">Browser (SPA)</text>
+    <text x="140" y="104" text-anchor="middle" fill="#8b95a4">RealtimeClient.ts</text>
+
+    <rect x="380" y="60" width="200" height="56" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="480" y="84" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">nginx :5173</text>
+    <text x="480" y="104" text-anchor="middle" fill="#8b95a4">location = /ws, least_conn</text>
+
+    <rect x="720" y="60" width="200" height="56" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="820" y="84" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">backend-1 or backend-2</text>
+    <text x="820" y="104" text-anchor="middle" fill="#8b95a4">gateway.ts (Fastify + ws)</text>
+
+    <line x1="140" y1="116" x2="140" y2="750" stroke="#2a313b" stroke-dasharray="4 4"/>
+    <line x1="480" y1="116" x2="480" y2="750" stroke="#2a313b" stroke-dasharray="4 4"/>
+    <line x1="820" y1="116" x2="820" y2="750" stroke="#2a313b" stroke-dasharray="4 4"/>
+  </g>
+
+  <!-- step 1: ticket over REST -->
+  <g>
+    <line x1="140" y1="150" x2="812" y2="150" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="480" y="142" text-anchor="middle" fill="#e8ebf0">1  POST /api/v1/auth/ws-ticket   (Authorization: Bearer &lt;access token&gt;)</text>
+    <line x1="812" y1="184" x2="148" y2="184" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+    <text x="480" y="176" text-anchor="middle" fill="#8b95a4">201 { ticket } - 32 random bytes; Redis keeps only SET snap:wsticket:&lt;sha256&gt; ... EX 30 NX</text>
+  </g>
+
+  <!-- step 2: upgrade -->
+  <g>
+    <line x1="140" y1="228" x2="812" y2="228" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="480" y="212" text-anchor="middle" fill="#e8ebf0">2  GET /ws?ticket=...   Upgrade: websocket, Sec-WebSocket-Protocol: snapland.v1, Origin: http://localhost:5173</text>
+    <text x="480" y="246" text-anchor="middle" fill="#8b95a4">nginx forwards Upgrade/Connection, logs only $uri (never the ticket), retries only connect errors</text>
+  </g>
+
+  <!-- gates -->
+  <g>
+    <rect x="500" y="268" width="450" height="326" rx="12" fill="#161b22" stroke="#2a313b"/>
+    <text x="725" y="292" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">authorizeUpgrade() - plain HTTP answers, no socket yet</text>
+    <text x="725" y="312" text-anchor="middle" fill="#8b95a4">(before all of it: per-IP ws_upgrade limit,</text>
+    <text x="725" y="330" text-anchor="middle" fill="#8b95a4">60/min, in onRequest -> 429)</text>
+
+    <g font-size="14">
+      <rect x="520" y="344" width="410" height="30" rx="6" fill="#1a1f26" stroke="#2a313b"/>
+      <text x="532" y="364" fill="#e8ebf0">0  instance shutting down?</text>
+      <text x="918" y="364" text-anchor="end" fill="#f87171">503</text>
+
+      <rect x="520" y="380" width="410" height="30" rx="6" fill="#1a1f26" stroke="#2a313b"/>
+      <text x="532" y="400" fill="#e8ebf0">1  Origin allowed? (missing = rejected)</text>
+      <text x="918" y="400" text-anchor="end" fill="#f87171">403</text>
+
+      <rect x="520" y="416" width="410" height="30" rx="6" fill="#1a1f26" stroke="#2a313b"/>
+      <text x="532" y="436" fill="#e8ebf0">2  subprotocol snapland.v1 offered?</text>
+      <text x="918" y="436" text-anchor="end" fill="#f87171">400</text>
+
+      <rect x="520" y="452" width="410" height="30" rx="6" fill="#1a1f26" stroke="#2a313b"/>
+      <text x="532" y="472" fill="#e8ebf0">3  ticket: Redis GETDEL (single use, <= 30 s)</text>
+      <text x="918" y="472" text-anchor="end" fill="#f87171">401</text>
+
+      <rect x="520" y="488" width="410" height="30" rx="6" fill="#1a1f26" stroke="#2a313b"/>
+      <text x="532" y="508" fill="#e8ebf0">4  session active? (marker + DB)</text>
+      <text x="918" y="508" text-anchor="end" fill="#f87171">401</text>
+
+      <rect x="520" y="524" width="410" height="30" rx="6" fill="#1a1f26" stroke="#2a313b"/>
+      <text x="532" y="544" fill="#e8ebf0">5  capacity 5000/instance, 10/user</text>
+      <text x="918" y="544" text-anchor="end" fill="#f87171">503 / 429</text>
+    </g>
+    <text x="725" y="578" text-anchor="middle" fill="#8b95a4">every rejection is counted (metrics) and audited as ws.reject</text>
+  </g>
+
+  <!-- 101 -->
+  <g>
+    <line x1="812" y1="620" x2="148" y2="620" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="480" y="612" text-anchor="middle" fill="#22d3ee" font-weight="600">3  101 Switching Protocols - the same TCP connection is now a two-way frame channel</text>
+  </g>
+
+  <!-- welcome sequence -->
+  <g>
+    <line x1="812" y1="660" x2="148" y2="660" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="480" y="652" text-anchor="middle" fill="#e8ebf0">4  one batch frame: welcome -> presence.snapshot -> lock.snapshot   (welcome is always the first message)</text>
+    <text x="480" y="684" text-anchor="middle" fill="#8b95a4">frames the client sent meanwhile wait in its serial inbound queue, behind the handshake</text>
+    <text x="480" y="702" text-anchor="middle" fill="#8b95a4">then presence.joined goes to the other sockets (never to its own subject)</text>
+    <line x1="140" y1="738" x2="812" y2="738" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+    <text x="480" y="730" text-anchor="middle" fill="#e8ebf0">5  viewport.set { bbox, zoom } (no ref) - spatial events start flowing;  later draft.start { ref: "c-1" } -> ack { ref: "c-1" }</text>
+  </g>
+  <text x="480" y="768" text-anchor="middle" fill="#8b95a4" font-size="13">Sources: backend/src/modules/realtime/{gateway,upgrade-auth,outbound-queue}.ts, backend/src/infra/auth/ws-tickets.ts, docker/nginx/nginx.conf</text>
+</svg>

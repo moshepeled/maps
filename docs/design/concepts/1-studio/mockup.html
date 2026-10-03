@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-base="aerial" data-frame="draw" data-input="pointer">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Snapland Studio</title>
+<script>
+/* Frames (URL hash, all optional):
+   #theme=dark|light  #base=aerial|map  #frame=draw|selected  #input=pointer|keyboard
+   default = dark · Aerial · Drawing with the mouse (the shared scenario). */
+(function(){var q=new URLSearchParams(location.hash.slice(1)),h=document.documentElement;
+  h.dataset.theme=q.get('theme')||'dark';h.dataset.base=q.get('base')||'aerial';
+  h.dataset.frame=q.get('frame')||'draw';h.dataset.input=q.get('input')||'pointer';
+  h.dataset.maptone=(h.dataset.base==='aerial'||h.dataset.theme==='dark')?'dark':'light';})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Hebrew:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ============================================================
+   Snapland — Concept 1 "Studio" (pro GIS workstation), rev 2
+   Charcoal (or paper) chrome, docked rail + options bar + inspector + status bar.
+   Neon cores on dark casings over dimmed imagery. Mono tabular numerics.
+   ============================================================ */
+:root{
+  /* chrome — dark */
+  --bg-0:#0a0c0f;        /* title bar, status bar */
+  --bg-1:#111418;        /* rail, options bar, inspector */
+  --bg-2:#181c22;        /* buttons, cards, hover rows */
+  --bg-3:#20252d;        /* hover, active segment, tags */
+  --bg-inset:#0c0f13;    /* readout wells */
+  --float:rgba(12,15,19,.92);
+  --line:#232831;        /* hairlines (decorative) */
+  --line-2:#2e343e;      /* control borders (decorative, paired with fill) */
+  --line-strong:#5c6676; /* input boundaries, 3:1 */
+  --text:#e8ebf0; --text-2:#a9b2bf; --text-3:#8b95a4; --text-off:#5d6674;
+  /* accent = me: my draft, my selection, primary action */
+  --accent:#22d3ee; --accent-hi:#67e8f9; --accent-ink:#03161a;
+  --accent-a10:rgba(34,211,238,.10); --accent-a16:rgba(34,211,238,.16); --accent-a32:rgba(34,211,238,.32);
+  /* semantic */
+  --ok:#34d399; --ok-text:#6ee7b7; --ok-bg:rgba(52,211,153,.10); --ok-line:rgba(52,211,153,.30);
+  --danger:#f87171; --danger-text:#fca5a5; --danger-bg:rgba(248,113,113,.08); --danger-line:rgba(248,113,113,.34);
+  /* collaborator neon set (12, CIEDE2000 >= 14.9 normal, >= 6.3 deutan/protan) — dark ink on top */
+  --collab-1:#b4f500; --collab-2:#f461ff; --collab-3:#ffab61; --collab-4:#b86e3d; --collab-5:#bcfab2; --collab-6:#a64ef4;
+  --collab-7:#9888d7; --collab-8:#ff8fcb; --collab-9:#f6dd79; --collab-10:#447ec1; --collab-11:#c44f9d; --collab-12:#5eae29;
+  --c-you:var(--collab-1); --c-dana:var(--collab-2); --c-omer:var(--collab-3); --c-ink:#0a0c0f;
+  /* type */
+  --font-ui:"IBM Plex Sans","IBM Plex Sans Hebrew",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  /* motion */
+  --dur-fast:120ms; --dur-base:180ms; --dur-fade:240ms; --ease:cubic-bezier(.2,.8,.2,1);
+  /* elevation */
+  --shadow-float:0 0 0 1px var(--line-2),0 6px 18px rgba(0,0,0,.45);
+  --shadow-pop:0 0 0 1px #2d333d,0 14px 34px rgba(0,0,0,.55);
+  /* layout */
+  --titlebar-h:44px; --optbar-h:44px; --status-h:26px; --rail-w:52px; --insp-w:352px;
+  color-scheme:dark;
+}
+/* chrome — light ("paper") */
+:root[data-theme="light"]{
+  --bg-0:#e9ecf0; --bg-1:#f6f7f9; --bg-2:#ffffff; --bg-3:#e3e7ec; --bg-inset:#eef1f4;
+  --float:rgba(255,255,255,.96);
+  --line:#dce0e6; --line-2:#cbd1d9; --line-strong:#838c99;
+  --text:#12161c; --text-2:#434c59; --text-3:#58616e; --text-off:#9aa2ad;
+  --accent:#0e7490; --accent-hi:#0b6478; --accent-ink:#ffffff;
+  --accent-a10:rgba(14,116,144,.08); --accent-a16:rgba(14,116,144,.11); --accent-a32:rgba(14,116,144,.36);
+  --ok:#059669; --ok-text:#065f46; --ok-bg:rgba(5,150,105,.09); --ok-line:rgba(5,150,105,.32);
+  --danger:#dc2626; --danger-text:#b91c1c; --danger-bg:rgba(220,38,38,.06); --danger-line:rgba(220,38,38,.34);
+  --shadow-float:0 0 0 1px rgba(15,23,42,.12),0 4px 14px rgba(15,23,42,.12);
+  --shadow-pop:0 0 0 1px rgba(15,23,42,.12),0 14px 34px rgba(15,23,42,.18);
+  color-scheme:light;
+}
+@media (prefers-reduced-motion: reduce){ :root{ --dur-fast:0ms; --dur-base:0ms; --dur-fade:0ms; } .live-dot::after{animation:none!important} }
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg-0);color:var(--text);font:400 13px/18px var(--font-ui);-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.i-14{width:14px;height:14px}.i-18{width:18px;height:18px}.i-12{width:12px;height:12px;stroke-width:2.25}.i-20{width:20px;height:20px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* frame switches */
+html[data-frame="selected"] .f-draw, html[data-frame="draw"] .f-sel{display:none!important}
+html[data-input="keyboard"] .in-ptr, html[data-input="pointer"] .in-kbd{display:none!important}
+html[data-base="aerial"] .b-map, html[data-base="map"] .b-aerial{display:none!important}
+
+/* ---------- app grid ---------- */
+.app{display:grid;height:100vh;grid-template-columns:var(--rail-w) minmax(0,1fr) var(--insp-w);grid-template-rows:var(--titlebar-h) minmax(0,1fr) var(--status-h)}
+.titlebar{grid-column:1/-1;grid-row:1}
+.rail{grid-column:1;grid-row:2}
+.stage{grid-column:2;grid-row:2;display:flex;flex-direction:column;min-width:0;min-height:0}
+.inspector{grid-column:3;grid-row:2}
+.statusbar{grid-column:1/-1;grid-row:3}
+.phone-only{display:none!important}
+
+/* ---------- title bar ---------- */
+.titlebar{display:flex;align-items:center;gap:12px;padding:0 10px 0 14px;background:var(--bg-0);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px;letter-spacing:-.01em}
+.brand svg{width:24px;height:24px;display:block}
+.tb-sep{width:1px;height:18px;background:var(--line-2)}
+.spacer{flex:1}
+.pill-live{display:inline-flex;align-items:center;gap:7px;height:24px;padding:0 10px 0 9px;border-radius:6px;background:var(--ok-bg);border:1px solid var(--ok-line);color:var(--ok-text);font-size:12px;font-weight:500}
+.live-dot{position:relative;width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
+.live-dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1.5px solid var(--ok);opacity:.35}
+.presence{display:inline-flex;align-items:center;gap:12px;height:38px;padding:0 12px 0 6px;border-radius:8px;color:var(--text-2);font-size:12px}
+.presence:hover{background:var(--bg-2)}
+.stack{display:flex;gap:10px}
+.av{--c:#888;position:relative;width:28px;height:28px;border-radius:50%;background:var(--c);color:var(--c-ink);display:grid;place-items:center;font:600 11px/1 var(--font-ui);letter-spacing:.02em;box-shadow:0 0 0 2px var(--bg-0);flex:none}
+.av.me{box-shadow:0 0 0 2px var(--bg-0),0 0 0 3.5px var(--accent)}
+.badge{position:absolute;right:-6px;bottom:-6px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:var(--bc,var(--c));color:var(--c-ink);box-shadow:0 0 0 2px var(--bg-0)}
+.badge .i{width:10px;height:10px;stroke-width:3}
+.badge.view{background:var(--bg-3);color:var(--text-2)}
+:root[data-theme="light"] .badge.view{background:#cfd5dd;color:#2b323c}
+.icon-btn{width:32px;height:32px;border-radius:6px;display:grid;place-items:center;color:var(--text-2)}
+.icon-btn:hover{background:var(--bg-2);color:var(--text)}
+.user{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 8px 0 10px;border-radius:6px;font-size:13px;font-weight:500;color:var(--text)}
+.user:hover{background:var(--bg-2)}
+.user .i{color:var(--text-3)}
+
+/* ---------- tool rail (key hints live in tooltips + status bar) ---------- */
+.rail{background:var(--bg-1);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px}
+.tool{position:relative;width:36px;height:36px;border-radius:7px;display:grid;place-items:center;color:var(--text-2);transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.tool:hover{background:var(--bg-3);color:var(--text)}
+.tool[aria-pressed="true"]{background:var(--accent-a16);color:var(--accent-hi);box-shadow:inset 0 0 0 1px var(--accent-a32)}
+.tool[aria-pressed="true"]::before{content:"";position:absolute;left:-8px;top:8px;bottom:8px;width:2px;border-radius:0 2px 2px 0;background:var(--accent)}
+.tool[aria-disabled="true"]{color:var(--text-off);cursor:default}
+.tool[aria-disabled="true"]:hover{background:none}
+.rail-sep{width:24px;height:1px;background:var(--line-2);margin:6px 0}
+
+/* ---------- options bar (docked HUD) ---------- */
+.optbar{height:var(--optbar-h);flex:none;display:flex;align-items:center;gap:14px;padding:0 10px 0 12px;background:var(--bg-1);border-bottom:1px solid var(--line);min-width:0}
+.mode-tag{white-space:nowrap;display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 10px 0 8px;border-radius:6px;background:var(--accent-a16);box-shadow:inset 0 0 0 1px var(--accent-a32);color:var(--accent-hi);font-weight:600;font-size:12px;letter-spacing:.01em}
+.mode-tag.neutral{background:var(--bg-3);box-shadow:inset 0 0 0 1px var(--line-2);color:var(--text)}
+.vsep{width:1px;height:22px;background:var(--line-2);flex:none}
+.readout{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.lbl{font:600 11px/1 var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+.readout .val{font:500 21px/1 var(--font-mono);color:var(--text);letter-spacing:-.02em}
+.readout .unit{font:500 13px/1 var(--font-ui);color:var(--text-2)}
+.readout .sub{font:400 12px/1 var(--font-mono);color:var(--text-3)}
+.hint{color:var(--text-2);font-size:12.5px;display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:0}
+.hint .dot{color:var(--text-3);margin:0 2px}
+.sel-name-inline{font-weight:600;font-size:13.5px;white-space:nowrap}
+kbd{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:4px;background:var(--bg-3);box-shadow:inset 0 -1px 0 rgba(0,0,0,.35),inset 0 0 0 1px var(--line-2);font:500 11px/1 var(--font-mono);color:var(--text)}
+:root[data-theme="light"] kbd{background:#fff;box-shadow:inset 0 -1px 0 rgba(15,23,42,.14),inset 0 0 0 1px var(--line-2)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:30px;padding:0 12px;border-radius:6px;font-weight:500;font-size:13px;white-space:nowrap;transition:background var(--dur-fast) var(--ease)}
+.btn-2{background:var(--bg-2);box-shadow:inset 0 0 0 1px var(--line-2);color:var(--text)}
+.btn-2:hover{background:var(--bg-3)}
+.btn-ghost{color:var(--text-2)}
+.btn-ghost:hover{background:var(--bg-2);color:var(--text)}
+.btn-1{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn-1:hover{background:var(--accent-hi)}
+.btn-danger{color:var(--danger-text);background:var(--danger-bg);box-shadow:inset 0 0 0 1px var(--danger-line)}
+.btn-danger:hover{background:rgba(248,113,113,.14)}
+.btn .kk{font:500 11px/1 var(--font-mono);opacity:.75}
+
+/* ---------- map stage ---------- */
+.mapwrap{position:relative;flex:1;min-height:0;background:#0b0e12;overflow:hidden}
+:root[data-maptone="light"] .mapwrap{background:#e8e4dc}
+#map{position:absolute;inset:0;background:transparent}
+.mapwrap::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:900;box-shadow:inset 0 10px 14px -12px rgba(0,0,0,.7),inset 0 0 0 1px rgba(0,0,0,.35)}
+:root[data-maptone="light"] .mapwrap::after{box-shadow:inset 0 8px 10px -10px rgba(15,23,42,.35),inset 0 0 0 1px rgba(15,23,42,.10)}
+.leaflet-container{font-family:var(--font-ui);background:transparent}
+/* Aerial dimmed 26% so neon cores dominate; never inverted (imagery stays true-colour) */
+:root[data-base="aerial"] .leaflet-tile-pane{filter:brightness(.74) saturate(.82) contrast(1.06)}
+/* Map (OSM) in the dark chrome: tinted, not re-styled — same geometry and labels */
+:root[data-theme="dark"][data-base="map"] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.86) saturate(.5)}
+:root[data-theme="dark"][data-base="map"] .mapwrap{background:#1b1e22}
+.ov-sel{filter:drop-shadow(0 0 5px rgba(34,211,238,.55))}
+:root[data-maptone="light"] .ov-sel{filter:drop-shadow(0 0 3px rgba(14,116,144,.45))}
+/* keyboard focus on the map: 2 px accent ring inside the frame (C-06.9 reticle is drawn at the centre) */
+.mapwrap.kbd-focus::before{content:"";position:absolute;inset:0;z-index:950;pointer-events:none;box-shadow:inset 0 0 0 2px var(--accent),inset 0 0 0 3.5px #05070a,inset 0 0 0 6px rgba(34,211,238,.22)}
+
+/* floating map controls */
+.mctl{position:absolute;z-index:1000}
+.seg{display:flex;padding:3px;gap:2px;border-radius:8px;background:var(--float);box-shadow:var(--shadow-float)}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:5px;font-size:12.5px;font-weight:500;color:var(--text-2)}
+.seg button:hover{color:var(--text);background:var(--bg-2)}
+.seg button[aria-checked="true"]{background:var(--bg-3);color:var(--text);box-shadow:inset 0 0 0 1px var(--line-2)}
+.seg button[aria-checked="true"] .i{color:var(--accent-hi)}
+.zoom{display:flex;flex-direction:column;border-radius:8px;overflow:hidden;background:var(--float);box-shadow:var(--shadow-float)}
+.zoom button{width:34px;height:32px;display:grid;place-items:center;color:var(--text-2)}
+.zoom button:hover{background:var(--bg-3);color:var(--text)}
+.zoom button+button{border-top:1px solid var(--line-2)}
+.attr{right:0;bottom:0;padding:3px 8px 3px 9px;border-radius:6px 0 0 0;background:rgba(10,12,15,.86);color:#b9c1cc;font-size:11px;line-height:15px;white-space:nowrap}
+.attr a{color:#67e8f9;text-decoration:none}
+.attr .he{font-family:"IBM Plex Sans Hebrew","IBM Plex Sans",sans-serif}
+:root[data-maptone="light"] .attr{background:rgba(255,255,255,.9);color:#3c4450}
+:root[data-maptone="light"] .attr a{color:#0b6478}
+
+/* toasts: bottom-centre lane (own + collaboration); collaboration toasts are held while drawing (§6.5) */
+.toast-lane{position:absolute;left:0;right:0;bottom:36px;z-index:1001;display:flex;justify-content:center;pointer-events:none}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:10px;width:344px;min-height:48px;padding:6px 6px 6px 12px;border-radius:9px;background:#1a1e25;box-shadow:var(--shadow-pop);position:relative;overflow:hidden;color:#e8ebf0}
+:root[data-theme="light"] .toast{background:#ffffff;color:var(--text)}
+.toast .t-ic{color:var(--text-2)}
+.toast .t1{flex:1;min-width:0;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toast .act{height:32px;padding:0 12px;border-radius:6px;color:var(--accent-hi);font-weight:600;font-size:13px}
+.toast .act:hover{background:var(--accent-a10)}
+.toast .x{width:32px;height:32px;border-radius:6px;display:grid;place-items:center;color:var(--text-3)}
+.toast .x:hover{background:var(--bg-3);color:var(--text)}
+.toast .timer{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--line)}
+.toast .timer::before{content:"";position:absolute;left:0;top:0;bottom:0;width:64%;background:var(--accent)}
+
+/* ---------- map glyphs (Leaflet divIcons) ---------- */
+.gl{position:absolute;transform:translate(-50%,-50%)}
+.pt{width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px #22d3ee,0 0 0 3.5px rgba(5,7,10,.75),0 1px 4px rgba(0,0,0,.5)}
+.pt.first{width:14px;height:14px;background:rgba(5,7,10,.55);box-shadow:inset 0 0 0 2.5px #22d3ee,0 0 0 1.5px rgba(5,7,10,.8),0 0 0 5px rgba(34,211,238,.18)}
+.pt.first::after{content:"";position:absolute;inset:4px;border-radius:50%;background:#22d3ee}
+.pt.last{width:11px;height:11px;background:#22d3ee;box-shadow:0 0 0 2px #fff,0 0 0 3.5px rgba(5,7,10,.75),0 0 10px rgba(34,211,238,.7)}
+.dot-r{width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px #fff,0 0 0 2.5px rgba(5,7,10,.7)}
+.xhair{width:30px;height:30px}
+.reticle{width:56px;height:56px}
+.chip{position:absolute;display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 8px;border-radius:5px;white-space:nowrap;font:600 12px/1 var(--font-ui);pointer-events:none}
+.chip .mono{font-weight:500;font-size:11.5px}
+.chip-area{background:rgba(9,11,14,.9);color:#e8ebf0;box-shadow:0 0 0 1px #343b46,0 2px 8px rgba(0,0,0,.5)}
+.chip-area .mono{color:#a9b2bf}
+.chip-sel{background:rgba(9,11,14,.92);color:#e8ebf0;box-shadow:0 0 0 1px #22d3ee,0 0 12px rgba(34,211,238,.35),0 2px 8px rgba(0,0,0,.5)}
+.chip-sel .mono{color:#67e8f9}
+.chip-sel .sw{width:8px;height:8px;border-radius:2px;background:rgba(34,211,238,.32);box-shadow:inset 0 0 0 1.5px #22d3ee}
+:root[data-maptone="light"] .chip-area{background:rgba(255,255,255,.95);color:#12161c;box-shadow:0 0 0 1px #c3c9d2,0 2px 6px rgba(15,23,42,.18)}
+:root[data-maptone="light"] .chip-area .mono{color:#434c59}
+:root[data-maptone="light"] .chip-sel{background:#fff;color:#12161c;box-shadow:0 0 0 1.5px #0e7490,0 2px 8px rgba(15,23,42,.2)}
+:root[data-maptone="light"] .chip-sel .mono{color:#0e7490}
+:root[data-maptone="light"] .chip-sel .sw{background:rgba(14,116,144,.18);box-shadow:inset 0 0 0 1.5px #0e7490}
+.chip-person{background:var(--c);color:var(--c-ink);box-shadow:0 0 0 1.5px rgba(5,7,10,.85),0 2px 8px rgba(0,0,0,.5)}
+.chip-person .mono{font-weight:600}
+.chip-person .i{stroke-width:2.6}
+
+/* ---------- inspector ---------- */
+.inspector{background:var(--bg-1);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.sec{border-bottom:1px solid var(--line)}
+.sec:last-child{border-bottom:0}
+.sec-h{display:flex;align-items:center;gap:6px;height:36px;padding:0 8px 0 10px}
+.sec-h .chev{color:var(--text-3)}
+.sec-h .lbl{flex:1;display:flex;align-items:center;gap:8px}
+.count{display:inline-grid;place-items:center;min-width:18px;height:17px;padding:0 5px;border-radius:4px;background:var(--bg-3);color:var(--text-2);font:500 11px/1 var(--font-mono);letter-spacing:0;text-transform:none}
+.sec-note{display:inline-flex;align-items:center;gap:6px;padding-right:6px;font-size:11.5px;color:var(--text-2)}
+.sec-note .i{color:var(--text-3)}
+.sec-b{padding:0 16px 14px}
+.sel-name{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.sel-name .sw{width:12px;height:12px;border-radius:3px;background:var(--accent-a32);box-shadow:inset 0 0 0 2px var(--accent);flex:none}
+.sel-name h2{flex:1;margin:0;font-size:18px;line-height:24px;font-weight:600;letter-spacing:-.015em}
+.well{border-radius:9px;background:var(--bg-inset);box-shadow:inset 0 0 0 1px var(--line)}
+.well-top{display:flex;align-items:flex-end;justify-content:space-between;padding:12px 14px}
+.big{display:flex;align-items:baseline;gap:6px;margin-top:8px}
+.big .v{font:500 34px/1 var(--font-mono);letter-spacing:-.035em;color:var(--text)}
+.big .u{font:500 15px/1 var(--font-ui);color:var(--text-2)}
+.ha{font:500 13px/1 var(--font-mono);color:var(--text-2);padding-bottom:3px}
+.cells{display:grid;grid-template-columns:1.25fr .8fr .8fr;border-top:1px solid var(--line)}
+.cell{padding:10px 14px 11px}
+.cell+.cell{border-left:1px solid var(--line)}
+.cell .v{display:block;margin-top:6px;font:500 14px/1 var(--font-mono);color:var(--text)}
+.cell .v small{font:400 12px var(--font-ui);color:var(--text-2);margin-left:3px}
+.props{margin:12px 0;display:grid;grid-template-columns:78px 1fr;row-gap:6px;font-size:12.5px}
+.props dt{color:var(--text-3)}
+.props dd{margin:0;color:var(--text);display:flex;align-items:center;gap:6px;min-width:0}
+.props dd .t{color:var(--text-2);font-family:var(--font-mono);font-size:12px}
+.pdot{--c:#888;width:8px;height:8px;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 1.5px rgba(0,0,0,.35)}
+.pdot.me{background:var(--accent)}
+:root[data-theme="light"] .pdot{box-shadow:0 0 0 1px rgba(15,23,42,.22)}
+.actions{display:flex;gap:8px}
+.actions .btn{height:32px}
+.actions .grow{flex:1}
+
+/* history timeline */
+.tl{list-style:none;margin:0;padding:2px 0 8px}
+.tl li{position:relative;display:grid;grid-template-columns:22px 1fr auto;column-gap:10px;padding:7px 12px;border-radius:7px;margin:0 4px}
+.tl li:hover,.tl li.hov{background:var(--bg-2)}
+.tl .rail-l{position:relative;display:flex;justify-content:center}
+.tl .rail-l::before{content:"";position:absolute;top:-7px;bottom:-7px;width:1px;background:var(--line-2)}
+.tl li:first-child .rail-l::before{top:10px}
+.tl li:last-child .rail-l::before{bottom:calc(100% - 10px)}
+.node{--c:#888;position:relative;z-index:1;width:11px;height:11px;margin-top:5px;border-radius:50%;background:var(--bg-1);box-shadow:inset 0 0 0 2px var(--c)}
+.tl li.cur .node{background:var(--c);box-shadow:0 0 0 3px var(--bg-1),0 0 0 4px var(--c)}
+.tl-top{display:flex;align-items:center;gap:8px;min-width:0;height:22px}
+.ver{font:600 11px/1 var(--font-mono);color:var(--text-2);padding:3px 5px;border-radius:4px;background:var(--bg-3)}
+.tl-title{font-weight:500;font-size:13px;color:var(--text)}
+.tag-cur{font:600 11px/1 var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--accent-hi);padding:3px 6px;border-radius:4px;background:var(--accent-a10);box-shadow:inset 0 0 0 1px var(--accent-a32)}
+.tl-sub{grid-column:2;margin-top:4px;font-size:12px;color:var(--text-2);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tl-sub .mono{font-size:11.5px;color:var(--text-2)}
+.sep{color:var(--text-3)}
+.tl time{grid-column:3;grid-row:1;font:400 11.5px/22px var(--font-mono);color:var(--text-3)}
+.tl .prev{grid-column:3;grid-row:1/span 2;align-self:center;justify-self:end;font-size:12.5px;font-weight:600;color:var(--accent-hi);height:28px;padding:0 10px;border-radius:5px;background:var(--accent-a10);box-shadow:inset 0 0 0 1px var(--accent-a32)}
+.tl li.hov time{visibility:hidden}
+
+/* people */
+.people{list-style:none;margin:0;padding:0 4px 8px}
+.people li{display:flex;align-items:center;gap:12px;height:42px;padding:0 12px;border-radius:7px}
+.people li:hover{background:var(--bg-2)}
+.people .av{width:26px;height:26px;font-size:11px;box-shadow:0 0 0 2px var(--bg-1)}
+.people .av.me{box-shadow:0 0 0 2px var(--bg-1),0 0 0 3.5px var(--accent)}
+.people .nm{flex:1;min-width:0}
+.people .n1{font-size:13px;font-weight:500;color:var(--text);display:flex;gap:8px;align-items:center}
+.people .you{font:600 11px/1 var(--font-ui);color:var(--accent-hi);padding:2px 5px;border-radius:4px;background:var(--accent-a10)}
+.people .n2{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.people .n2.viewing{color:var(--text-3)}
+.people .n2 .i{width:12px;height:12px;stroke-width:2.25}
+
+/* activity */
+.feed{list-style:none;margin:0;padding:0 4px 8px}
+.feed li{display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 6px 6px 12px;border-radius:7px}
+.feed li:hover{background:var(--bg-2)}
+.feed .av{width:26px;height:26px;box-shadow:0 0 0 2px var(--bg-1)}
+.feed .a-main{flex:1;min-width:0}
+.feed .a1{font-size:13px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed .a1 b{color:var(--text);font-weight:500}
+.feed .a2{margin-top:3px;font:400 11.5px/1 var(--font-mono);color:var(--text-3)}
+.lnk{height:28px;padding:0 10px;border-radius:5px;color:var(--accent-hi);font-weight:600;font-size:12.5px}
+.lnk:hover{background:var(--accent-a10)}
+
+/* ---------- status bar ---------- */
+.statusbar{display:flex;align-items:center;background:var(--bg-0);border-top:1px solid var(--line);font:400 11.5px/1 var(--font-mono);color:var(--text-2);padding:0 6px 0 0;min-width:0;white-space:nowrap}
+.sb{display:flex;align-items:center;gap:7px;height:100%;padding:0 12px;border-right:1px solid var(--line)}
+.sb .i{color:var(--text-3)}
+.sb.first{width:var(--rail-w);justify-content:center;padding:0}
+.sb .k{font-family:var(--font-ui);color:var(--text-3)}
+.sb .itm{color:var(--text-3)}
+.scale{display:flex;align-items:center;gap:8px}
+.scale .bar{width:124px;height:6px;border:1.5px solid var(--text-2);border-top:0}
+.sb-right{margin-left:auto;display:flex;align-items:center;gap:14px;padding:0 8px;font-family:var(--font-ui);font-size:11.5px;color:var(--text-3)}
+.sb-right kbd{height:18px;min-width:18px;margin-right:5px}
+
+/* ============================================================
+   TABLET / SMALL LAPTOP (600–1199 px): inspector floats over the map, below the options bar
+   ============================================================ */
+@media (min-width:600px) and (max-width:1199px){
+  :root{--insp-w:340px}
+  .app{grid-template-columns:var(--rail-w) minmax(0,1fr)}
+  .inspector{grid-column:2;grid-row:2;justify-self:end;align-self:start;width:var(--insp-w);max-height:calc(100% - var(--optbar-h) - 10px - 34px);margin:calc(var(--optbar-h) + 10px) 10px 34px 0;z-index:1200;border:0;border-radius:12px;background:var(--bg-1);box-shadow:var(--shadow-pop);overflow:auto}
+  .toast-lane{right:calc(var(--insp-w) + 10px)}
+  .insp-collapse-md .sec-b,.insp-collapse-md .people,.insp-collapse-md .feed{display:none}
+  .insp-collapse-md .chev{transform:rotate(-90deg)}
+  .sec-h{height:32px}
+  .tl li{padding-top:6px;padding-bottom:6px}
+  .well-top{padding:10px 14px}
+  .wide-only{display:none!important}
+}
+
+/* ============================================================
+   PHONE (< 600 px): title bar, docked HUD, map, bottom bar / sheet
+   ============================================================ */
+@media (max-width:599px){
+  :root{--titlebar-h:48px}
+  .app{grid-template-columns:1fr;grid-template-rows:var(--titlebar-h) minmax(0,1fr) 72px}
+  html[data-frame="selected"] .app{grid-template-rows:var(--titlebar-h) minmax(0,1fr)}
+  .rail,.inspector,.statusbar,.desk-only{display:none!important}
+  .phone-only{display:flex!important}
+  .stage{grid-column:1;grid-row:2}
+  .dock{grid-column:1;grid-row:3}
+  .titlebar{padding:0 4px 0 12px;gap:10px}
+  .brand svg{width:28px;height:28px}
+  .brand .word{display:none}
+  .pill-live{height:28px}
+  .pcount{display:inline-flex;align-items:center;gap:7px;height:44px;padding:0 12px;border-radius:8px;font:600 14px/1 var(--font-mono);color:var(--text)}
+  .pcount .i{color:var(--text-2)}
+  .icon-btn{width:44px;height:44px}
+  .optbar{height:58px;gap:12px;padding:0 16px}
+  .mode-tag{width:36px;height:36px;padding:0;justify-content:center;border-radius:8px}
+  .mode-tag .txt{display:none}
+  .mode-tag .i{width:20px;height:20px}
+  .readout-m{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .readout-m .row1{display:flex;align-items:baseline;gap:7px}
+  .readout-m .val{font:500 22px/1 var(--font-mono);letter-spacing:-.02em}
+  .readout-m .unit{font:500 13px/1 var(--font-ui);color:var(--text-2)}
+  .readout-m .sub{font:400 12px/1 var(--font-mono);color:var(--text-3)}
+  .readout-m .row2{font-size:12.5px;line-height:14px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mapwrap{--sheet-h:0px;--attr-h:32px}
+  html[data-frame="selected"] .mapwrap{--sheet-h:max(176px,30dvh)}
+  .attr{bottom:var(--sheet-h);right:0;border-radius:6px 0 0 0;font-size:11px;line-height:14px;padding:2px 8px;white-space:normal;text-align:right;display:flex;flex-direction:column;align-items:flex-end}
+  .attr .sepdot{display:none}
+  .ctl-row{position:absolute;left:12px;right:12px;bottom:calc(var(--sheet-h) + var(--attr-h) + 8px);z-index:1000;display:flex;align-items:center;justify-content:space-between}
+  .layer-toggle{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 14px 0 12px;border-radius:9px;background:var(--float);box-shadow:var(--shadow-float);font-size:13.5px;font-weight:500;color:var(--text)}
+  .layer-toggle .i{color:var(--accent-hi)}
+  .zoom{flex-direction:row}
+  .zoom button{width:44px;height:44px}
+  .zoom button+button{border-top:0;border-left:1px solid var(--line-2)}
+  .toast-lane{left:12px;right:12px;bottom:calc(var(--sheet-h) + var(--attr-h) + 64px)}
+  .toast{width:100%}
+  .sheet{position:absolute;left:0;right:0;bottom:0;height:var(--sheet-h);z-index:1100;flex-direction:column;background:var(--bg-1);border-radius:14px 14px 0 0;box-shadow:0 -1px 0 var(--line-2),0 -12px 30px rgba(0,0,0,.5);padding:0 16px 16px}
+  .grab{align-self:center;width:36px;height:4px;border-radius:2px;background:#3a414c;margin:8px 0 0;flex:none}
+  .sh-h{display:flex;align-items:center;gap:0;height:44px;margin-right:-12px}
+  .sh-h .lbl{flex:1}
+  .sh-name{display:flex;align-items:center;gap:9px}
+  .sh-name .sw{width:11px;height:11px;border-radius:3px;background:var(--accent-a32);box-shadow:inset 0 0 0 2px var(--accent);flex:none}
+  .sh-name h2{margin:0;font-size:17px;line-height:22px;font-weight:600;letter-spacing:-.01em}
+  .sh-metrics{display:flex;align-items:baseline;gap:10px;margin-top:10px}
+  .sh-metrics .v{font:500 26px/1 var(--font-mono);letter-spacing:-.03em}
+  .sh-metrics .u{font-size:13px;color:var(--text-2);margin-left:-5px}
+  .sh-metrics .m{font:400 12px/1 var(--font-mono);color:var(--text-2)}
+  .sh-props{display:grid;grid-template-columns:72px 1fr;row-gap:6px;margin:12px 0 0;font-size:12.5px}
+  .sh-props dt{color:var(--text-3)}
+  .sh-props dd{margin:0;display:flex;align-items:center;gap:6px;color:var(--text)}
+  .sh-props .mono{font-size:12px;color:var(--text-2)}
+  .sh-act{display:flex;gap:8px;margin-top:auto}
+  .sh-act .btn{height:44px;font-size:13.5px;border-radius:8px;padding:0 14px}
+  .sh-act .grow{flex:1}
+  .dock{display:flex;align-items:center;gap:8px;padding:0 16px;background:var(--bg-0);border-top:1px solid var(--line)}
+  html[data-frame="selected"] .dock{display:none!important}
+  .dock .btn{height:48px;border-radius:9px;font-size:14px;padding:0 16px}
+  .dock .push{flex:1}
+  .dock .fin{min-width:132px}
+}
+</style>
+</head>
+<body>
+
+<!-- Lucide icon sprite (ISC licence) + custom polygon glyph -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-poly" viewBox="0 0 24 24"><path d="M5 8.5 12 4l7 5.5-2.5 9h-9z"/><circle cx="12" cy="4" r="1.6" fill="currentColor"/><circle cx="19" cy="9.5" r="1.6" fill="currentColor"/><circle cx="16.5" cy="18.5" r="1.6" fill="currentColor"/><circle cx="7.5" cy="18.5" r="1.6" fill="currentColor"/><circle cx="5" cy="8.5" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="i-vsq" viewBox="0 0 24 24"><path d="M19.5 7a24 24 0 0 1 0 10"/><path d="M4.5 7a24 24 0 0 0 0 10"/><path d="M7 19.5a24 24 0 0 0 10 0"/><path d="M7 4.5a24 24 0 0 1 10 0"/><rect x="17" y="17" width="5" height="5" rx="1"/><rect x="17" y="2" width="5" height="5" rx="1"/><rect x="2" y="17" width="5" height="5" rx="1"/><rect x="2" y="2" width="5" height="5" rx="1"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></symbol>
+  <symbol id="i-kbd" viewBox="0 0 24 24"><path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></symbol>
+  <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-chev-u" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></symbol>
+  <symbol id="i-sat" viewBox="0 0 24 24"><path d="M13 7 9 3 5 7l4 4"/><path d="m17 11 4 4-4 4-4-4"/><path d="m8 12 4 4 6-6-4-4Z"/><path d="m16 8 3-3"/><path d="M9 21a6 6 0 0 0-6-6"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M22 12h-4"/><path d="M6 12H2"/><path d="M12 6V2"/><path d="M12 22v-4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742"/><path d="m2 2 20 20"/><path d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05"/></symbol>
+  <symbol id="i-cursor-sq" viewBox="0 0 24 24"><path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/><path d="M21 11V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6"/></symbol>
+  <symbol id="mark" viewBox="0 0 24 24">
+    <rect x=".75" y=".75" width="22.5" height="22.5" rx="6" fill="var(--mk-bg)" stroke="var(--mk-edge)" stroke-width="1"/>
+    <path d="M6.5 8.2 15.8 5.9 18 15.4 8.6 18.1Z" fill="var(--mk-fill)" stroke="var(--mk-line)" stroke-width="1.5" stroke-linejoin="round"/>
+    <rect x="5" y="6.7" width="3" height="3" rx=".6" fill="var(--mk-v)"/><rect x="14.3" y="4.4" width="3" height="3" rx=".6" fill="var(--mk-v)"/>
+    <rect x="16.5" y="13.9" width="3" height="3" rx=".6" fill="var(--mk-v)"/><rect x="7.1" y="16.6" width="3" height="3" rx=".6" fill="var(--mk-line)"/>
+  </symbol>
+</svg>
+<style>
+  .brand{--mk-bg:#161a20;--mk-edge:#343b46;--mk-fill:rgba(34,211,238,.18);--mk-line:#22d3ee;--mk-v:#e8ebf0}
+  :root[data-theme="light"] .brand{--mk-bg:#12161c;--mk-edge:#12161c;--mk-fill:rgba(34,211,238,.22);--mk-line:#22d3ee;--mk-v:#ffffff}
+</style>
+
+<div class="app">
+  <!-- ======================= TITLE BAR ======================= -->
+  <header class="titlebar">
+    <div class="brand"><svg aria-hidden="true"><use href="#mark"/></svg><span class="word">Snapland</span></div>
+    <span class="pill-live" role="status" aria-label="Connection: Live"><span class="live-dot"></span>Live</span>
+    <span class="spacer"></span>
+    <!-- desktop: avatars, 10 px apart, status badges (plus = drawing, eye = viewing); me first with the accent ring -->
+    <button class="presence desk-only" aria-label="3 people on the map: You, drawing a new area; Omer Cohen, drawing a new area; Dana Levi, viewing" title="On the map now (P)">
+      <span class="stack">
+        <span class="av me" style="--c:var(--c-you)">Mo<span class="badge" style="--bc:var(--accent)"><svg class="i"><use href="#i-plus"/></svg></span></span>
+        <span class="av" style="--c:var(--c-omer)">OC<span class="badge"><svg class="i"><use href="#i-plus"/></svg></span></span>
+        <span class="av" style="--c:var(--c-dana)">DL<span class="badge view"><svg class="i"><use href="#i-eye"/></svg></span></span>
+      </span><span>3 online</span>
+    </button>
+    <span class="tb-sep desk-only"></span>
+    <button class="icon-btn desk-only" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)"><svg class="i"><use href="#i-kbd"/></svg></button>
+    <button class="user desk-only" aria-haspopup="menu" aria-label="Account menu, Moshe">Moshe<svg class="i i-14"><use href="#i-chev-d"/></svg></button>
+    <!-- phone: presence collapses to a count button (§3.2) -->
+    <button class="pcount phone-only" aria-label="3 on the map"><svg class="i i-18"><use href="#i-users"/></svg>3</button>
+    <button class="icon-btn phone-only" aria-label="Menu"><svg class="i i-20"><use href="#i-menu"/></svg></button>
+  </header>
+
+  <!-- ======================= TOOL RAIL ======================= -->
+  <nav class="rail" aria-label="Tools">
+    <button class="tool f-draw" aria-pressed="true" aria-label="Draw area (D)" title="Draw area  D"><svg class="i i-18"><use href="#i-poly"/></svg></button>
+    <button class="tool f-sel" aria-pressed="false" aria-label="Draw area (D)" title="Draw area  D"><svg class="i i-18"><use href="#i-poly"/></svg></button>
+    <button class="tool f-draw" aria-disabled="true" aria-label="Edit shape (E), unavailable while drawing" title="Edit shape  E"><svg class="i i-18"><use href="#i-vsq"/></svg></button>
+    <button class="tool f-sel" aria-label="Edit shape (E)" title="Edit shape  E"><svg class="i i-18"><use href="#i-vsq"/></svg></button>
+    <span class="rail-sep"></span>
+    <button class="tool" aria-label="Areas in view (A)" title="Areas in view  A"><svg class="i i-18"><use href="#i-list"/></svg></button>
+    <button class="tool" aria-label="People (P)" title="On the map now  P"><svg class="i i-18"><use href="#i-users"/></svg></button>
+    <span class="spacer"></span>
+    <button class="tool" aria-label="Keyboard shortcuts (?)" title="Keyboard shortcuts  ?"><svg class="i i-18"><use href="#i-help"/></svg></button>
+  </nav>
+
+  <!-- ======================= STAGE ======================= -->
+  <main class="stage">
+    <!-- options bar = docked HUD. Drawing: readout + hint + actions. Area selected: name + key map. -->
+    <div class="optbar f-draw" role="toolbar" aria-label="Drawing">
+      <span class="mode-tag"><svg class="i i-14"><use href="#i-poly"/></svg><span class="txt">Draw area</span></span>
+      <span class="vsep desk-only"></span>
+      <div class="readout desk-only" tabindex="0" aria-label="Area 1.27 square kilometers" title="127.2 ha · 1,271,900 m² · perimeter 4.23 km">
+        <span class="lbl">Area</span><span class="val mono">1.27</span><span class="unit">km²</span><span class="sub wide-only">127.2 ha</span>
+      </div>
+      <span class="vsep desk-only"></span>
+      <div class="readout desk-only"><span class="lbl">Points</span><span class="val mono" style="font-size:17px">5</span></div>
+      <span class="vsep desk-only"></span>
+      <span class="hint desk-only in-ptr" title="Double-click, click the first point, or press Enter to finish."><kbd>Enter</kbd>to finish</span>
+      <span class="hint desk-only in-kbd"><kbd>Space</kbd>add point<span class="dot">·</span><kbd>Enter</kbd>finish</span>
+      <span class="spacer desk-only"></span>
+      <button class="btn btn-ghost desk-only" aria-label="Undo last point"><svg class="i"><use href="#i-undo"/></svg>Undo point<span class="kk wide-only">Ctrl Z</span></button>
+      <button class="btn btn-2 desk-only">Cancel<span class="kk">Esc</span></button>
+      <button class="btn btn-1 desk-only"><svg class="i"><use href="#i-check"/></svg>Finish</button>
+      <!-- phone HUD: readout row + exactly one message line -->
+      <div class="readout-m phone-only" aria-label="Area 1.27 square kilometers, 5 points">
+        <div class="row1"><span class="val mono">1.27</span><span class="unit">km²</span><span class="sub">· 5 points</span></div>
+        <div class="row2">Tap the first point or Finish.</div>
+      </div>
+    </div>
+    <div class="optbar f-sel desk-only" role="toolbar" aria-label="Selected area">
+      <span class="mode-tag neutral"><svg class="i i-14"><use href="#i-cursor-sq"/></svg><span class="txt">Area selected</span></span>
+      <span class="vsep"></span>
+      <span class="sel-name-inline">Yarkon Park Plot</span><span class="readout"><span class="val mono" style="font-size:15px">0.84</span><span class="unit">km²</span></span>
+      <span class="vsep"></span>
+      <span class="hint"><kbd>E</kbd>Edit shape<span class="dot">·</span><kbd>F2</kbd>Rename<span class="dot">·</span><kbd>H</kbd>History<span class="dot">·</span><kbd>Z</kbd>Zoom to area</span>
+      <span class="spacer"></span>
+      <span class="hint"><kbd>Esc</kbd>Deselect</span>
+    </div>
+
+    <div class="mapwrap" id="mapwrap">
+      <div id="map" tabindex="0" aria-label="Map. Arrow keys pan, plus and minus zoom."></div>
+
+      <!-- desktop floating controls: base layer (radiogroup) + zoom, top-left -->
+      <div class="mctl desk-only" style="left:12px;top:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start">
+        <div class="seg" role="radiogroup" aria-label="Base map">
+          <button role="radio" id="seg-map" title="Map  L"><svg class="i i-14"><use href="#i-map"/></svg>Map</button>
+          <button role="radio" id="seg-aerial" title="Aerial  L"><svg class="i i-14"><use href="#i-sat"/></svg>Aerial</button>
+        </div>
+        <div class="zoom"><button aria-label="Zoom in"><svg class="i"><use href="#i-plus"/></svg></button><button aria-label="Zoom out"><svg class="i"><use href="#i-minus"/></svg></button></div>
+      </div>
+
+      <!-- toast lane, bottom-centre. Drawing: collaboration toasts are held (§6.5), so the lane is empty. -->
+      <div class="toast-lane f-sel" role="region" aria-label="Notifications">
+        <div class="toast" role="status">
+          <svg class="i t-ic"><use href="#i-poly"/></svg>
+          <span class="t1">Drawing discarded</span>
+          <button class="act">Undo</button>
+          <button class="x" aria-label="Dismiss"><svg class="i i-14"><use href="#i-x"/></svg></button>
+          <span class="timer" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <!-- phone control row: one-tap layer toggle (shows the layer you switch TO) + zoom -->
+      <div class="ctl-row phone-only">
+        <button class="layer-toggle b-aerial" aria-label="Switch base map to Map"><svg class="i i-18"><use href="#i-map"/></svg>Map</button>
+        <button class="layer-toggle b-map" aria-label="Switch base map to Aerial"><svg class="i i-18"><use href="#i-sat"/></svg>Aerial</button>
+        <div class="zoom"><button aria-label="Zoom in"><svg class="i i-18"><use href="#i-plus"/></svg></button><button aria-label="Zoom out"><svg class="i i-18"><use href="#i-minus"/></svg></button></div>
+      </div>
+
+      <!-- attribution: Aerial = GovMap + Esri only; Map = OpenStreetMap only (§7) -->
+      <div class="mctl attr b-aerial"><span class="he" dir="rtl">תצלום אוויר © <a href="#">GovMap</a> / המרכז למיפוי ישראל</span><span class="sepdot"> · </span><span>Imagery © <a href="#">Esri</a>, Maxar, Earthstar Geographics</span></div>
+      <div class="mctl attr b-map">© <a href="#">OpenStreetMap</a> contributors</div>
+
+      <!-- phone AreaSelected: peek sheet (the bottom bar sits under it) -->
+      <section class="sheet phone-only f-sel" aria-label="Selected area">
+        <span class="grab"></span>
+        <div class="sh-h">
+          <span class="lbl">Selected area</span>
+          <button class="icon-btn" aria-label="Expand"><svg class="i i-18"><use href="#i-chev-u"/></svg></button>
+          <button class="icon-btn" aria-label="Close"><svg class="i i-18"><use href="#i-x"/></svg></button>
+        </div>
+        <div class="sh-name"><span class="sw"></span><h2>Yarkon Park Plot</h2></div>
+        <div class="sh-metrics"><span class="v">0.84</span><span class="u">km²</span><span class="m">84.0 ha · 3.91 km · 6 points</span></div>
+        <dl class="sh-props"><dt>Created</dt><dd><span class="pdot" style="--c:var(--c-dana)"></span>Dana Levi<span class="sep">·</span><span class="mono">today 10:42</span></dd><dt>Last edit</dt><dd><span class="pdot me"></span>You<span class="sep">·</span><span class="mono">today 11:58</span><span class="sep">·</span><span class="ver">v3</span></dd></dl>
+        <div class="sh-act">
+          <button class="btn btn-2 grow"><svg class="i"><use href="#i-vsq"/></svg>Edit shape</button>
+          <button class="btn btn-2"><svg class="i"><use href="#i-history"/></svg>History</button>
+          <button class="btn btn-danger"><svg class="i"><use href="#i-trash"/></svg>Delete</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ======================= INSPECTOR ======================= -->
+  <aside class="inspector" aria-label="Inspector">
+    <section class="sec">
+      <div class="sec-h">
+        <svg class="i i-14 chev"><use href="#i-chev-d"/></svg>
+        <span class="lbl">Selection</span>
+        <button class="icon-btn" aria-label="Zoom to area (Z)" title="Zoom to area  Z"><svg class="i"><use href="#i-scan"/></svg></button>
+        <button class="icon-btn" aria-label="Close panel (Esc)" title="Close  Esc"><svg class="i"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="sec-b">
+        <div class="sel-name"><span class="sw"></span><h2>Yarkon Park Plot</h2>
+          <button class="icon-btn" aria-label="Rename (F2)" title="Rename  F2"><svg class="i"><use href="#i-pencil"/></svg></button></div>
+        <div class="well">
+          <div class="well-top">
+            <div><span class="lbl">Area</span>
+              <div class="big"><span class="v">0.84</span><span class="u">km²</span></div></div>
+            <span class="ha">84.0 ha</span>
+          </div>
+          <div class="cells">
+            <div class="cell"><span class="lbl">Perimeter</span><span class="v">3.91<small>km</small></span></div>
+            <div class="cell"><span class="lbl">Points</span><span class="v">6</span></div>
+            <div class="cell"><span class="lbl">Version</span><span class="v">v3</span></div>
+          </div>
+        </div>
+        <dl class="props">
+          <dt>Created</dt><dd><span class="pdot" style="--c:var(--c-dana)"></span>Dana Levi<span class="sep">·</span><span class="t">today 10:42</span></dd>
+          <dt>Last edit</dt><dd><span class="pdot me"></span>You<span class="sep">·</span><span class="t">today 11:58</span></dd>
+        </dl>
+        <div class="actions">
+          <button class="btn btn-2 grow"><svg class="i"><use href="#i-vsq"/></svg>Edit shape<span class="kk">E</span></button>
+          <button class="btn btn-danger"><svg class="i"><use href="#i-trash"/></svg>Delete</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-h">
+        <svg class="i i-14 chev"><use href="#i-chev-d"/></svg>
+        <span class="lbl">History <span class="count">3</span></span>
+      </div>
+      <ol class="tl">
+        <li class="cur">
+          <span class="rail-l"><span class="node" style="--c:var(--accent)"></span></span>
+          <div><div class="tl-top"><span class="ver">v3</span><span class="tl-title">Renamed</span><span class="tag-cur">Current</span></div>
+            <div class="tl-sub"><span class="pdot me"></span>You<span class="sep">·</span>from “Yarkon Plot”</div></div>
+          <time>11:58</time>
+        </li>
+        <li class="hov">
+          <span class="rail-l"><span class="node" style="--c:var(--c-dana)"></span></span>
+          <div><div class="tl-top"><span class="ver">v2</span><span class="tl-title">Reshaped</span></div>
+            <div class="tl-sub"><span class="pdot" style="--c:var(--c-dana)"></span>Dana<span class="sep">·</span><span class="mono">0.79 → 0.84 km²</span></div></div>
+          <time>11:20</time>
+          <button class="prev">Preview</button>
+        </li>
+        <li>
+          <span class="rail-l"><span class="node" style="--c:var(--c-dana)"></span></span>
+          <div><div class="tl-top"><span class="ver">v1</span><span class="tl-title">Created</span></div>
+            <div class="tl-sub"><span class="pdot" style="--c:var(--c-dana)"></span>Dana<span class="sep">·</span><span class="mono">0.79 km²</span></div></div>
+          <time>10:42</time>
+        </li>
+      </ol>
+    </section>
+
+    <section class="sec insp-collapse-md">
+      <div class="sec-h">
+        <svg class="i i-14 chev"><use href="#i-chev-d"/></svg>
+        <span class="lbl">People <span class="count">3</span></span>
+        <span class="sec-note" style="color:var(--ok-text)"><span class="live-dot" style="width:6px;height:6px"></span>online</span>
+      </div>
+      <ul class="people">
+        <li><span class="av me" style="--c:var(--c-you)">Mo</span><div class="nm"><div class="n1">Moshe<span class="you">You</span></div>
+          <div class="n2 f-draw"><svg class="i" style="color:var(--accent-hi)"><use href="#i-plus"/></svg>Drawing a new area</div><div class="n2 viewing f-sel"><svg class="i"><use href="#i-eye"/></svg>Viewing</div></div></li>
+        <li><span class="av" style="--c:var(--c-omer)">OC</span><div class="nm"><div class="n1">Omer Cohen</div>
+          <div class="n2"><svg class="i omer-ic"><use href="#i-plus"/></svg>Drawing a new area</div></div></li>
+        <li><span class="av" style="--c:var(--c-dana)">DL</span><div class="nm"><div class="n1">Dana Levi</div>
+          <div class="n2 viewing"><svg class="i"><use href="#i-eye"/></svg>Viewing</div></div></li>
+      </ul>
+    </section>
+
+    <section class="sec insp-collapse-md">
+      <div class="sec-h">
+        <svg class="i i-14 chev"><use href="#i-chev-d"/></svg>
+        <span class="lbl">Activity <span class="count">1</span></span>
+        <span class="sec-note f-draw" title="Collaboration toasts wait until you finish or cancel the drawing; the map still updates."><svg class="i i-12"><use href="#i-bell-off"/></svg>Toasts held while you draw</span>
+      </div>
+      <ul class="feed">
+        <li><span class="av" style="--c:var(--c-dana)">DL</span>
+          <div class="a-main"><div class="a1">Dana saved <b>Yarkon Park Plot</b></div><div class="a2">0.84 km² · 11:20</div></div>
+          <button class="lnk">Show</button></li>
+      </ul>
+    </section>
+  </aside>
+
+  <!-- ======================= STATUS BAR ======================= -->
+  <footer class="statusbar">
+    <span class="sb first"><svg class="i i-14"><use href="#i-target"/></svg></span>
+    <span class="sb" id="coord" title="Pointer position (the map centre when the pointer is off the map), in latitude/longitude and in the Israeli Transverse Mercator grid (ITM, metres)." dir="ltr"><span class="k" id="coord-k" hidden>Map centre</span><span id="coord-v"></span></span>
+    <span class="sb" id="zoom-v">z 15</span>
+    <span class="sb scale"><span class="bar" id="scale-bar"></span><span id="scale-t">500 m</span></span>
+    <span class="sb" title="Overlapping areas are each counted; small areas that are hidden at this zoom are not included.">2 areas · 0.96 km² in view</span>
+    <span class="sb-right">
+      <span class="f-draw in-ptr wide-only"><kbd>Backspace</kbd>Undo point</span>
+      <span class="f-draw in-kbd wide-only"><kbd>⇧ Arrows</kbd>Fine pan</span>
+      <span class="f-sel wide-only"><kbd>Del</kbd>Delete</span>
+      <span class="wide-only"><kbd>L</kbd>Map / Aerial</span>
+      <span><kbd>?</kbd>Shortcuts</span>
+    </span>
+  </footer>
+
+  <!-- ======================= PHONE BOTTOM BAR (Drawing): Cancel ········ Undo · Finish ======================= -->
+  <div class="dock phone-only f-draw" role="toolbar" aria-label="Drawing actions">
+    <button class="btn btn-2">Cancel</button>
+    <span class="push"></span>
+    <button class="btn btn-2" aria-label="Undo last point"><svg class="i i-18"><use href="#i-undo"/></svg>Undo</button>
+    <button class="btn btn-1 fin"><svg class="i i-18"><use href="#i-check"/></svg>Finish</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const H = document.documentElement, D = H.dataset;
+  const phone = matchMedia('(max-width:599px)').matches;
+  const overlayInsp = matchMedia('(min-width:600px) and (max-width:1199px)').matches;
+  const darkMap = D.maptone === 'dark', kbd = D.input === 'keyboard' && !phone, sel = D.frame === 'selected', draw = !sel;
+
+  // ---- shared scenario geometry (real lat/lng; geodesic areas checked with geographiclib) ----
+  const YARKON=[[32.09345,34.7944],[32.09353,34.80581],[32.08804,34.80633],[32.0845,34.8029],[32.08505,34.7959],[32.0895,34.7976]]; // 0.840 km², 3.91 km, 6 pts
+  const RABIN =[[32.08353,34.77968],[32.08375,34.78208],[32.08156,34.78234],[32.07916,34.782],[32.07909,34.77959]];              // 0.121 km²
+  const MINE  =[[32.0828,34.78457],[32.08389,34.7929],[32.08011,34.7983],[32.07378,34.79667],[32.07276,34.78852]];                // 5 placed points
+  const CURSOR=[32.07735,34.78388];                                                                                               // + cursor = 1.272 km²
+  const MINE_TOUCH=[MINE[0],MINE[1],MINE[2],MINE[3],[32.07276,34.78541]];                                                          // touch: placed points closed = 1.270 km²
+  const OMER  =[[32.06709,34.79024],[32.06658,34.78208],[32.07138,34.78165],[32.07255,34.78629],[32.07109,34.79075]];              // 0.460 km², last = east
+  const OMER_CUR=[32.06891,34.79281];
+
+  // ---- map + view per frame ----
+  const map = L.map('map',{zoomControl:false,attributionControl:false,fadeAnimation:false,zoomAnimation:false,markerZoomAnimation:false,inertia:false,zoomSnap:.25});
+  const B = a => L.latLngBounds(a);
+  if (phone && draw)      map.fitBounds(B([...MINE_TOUCH,...OMER]),{paddingTopLeft:[20,24],paddingBottomRight:[20,92]});
+  else if (phone && sel)  map.fitBounds(B([...YARKON,...OMER,...RABIN]),{paddingTopLeft:[16,20],paddingBottomRight:[16,Math.max(176,innerHeight*.3)+32+52+64+18]});
+  else if (overlayInsp)   map.fitBounds(B([...YARKON,...OMER,...RABIN]),{paddingTopLeft:[64,24],paddingBottomRight:[340+34,92]});
+  else if (kbd)           map.setView(CURSOR,15);
+  else                    map.setView([32.080,34.785],15);
+
+  const tiles = D.base === 'aerial'
+    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  L.tileLayer(tiles,{maxZoom:19}).addTo(map);
+  document.getElementById('seg-map').setAttribute('aria-checked', D.base==='map');
+  document.getElementById('seg-aerial').setAttribute('aria-checked', D.base==='aerial');
+  if (kbd) document.getElementById('mapwrap').classList.add('kbd-focus');
+
+  [['p-areas',410],['p-sel',420],['p-remote',430],['p-own',440],['p-handles',620],['p-chips',640]].forEach(([n,z])=>{map.createPane(n).style.zIndex=z;});
+
+  // overlay recipe keyed to the map's luminance (aerial / dark-tinted map vs light map)
+  const CAS = darkMap ? '#05070a' : '#ffffff', CAS_OP = darkMap ? .75 : .92;
+  const ME = darkMap ? '#22d3ee' : '#0e7490', SAVED = darkMap ? '#eef1f5' : '#2f3a4a', NEON_CAS='#05070a';
+  const OM = getComputedStyle(H).getPropertyValue('--collab-3').trim();
+  document.querySelectorAll('.omer-ic').forEach(e=>e.style.color=OM);
+
+  function stroke(ll,{closed=false,color,w=2,dash=null,op=1,casing=4,cas=CAS,casOp=CAS_OP,pane,cls='',cap}){
+    const C = closed ? L.polygon : L.polyline;
+    if(casing) C(ll,{pane,interactive:false,fill:false,color:cas,opacity:casOp,weight:w+casing,lineJoin:'round',lineCap:'round'}).addTo(map);
+    C(ll,{pane,interactive:false,fill:false,color,opacity:op,weight:w,dashArray:dash,lineJoin:'round',lineCap:cap||(dash?'butt':'round'),className:cls}).addTo(map);
+  }
+  function fill(ll,color,op,pane){ L.polygon(ll,{pane,interactive:false,stroke:false,fillColor:color,fillOpacity:op}).addTo(map); }
+  function glyph(ll,html,pane='p-handles'){ L.marker(ll,{pane,interactive:false,keyboard:false,icon:L.divIcon({className:'',html,iconSize:[0,0]})}).addTo(map); }
+  const P = (x,y)=>map.containerPointToLatLng([x,y]);
+  const showSel = sel || !phone;   // phone Drawing: modes are exclusive, nothing is selected
+
+  // ---- saved areas (large first; draw order never changes) ----
+  fill(YARKON, showSel ? ME : (darkMap?'#ffffff':'#2f3a4a'), showSel ? .13 : .10, 'p-areas');
+  fill(RABIN, darkMap?'#ffffff':'#2f3a4a', darkMap?.12:.10, 'p-areas');
+  stroke(RABIN,{closed:true,color:SAVED,w:1.75,pane:'p-areas',op:.95,casing:3.5});
+  if (!showSel) stroke(YARKON,{closed:true,color:SAVED,w:1.75,pane:'p-areas',op:.95,casing:3.5});
+
+  // ---- selection copy: accent core + glow + CAD corner brackets ----
+  if (showSel) {
+    stroke(YARKON,{closed:true,color:ME,w:2.75,casing:4.5,pane:'p-sel',cls:'ov-sel'});
+    const pts = YARKON.map(p=>map.latLngToContainerPoint(p));
+    const x0=Math.min(...pts.map(p=>p.x))-9, x1=Math.max(...pts.map(p=>p.x))+9, y0=Math.min(...pts.map(p=>p.y))-9, y1=Math.max(...pts.map(p=>p.y))+9, a=14;
+    [[[x0,y0+a],[x0,y0],[x0+a,y0]],[[x1-a,y0],[x1,y0],[x1,y0+a]],[[x1,y1-a],[x1,y1],[x1-a,y1]],[[x0+a,y1],[x0,y1],[x0,y1-a]]]
+      .forEach(b=>stroke(b.map(q=>P(q[0],q[1])),{color:ME,w:1.5,casing:3,casOp:.6,pane:'p-sel',cap:'square'}));
+  }
+
+  // ---- Omer's live draft (remote, non-interactive): dashed, dots, streamed rubber-band; always on a dark casing ----
+  fill(OMER,OM,.13,'p-remote');
+  stroke(OMER,{color:OM,w:2.5,dash:'8 5',pane:'p-remote',cas:NEON_CAS,casOp:darkMap?.75:.62,casing:darkMap?4:3});
+  stroke([OMER[OMER.length-1],OMER_CUR],{color:OM,w:1.5,dash:'1 4',op:.6,casing:2.5,cas:NEON_CAS,casOp:.55,pane:'p-remote',cap:'round'});
+  OMER.forEach(p=>glyph(p,'<div class="gl dot-r" style="--c:'+OM+'"></div>','p-remote'));
+
+  // ---- my draft ----
+  if (draw) {
+    if (phone) {
+      // touch: no hover, so no rubber-band — the placed points shown closed (C-06.3)
+      fill(MINE_TOUCH,ME,.14,'p-own');
+      stroke(MINE_TOUCH,{color:ME,w:2.5,pane:'p-own'});
+      stroke([MINE_TOUCH[4],MINE_TOUCH[0]],{color:ME,w:2,dash:'1 5',op:.8,pane:'p-own',casing:3,cap:'round'});
+      MINE_TOUCH.forEach((p,i)=>glyph(p,'<div class="gl pt'+(i===0?' first':i===4?' last':'')+'"></div>'));
+    } else {
+      fill([...MINE,CURSOR],ME,.14,'p-own');
+      stroke(MINE,{color:ME,w:2.5,pane:'p-own'});
+      stroke([MINE[MINE.length-1],CURSOR],{color:ME,w:2,dash:'6 4',pane:'p-own',casing:3.5});
+      stroke([CURSOR,MINE[0]],{color:ME,w:2,dash:'1 5',op:.7,pane:'p-own',casing:0,cap:'round'});
+      MINE.forEach((p,i)=>glyph(p,'<div class="gl pt'+(i===0?' first':i===MINE.length-1?' last':'')+'"></div>'));
+      if (kbd) {
+        // C-06.9 keyboard reticle at the map centre (the provisional point)
+        glyph(CURSOR,'<svg class="gl reticle" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="15" fill="none" stroke="#05070a" stroke-width="4" opacity=".6"/><circle cx="28" cy="28" r="15" fill="none" stroke="#22d3ee" stroke-width="1.5"/><g stroke="#05070a" stroke-width="4.5" stroke-linecap="round" opacity=".8"><path d="M28 3v14M28 39v14M3 28h14M39 28h14"/></g><g stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M28 3v14M28 39v14M3 28h14M39 28h14"/></g><circle cx="28" cy="28" r="2.5" fill="#22d3ee" stroke="#05070a" stroke-width="1.2"/></svg>','p-chips');
+      } else {
+        glyph(CURSOR,'<svg class="gl xhair" viewBox="0 0 30 30" aria-hidden="true"><g stroke="#05070a" stroke-width="4" stroke-linecap="round" opacity=".8"><path d="M15 2v8M15 20v8M2 15h8M20 15h8"/></g><g stroke="#fff" stroke-width="1.6" stroke-linecap="round"><path d="M15 2v8M15 20v8M2 15h8M20 15h8"/></g><circle cx="15" cy="15" r="2" fill="#22d3ee" stroke="#05070a" stroke-width="1"/></svg>','p-chips');
+      }
+    }
+  }
+
+  // ---- chips ----
+  const yc = YARKON.reduce((a,p)=>[a[0]+p[0]/YARKON.length,a[1]+p[1]/YARKON.length],[0,0]);
+  if (showSel) glyph(yc,'<div class="chip chip-sel" style="transform:translate(-50%,-50%)"><span class="sw"></span>Yarkon Park Plot<span class="mono">0.84 km²</span></div>','p-chips');
+  if (!phone) glyph([32.08142,34.77959],'<div class="chip chip-area" style="transform:translate(calc(-100% - 10px),-50%)">Rabin Square Event Zone<span class="mono">0.12 km²</span></div>','p-chips');
+  const om = OMER[OMER.length-1];
+  glyph(om,'<div class="chip chip-person" style="--c:'+OM+';transform:translate(12px,-50%)"><svg class="i i-12"><use href="#i-plus"/></svg>'+(phone?'Omer · drawing':'Omer · drawing · <span class="mono">0.46 km²</span>')+'</div>','p-chips');
+
+  // Chip rule: a chip never leaves the visible map (or slides under a floating panel); it slides inward (+8 px).
+  requestAnimationFrame(()=>{
+    const box = document.getElementById('map').getBoundingClientRect();
+    const right = overlayInsp ? box.right - 340 - 20 : box.right;
+    document.querySelectorAll('.chip').forEach(c=>{
+      const r=c.getBoundingClientRect(); let dx=0, dy=0;
+      if(r.right>right-8) dx=right-8-r.right; if(r.left<box.left+8) dx=box.left+8-r.left;
+      if(r.top<box.top+8) dy=box.top+8-r.top;
+      if(dx||dy) c.style.translate=dx+'px '+dy+'px';
+    });
+  });
+
+  // ---- status bar: C-27 coordinate readout (WGS84 6 dp · ITM 1 dp, no grouping), zoom, scale ----
+  function toITM(lat,lng){
+    const d2r=Math.PI/180, sec=Math.PI/648000;
+    const aW=6378137, fW=1/298.257223563, eW=fW*(2-fW);
+    let p=lat*d2r, l=lng*d2r, N=aW/Math.sqrt(1-eW*Math.sin(p)**2);
+    let X=N*Math.cos(p)*Math.cos(l), Y=N*Math.cos(p)*Math.sin(l), Z=N*(1-eW)*Math.sin(p);
+    const Dx=23.772,Dy=17.49,Dz=17.859,Rx=-0.3132*sec,Ry=-1.85274*sec,Rz=1.67299*sec,M=1+(-5.4262)/1e6;
+    const xt=(X-Dx)/M, yt=(Y-Dy)/M, zt=(Z-Dz)/M;
+    X=xt+Rz*yt-Ry*zt; Y=-Rz*xt+yt+Rx*zt; Z=Ry*xt-Rx*yt+zt;
+    const a=6378137, f=1/298.257222101, es=f*(2-f), pr=Math.hypot(X,Y); l=Math.atan2(Y,X); p=Math.atan2(Z,pr*(1-es));
+    for(let i=0;i<8;i++){N=a/Math.sqrt(1-es*Math.sin(p)**2); const h=pr/Math.cos(p)-N; p=Math.atan2(Z,pr*(1-es*N/(N+h)));}
+    const lat0=31.7343936111111*d2r, lon0=35.2045169444444*d2r, k0=1.0000067, x0=219529.584, y0=626907.39, ep2=es/(1-es);
+    const e0=1-es/4-3*es*es/64-5*es**3/256, e1=3/8*(es+es*es/4+15*es**3/128), e2=15/256*(es*es+3*es**3/4), e3=35*es**3/3072;
+    const mlfn=q=>a*(e0*q-e1*Math.sin(2*q)+e2*Math.sin(4*q)-e3*Math.sin(6*q));
+    const s=Math.sin(p), c=Math.cos(p), t=Math.tan(p)**2, C=ep2*c*c, A=c*(l-lon0), A2=A*A, n=a/Math.sqrt(1-es*s*s);
+    return [x0+k0*n*A*(1+A2/6*(1-t+C+A2/20*(5-18*t+t*t+72*C-58*ep2))),
+            y0+k0*(mlfn(p)-mlfn(lat0)+n*Math.tan(p)*A2*(0.5+A2/24*(5-t+9*C+4*C*C+A2/30*(61-58*t+t*t+600*C-330*ep2))))];
+  }
+  const cv=document.getElementById('coord-v'), ck=document.getElementById('coord-k');
+  function setCoord(ll, centre){
+    const [e,n]=toITM(ll.lat,ll.lng);
+    cv.innerHTML=ll.lat.toFixed(6)+', '+ll.lng.toFixed(6)+' <span class="itm">·</span> <span class="itm">ITM E</span> '+e.toFixed(1)+' <span class="itm">N</span> '+n.toFixed(1);
+    ck.hidden=!centre;
+  }
+  const pointerPos = (!phone && draw && !kbd) ? L.latLng(CURSOR) : null;
+  const rest = ()=> pointerPos ? setCoord(pointerPos,false) : setCoord(map.getCenter(),true);
+  rest();
+  map.on('mousemove',e=>setCoord(e.latlng,false)); map.on('mouseout',rest);
+  const z=map.getZoom(); document.getElementById('zoom-v').textContent='z '+(+z.toFixed(2));
+  const mpp=156543.03392*Math.cos(map.getCenter().lat*Math.PI/180)/Math.pow(2,z);
+  const nice=[100,200,250,500,1000,2000].reverse().find(m=>m/mpp<=130)||100;
+  document.getElementById('scale-bar').style.width=Math.round(nice/mpp)+'px';
+  document.getElementById('scale-t').textContent=nice>=1000?(nice/1000)+' km':nice+' m';
+})();
+</script>
+</body>
+</html>

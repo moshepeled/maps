@@ -1,0 +1,261 @@
+/* ==========================================================================
+   Title bar (UX C-02, C-16; UI.md v2 section 10.2, section 10.3): brand, connection pill, Quiet chip, presence, user menu.
+   44 px (48 below 600 px, --size-topbar), on the frame colour, hairline below; no shadow (docked chrome).
+   ========================================================================== */
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  height: var(--frame-topbar);
+  padding: 0 10px 0 14px;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.titlebar__spacer {
+  flex: 1;
+  min-width: 0;
+}
+.titlebar__divider {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border);
+  flex: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: none;
+}
+.brand-mark {
+  flex: none;
+}
+.wordmark {
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-md);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+/* ------------------------------------------------------------------ connection pill (UI.md section 10.3) */
+.pill-wrap,
+.presence-wrap {
+  position: relative;
+  flex: none;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: var(--size-pill);
+  padding: 0 10px 0 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-pressed);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+.pill--live {
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-success-text);
+}
+/* A static ring: nothing loops forever (WCAG 2.2.2; UI.md section 8). */
+.pill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-live);
+  outline: 1.5px solid color-mix(in srgb, var(--color-live) 35%, transparent);
+  outline-offset: 2.5px;
+}
+.pill--warning {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+.pill--warning .ic,
+.pill--warning .spinner {
+  color: var(--color-warning-icon);
+}
+.pill--danger {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-text);
+}
+.pill--danger .ic {
+  color: var(--color-danger-icon);
+}
+.pill-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--z-popover);
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.chip-quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-neutral-badge-bg);
+  color: var(--color-neutral-badge-text);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  flex: none;
+}
+
+/* ------------------------------------------------------------------ presence button (UI.md section 10.4) */
+.presence-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  padding: 0 12px 0 6px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+/* Coarse pointers: a 44 px target like the rest of the title bar (UX C-02, WCAG 2.5.8 row of section 10). */
+@media (pointer: coarse) {
+  .presence-btn {
+    min-height: 44px;
+  }
+}
+.presence-btn:hover {
+  background: var(--color-surface-hover);
+}
+.avatar-stack {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.presence-online {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+.changes-count {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-neutral-badge-bg);
+  color: var(--color-neutral-badge-text);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+}
+.presence-btn[data-offline='true'] .avatar {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+.presence-pop {
+  position: absolute;
+  z-index: var(--z-popover);
+  top: calc(100% + 8px);
+  right: 0;
+  max-height: min(420px, 60vh);
+  overflow: auto;
+}
+
+/* ------------------------------------------------------------------ user menu button */
+.user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--size-control-md);
+  max-width: 220px;
+  padding: 0 8px 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+.user-btn:hover {
+  background: var(--color-surface-hover);
+}
+.user-btn[aria-expanded='true'] {
+  background: var(--color-surface-pressed);
+}
+.user-btn bdi {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-btn__chevron {
+  color: var(--color-text-tertiary);
+}
+
+/* ------------------------------------------------------------------ phone title bar (UI.md section 10.2; UX section 3.2) */
+.app[data-layout='phone'] .titlebar {
+  gap: 10px;
+  padding: 0 4px 0 12px;
+}
+.presence-count-hit {
+  min-height: 44px;
+  padding: 0 4px;
+}
+.presence-count {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 44px;
+  padding: 0 12px;
+  color: var(--color-text-secondary);
+}
+.presence-count .num {
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+.presence-count__dot {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-neutral-badge-text);
+}
+.menu-btn {
+  width: 44px;
+  height: 44px;
+}
+.menu-badge {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--color-neutral-badge-bg);
+  color: var(--color-neutral-badge-text);
+  box-shadow: 0 0 0 2px var(--color-bg);
+}
+@media (max-width: 399.98px) {
+  .wordmark {
+    display: none;
+  }
+}

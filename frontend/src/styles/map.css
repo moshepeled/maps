@@ -1,0 +1,872 @@
+/* ==========================================================================
+   The map (UX C-04, C-15, section 7; UI.md v2 section 9): the map element and its cursors, the base-map tone (tile tint and
+   dimming), the keyboard reticle, the floating controls (base-map switcher, zoom, phone layer toggle), the attribution
+   and the Leaflet overlays (lines, point glyphs, chips, handles, markers, tooltips, the saved-areas canvas).
+   Overlay colours are the --ov-* map-tone tokens: they resolve from data-base-layer (on the map, its wrapper and the
+   attribution) and the theme, so every overlay follows a theme or base-layer change without a redraw.
+   ========================================================================== */
+
+/* The map well under the docked bars (UI.md section 6) and the map's focus frame (UI.md section 9.10) are a pseudo-element above
+   the tiles, which would hide an inset ring drawn on the map container itself. It lives on the wrapper, which carries
+   data-base-layer, so the light map tone gets its own well and ring. */
+.map-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-map-well);
+  pointer-events: none;
+  box-shadow: var(--map-well-shadow);
+}
+.map-wrap:has(> .map:focus-visible)::after {
+  z-index: var(--z-map-focus);
+  box-shadow:
+    inset 0 0 0 2px var(--map-focus-ring),
+    inset 0 0 0 3.5px var(--map-focus-halo),
+    inset 0 0 0 6px var(--map-focus-glow);
+}
+
+.map-wrap {
+  position: absolute;
+  inset: 0;
+}
+.map {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-map);
+  isolation: isolate;
+  background: var(--map-backdrop-osm);
+  outline: none;
+}
+.map[data-base-layer='aerial'],
+.map[data-base-layer='govmap-itm'] {
+  background: var(--map-backdrop-imagery);
+}
+.snap-map-instance {
+  position: absolute;
+  inset: 0;
+}
+.snap-map-instance .leaflet-container,
+.snap-map-instance.leaflet-container {
+  background: transparent;
+  font-family: var(--font-sans);
+}
+.map[data-mode='drawing'] .leaflet-container,
+.map[data-mode='drawing'] .leaflet-interactive {
+  cursor: crosshair;
+}
+.map[data-mode='drawing'].is-not-allowed .leaflet-container {
+  cursor: not-allowed;
+}
+.map[data-mode='drawing'].is-snap-first .leaflet-container {
+  cursor: pointer;
+}
+.map.is-over-area .leaflet-container {
+  cursor: pointer;
+}
+.map.is-move-armed .leaflet-container {
+  cursor: crosshair;
+}
+
+/* ------------------------------------------------------------------ base-map tone (UI.md section 2.5, section 9.1)
+   The filters sit on each tile layer (baseLayers.ts className), never on the tile pane: overlays stay unfiltered,
+   and an outgoing layer keeps its own look during a cross-fade. Map (OSM) is tinted in the
+   dark theme only (--map-filter-osm is none in the light theme); imagery is dimmed in both. */
+.snap-tiles--osm {
+  filter: var(--map-filter-osm);
+}
+.snap-tiles--imagery {
+  filter: var(--map-filter-imagery);
+}
+
+/* ------------------------------------------------------------------ keyboard reticle (C-06.9; UI.md section 9.9)
+   MapView's SVG: a ring and a centre dot in "me", four arms, each over its casing. */
+.reticle {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--ov-reticle-size);
+  height: var(--ov-reticle-size);
+  transform: translate(-50%, -50%);
+  z-index: var(--z-map-reticle);
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  stroke-linecap: round;
+}
+.reticle__ring-casing {
+  stroke: var(--ov-reticle-casing);
+  stroke-opacity: 0.6;
+  stroke-width: 4px;
+}
+.reticle__ring {
+  stroke: var(--ov-own-stroke);
+  stroke-width: 1.5px;
+}
+.reticle__arms-casing {
+  stroke: var(--ov-reticle-casing);
+  stroke-opacity: 0.8;
+  stroke-width: 4.5px;
+}
+.reticle__arms {
+  stroke: var(--ov-reticle-line);
+  stroke-width: 2px;
+}
+.reticle__dot {
+  fill: var(--ov-own-stroke);
+  stroke: var(--ov-reticle-casing);
+  stroke-width: 1.2px;
+}
+.map.is-keyboard:focus-visible ~ .reticle,
+.map.is-keyboard:focus ~ .reticle {
+  display: block;
+}
+
+/* ------------------------------------------------------------------ floating controls (UI.md section 10.10) */
+.map-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none;
+}
+.map-controls > * {
+  pointer-events: auto;
+}
+.app[data-layout='phone'] .map-controls {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-float);
+  box-shadow: var(--shadow-1);
+}
+.segment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--size-segment);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.segment:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+.segment[aria-checked='true'] {
+  background: var(--color-segment-selected);
+  box-shadow: inset 0 0 0 1px var(--color-segment-selected-border);
+  color: var(--color-on-segment-selected);
+}
+.segment[aria-checked='true'] .ic {
+  color: var(--color-accent-text);
+}
+/* Two-tone focus over the map (UI.md section 9.10). */
+.segment:focus-visible,
+.zoom-btn:focus-visible,
+.layer-toggle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-focus-ring),
+    0 0 0 3.5px var(--color-focus-ring-halo);
+}
+
+.zoom-controls {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-float);
+  box-shadow: var(--shadow-1);
+}
+.zoom-btn {
+  display: grid;
+  place-items: center;
+  width: max(34px, var(--size-hit-min));
+  height: max(32px, var(--size-hit-min));
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.zoom-btn + .zoom-btn {
+  border-top: 1px solid var(--color-border);
+}
+.zoom-btn:hover {
+  background: var(--color-surface-raised-hover);
+  color: var(--color-text);
+}
+.app[data-layout='phone'] .zoom-controls {
+  flex-direction: row;
+}
+.app[data-layout='phone'] .zoom-btn {
+  width: 44px;
+  height: 44px;
+}
+.app[data-layout='phone'] .zoom-btn + .zoom-btn {
+  border-top: 0;
+  border-left: 1px solid var(--color-border);
+}
+
+.layer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--size-control-lg);
+  padding: 0 14px 0 12px;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-float);
+  box-shadow: var(--shadow-1);
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+.layer-toggle .ic {
+  color: var(--color-accent-text);
+}
+
+/* ------------------------------------------------------------------ attribution (UI.md section 9.10) */
+.attribution {
+  max-width: 100%;
+  padding: 3px 8px 3px 9px;
+  border-radius: var(--radius-sm) 0 0 0;
+  background: var(--map-attr-bg);
+  color: var(--map-attr-text);
+  font-size: var(--font-size-2xs);
+  line-height: 15px;
+}
+.attribution .link {
+  color: var(--map-attr-link);
+  text-decoration: none;
+}
+.attribution .link:hover,
+.attribution .link:focus-visible {
+  text-decoration: underline;
+}
+.attribution .link:focus-visible {
+  outline: none;
+  border-radius: var(--radius-2xs);
+  padding: 0 2px;
+  margin: 0 -2px;
+  box-shadow: inset 0 0 0 2px var(--map-focus-ring);
+}
+.app[data-layout='phone'] .attribution {
+  padding: 2px 8px;
+  text-align: right;
+}
+/* Phones: the credit links are inline in the credit text (the WCAG 2.5.8 inline exception, UI.md section 9.10), but their
+   hit box still grows to the 24 px minimum. Vertical padding on an inline box changes neither the line nor the plate,
+   and 5 px stays inside the 8 px gap to the control row above. */
+@media (pointer: coarse) {
+  .app[data-layout='phone'] .attribution .link {
+    padding-block: 5px;
+  }
+}
+
+/* ------------------------------------------------------------------ Leaflet overlays */
+.leaflet-container {
+  font-family: var(--font-sans);
+}
+.snap-icon,
+.snap-anchor-icon,
+.snap-marker-icon,
+.snap-handle-icon {
+  background: none;
+  border: 0;
+}
+/* Chips and glyphs hang off a 0 x 0 icon at their point (overlayUtil.anchoredMarker). */
+.snap-anchor-icon {
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* ------------------------------------------------------------------ overlay lines (UI.md section 9.2 - section 9.7)
+   Every line is a core on a casing: up to three SVG paths from overlayUtil.casedPath - ov-outline (invalid edges
+   only), ov-casing, ov-core - and ov-fill on the path that paints a shape's fill. The role class sets --core-width,
+   --casing-extra and the core's colour and dash. A person's colour arrives as Leaflet's stroke / fill attribute
+   instead, so collaborator roles never set stroke or fill here. Dashed cores use butt caps so the gaps stay crisp. */
+path.ov-core,
+path.ov-casing,
+path.ov-outline {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+path.ov-core {
+  stroke-width: var(--core-width, 2px);
+}
+path.ov-casing {
+  stroke: var(--ov-casing);
+  stroke-opacity: var(--ov-casing-opacity);
+  stroke-width: calc(var(--core-width, 2px) + var(--casing-extra, var(--ov-casing-extra)));
+}
+/* Collaborator colours keep a dark casing on every map tone (UI.md section 2.5). */
+path.ov-casing--remote {
+  stroke: var(--ov-remote-casing);
+  stroke-opacity: var(--ov-remote-casing-opacity);
+}
+path.ov-outline {
+  stroke: var(--ov-invalid-outline);
+  stroke-opacity: var(--ov-invalid-outline-opacity);
+  stroke-width: calc(
+    var(--core-width, 2px) + var(--casing-extra, var(--ov-casing-extra)) + var(--ov-invalid-outline-extra)
+  );
+}
+
+/* Saved area hover (desktop): drawn over the canvas area, so its fill adds only the hover difference. */
+path.ov-hover {
+  --core-width: var(--ov-area-stroke-width-hover);
+  --casing-extra: var(--ov-area-casing-extra);
+}
+path.ov-hover.ov-core {
+  stroke: var(--ov-area-stroke);
+}
+path.ov-hover.ov-fill {
+  fill: var(--ov-area-fill);
+  fill-opacity: calc(var(--ov-area-fill-opacity-hover) - var(--ov-area-fill-opacity));
+}
+
+/* Selection (UI.md section 9.4): "me" with a glow, and CAD corner brackets that say "selected" without colour. */
+path.ov-selected {
+  --core-width: var(--ov-selected-stroke-width);
+  --casing-extra: var(--ov-selected-casing-extra);
+}
+path.ov-selected.ov-core {
+  stroke: var(--ov-selected-stroke);
+  filter: var(--ov-selected-glow);
+}
+path.ov-selected.ov-fill {
+  fill: var(--ov-selected-stroke);
+  fill-opacity: var(--ov-selected-fill-opacity);
+}
+path.ov-bracket {
+  --core-width: var(--ov-bracket-width);
+  --casing-extra: var(--ov-bracket-casing-extra);
+  stroke-linecap: square;
+}
+path.ov-bracket.ov-core {
+  stroke: var(--ov-selected-stroke);
+}
+path.ov-bracket.ov-casing {
+  stroke-opacity: var(--ov-bracket-casing-opacity);
+}
+/* Brackets are measured in pixels: hidden while a zoom animation scales the SVG, redrawn at zoomend. */
+.leaflet-zoom-anim path.ov-bracket {
+  visibility: hidden;
+}
+
+/* My shape (UI.md section 9.5, section 9.6): drawing, finished, saving and editing, always "me", never neutral or dashed. */
+path.ov-own {
+  --core-width: var(--ov-own-stroke-width);
+  --casing-extra: var(--ov-casing-extra);
+}
+path.ov-own.ov-core {
+  stroke: var(--ov-own-stroke);
+}
+path.ov-own.ov-fill {
+  fill: var(--ov-own-stroke);
+  fill-opacity: var(--ov-own-fill-opacity);
+}
+path.ov-own.is-saving.ov-core {
+  stroke-opacity: var(--ov-saving-core-opacity);
+}
+/* An invalid drag turns the edited shape to the invalid style (colour and pattern), with its outline. */
+path.ov-own.is-invalid {
+  --core-width: var(--ov-invalid-stroke-width);
+}
+path.ov-own.is-invalid.ov-core {
+  stroke: var(--ov-invalid);
+  stroke-dasharray: var(--ov-invalid-dash);
+  stroke-linecap: butt;
+}
+path.ov-edit.ov-outline {
+  display: none;
+}
+path.ov-edit.is-invalid.ov-outline {
+  display: inline;
+}
+/* Rubber-band: last point -> pointer, dashed. Closing preview: pointer -> first point, dotted, no casing; with no
+   pointer (touch, or off the map) it is the closing edge of the placed points, on a 3 px casing (no token). */
+path.ov-rubber {
+  --core-width: var(--ov-rubber-width);
+  --casing-extra: var(--ov-rubber-casing-extra);
+}
+path.ov-rubber.ov-core {
+  stroke: var(--ov-own-stroke);
+  stroke-dasharray: var(--ov-rubber-dash);
+  stroke-linecap: butt;
+}
+path.ov-closing {
+  --core-width: var(--ov-rubber-width);
+  --casing-extra: 3px;
+}
+path.ov-closing.ov-core {
+  stroke: var(--ov-own-stroke);
+  stroke-opacity: var(--ov-closing-opacity);
+  stroke-dasharray: var(--ov-closing-dash);
+}
+path.ov-closing.is-closed.ov-core {
+  stroke-opacity: var(--ov-closing-opacity-touch);
+}
+/* Invalid edges (UI.md section 9.7): colour AND pattern change; the outline (dark tone only) keeps them at 3:1. */
+path.ov-invalid {
+  --core-width: var(--ov-invalid-stroke-width);
+  --casing-extra: var(--ov-casing-extra);
+}
+path.ov-invalid.ov-core {
+  stroke: var(--ov-invalid);
+  stroke-dasharray: var(--ov-invalid-dash);
+  stroke-linecap: butt;
+}
+
+/* History preview ghost: the saved neutral, dotted. */
+path.ov-ghost {
+  --core-width: var(--ov-ghost-stroke-width);
+  --casing-extra: var(--ov-casing-extra);
+}
+path.ov-ghost.ov-core {
+  stroke: var(--ov-ghost-stroke);
+  stroke-dasharray: var(--ov-ghost-dash);
+}
+path.ov-ghost.ov-fill {
+  fill: var(--ov-ghost-stroke);
+  fill-opacity: var(--ov-ghost-fill-opacity);
+}
+/* Conflict, mine: "me" at the selection's width and fill (UI.md section 9.3 asks .12; the selection fill token is .13). */
+path.ov-mine {
+  --core-width: var(--ov-selected-stroke-width);
+  --casing-extra: var(--ov-selected-casing-extra);
+}
+path.ov-mine.ov-core {
+  stroke: var(--ov-selected-stroke);
+}
+path.ov-mine.ov-fill {
+  fill: var(--ov-selected-stroke);
+  fill-opacity: var(--ov-selected-fill-opacity);
+}
+
+/* Other people (their --c): drafts dashed with a light fill, their streamed rubber-band dotted, conflict "theirs". */
+path.ov-remote {
+  --core-width: var(--ov-remote-stroke-width);
+  --casing-extra: var(--ov-remote-casing-extra);
+}
+path.ov-remote.ov-core {
+  stroke-dasharray: var(--ov-remote-dash);
+  stroke-linecap: butt;
+}
+path.ov-remote.ov-fill {
+  fill-opacity: var(--ov-remote-fill-opacity);
+}
+path.ov-remote.is-idle {
+  opacity: var(--ov-remote-idle-opacity);
+  animation: ov-idle-fade var(--duration-remote-fade) var(--ease-standard);
+}
+path.ov-remote-band {
+  --core-width: var(--ov-remote-rubber-width);
+  --casing-extra: var(--ov-remote-rubber-casing-extra);
+}
+path.ov-remote-band.ov-core {
+  stroke-opacity: var(--ov-remote-rubber-opacity);
+  stroke-dasharray: var(--ov-remote-rubber-dash);
+}
+path.ov-remote-band.ov-casing {
+  stroke-opacity: var(--ov-remote-rubber-casing-opacity);
+}
+path.ov-theirs {
+  --core-width: var(--ov-remote-stroke-width);
+  --casing-extra: var(--ov-remote-casing-extra);
+}
+path.ov-theirs.ov-core {
+  stroke-dasharray: var(--ov-conflict-theirs-dash);
+  stroke-linecap: butt;
+}
+/* Lock ring and the reduced-motion change ring: a band in the person's colour that clears the area's own line and
+   casing. The lock is dashed; the change ring is solid, so it never reads as a lock. */
+path.ov-lock,
+path.ov-pulse-static {
+  --core-width: calc(var(--ov-area-stroke-width) + var(--ov-area-casing-extra) + var(--ov-ring-extra));
+  --casing-extra: var(--ov-remote-casing-extra);
+}
+path.ov-lock.ov-core {
+  stroke-dasharray: var(--ov-lock-dash);
+  stroke-linecap: butt;
+}
+/* Remote-change pulse (UI.md section 8): grows out from under the area's line and fades, once. */
+path.ov-pulse {
+  --core-width: calc(var(--ov-area-stroke-width) + var(--ov-pulse-extra-from));
+  --casing-extra: var(--ov-remote-casing-extra);
+  animation: var(--duration-pulse) var(--ease-in-out) forwards;
+}
+path.ov-pulse.ov-core {
+  animation-name: ov-pulse-core;
+}
+path.ov-pulse.ov-casing {
+  animation-name: ov-pulse-casing;
+}
+@keyframes ov-pulse-core {
+  from {
+    stroke-opacity: var(--ov-pulse-opacity);
+    stroke-width: calc(var(--ov-area-stroke-width) + var(--ov-pulse-extra-from));
+  }
+  to {
+    stroke-opacity: 0;
+    stroke-width: calc(var(--ov-area-stroke-width) + var(--ov-pulse-extra-to));
+  }
+}
+@keyframes ov-pulse-casing {
+  from {
+    stroke-opacity: var(--ov-remote-casing-opacity);
+    stroke-width: calc(
+      var(--ov-area-stroke-width) + var(--ov-pulse-extra-from) + var(--ov-remote-casing-extra)
+    );
+  }
+  to {
+    stroke-opacity: 0;
+    stroke-width: calc(
+      var(--ov-area-stroke-width) + var(--ov-pulse-extra-to) + var(--ov-remote-casing-extra)
+    );
+  }
+}
+/* A draft pausing fades to its idle opacity (to the element's own opacity: only the start is given). */
+@keyframes ov-idle-fade {
+  from {
+    opacity: 1;
+  }
+}
+
+/* Saved areas are one canvas: its casing is a filter on it (UI.md section 9.2). */
+.leaflet-snap-areas-pane canvas {
+  filter: var(--ov-halo-filter);
+}
+
+/* ------------------------------------------------------------------ point glyphs (UI.md section 9.5, section 9.7)
+   divIcons centred on their point: my draft's points, collaborators' point dots and the invalid x ticks. */
+.snap-point,
+.snap-dot,
+.snap-invalid-tick {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+/* Placed point: a white disc with a "me" ring and a casing ring. */
+.snap-point {
+  --casing-ring: color-mix(in srgb, var(--ov-casing) calc(var(--ov-casing-opacity) * 100%), transparent);
+  width: var(--ov-point-size);
+  height: var(--ov-point-size);
+  background: var(--ov-handle-fill);
+  box-shadow:
+    0 0 0 2px var(--ov-own-stroke),
+    0 0 0 3.5px var(--casing-ring),
+    var(--ov-glyph-shadow);
+}
+/* First point: a "me" ring with a centre dot and a halo; larger while a click there would finish. */
+.snap-point--first {
+  width: var(--ov-point-first-size);
+  height: var(--ov-point-first-size);
+  background: color-mix(in srgb, var(--ov-casing) 55%, transparent);
+  box-shadow:
+    inset 0 0 0 2.5px var(--ov-own-stroke),
+    0 0 0 1.5px var(--casing-ring),
+    0 0 0 5px color-mix(in srgb, var(--ov-own-stroke) 18%, transparent);
+}
+.snap-point--first::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ov-own-stroke);
+  transform: translate(-50%, -50%);
+}
+.snap-point--first.is-hot {
+  width: var(--ov-point-first-size-hover);
+  height: var(--ov-point-first-size-hover);
+}
+/* Last point: a "me" disc with a white ring and a glow. */
+.snap-point--last {
+  width: var(--ov-point-last-size);
+  height: var(--ov-point-last-size);
+  background: var(--ov-own-stroke);
+  box-shadow:
+    0 0 0 2px var(--ov-handle-fill),
+    0 0 0 3.5px var(--casing-ring),
+    0 0 10px color-mix(in srgb, var(--ov-own-stroke) 70%, transparent);
+}
+/* Finished but unsaved (Naming, Saving): small dots stay as the "unsaved" marker. */
+.snap-point--unsaved {
+  width: var(--ov-own-unsaved-point-size);
+  height: var(--ov-own-unsaved-point-size);
+}
+/* A collaborator's point: their colour, a white ring and a dark ring. */
+.snap-dot {
+  --c: var(--collab-1);
+  width: var(--ov-remote-point-size);
+  height: var(--ov-remote-point-size);
+  background: var(--c);
+  box-shadow:
+    0 0 0 1.5px var(--ov-handle-fill),
+    0 0 0 2.5px color-mix(in srgb, var(--ov-remote-casing) 70%, transparent);
+}
+.snap-dot.is-idle {
+  opacity: var(--ov-remote-idle-opacity);
+  animation: ov-idle-fade var(--duration-remote-fade) var(--ease-standard);
+}
+/* x tick on an invalid edge: a pattern used nowhere else, so the state does not rely on the red. */
+.snap-invalid-tick {
+  width: var(--ov-invalid-tick-size);
+  height: var(--ov-invalid-tick-size);
+  background: var(--ov-invalid-tick-bg);
+  box-shadow:
+    inset 0 0 0 1.5px var(--ov-invalid),
+    var(--ov-glyph-shadow);
+}
+.snap-invalid-tick::before,
+.snap-invalid-tick::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6.5px;
+  height: 1.5px;
+  border-radius: var(--radius-full);
+  background: var(--ov-invalid);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.snap-invalid-tick::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+.snap-invalid-marker {
+  display: grid;
+  place-items: center;
+  width: var(--ov-marker-invalid-size);
+  height: var(--ov-marker-invalid-size);
+  border-radius: 50%;
+  background: var(--ov-invalid);
+  color: var(--ov-invalid-glyph);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  box-shadow:
+    0 0 0 2px var(--ov-invalid-tick-bg),
+    var(--ov-glyph-shadow);
+}
+
+/* ------------------------------------------------------------------ chips (UI.md section 9.8)
+   No text sits directly on tiles: map text is on a chip. Person chips are the person's colour with ink text; neutral
+   and outline (paused) chips use the map-tone chip plate. Values (km²) are mono. */
+.snap-chip {
+  --c: var(--collab-1);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 280px;
+  height: var(--ov-chip-height);
+  padding: 0 8px;
+  border-radius: var(--ov-chip-radius);
+  background: var(--c);
+  color: var(--collab-ink);
+  box-shadow: var(--ov-chip-ring), var(--ov-chip-shadow);
+  transform: translate(12px, -50%);
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.snap-chip__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.snap-chip__value {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-mono-xs);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--letter-spacing-mono);
+}
+.snap-chip--person .snap-chip__value {
+  font-weight: var(--font-weight-semibold);
+}
+.snap-chip__icon {
+  flex: none;
+  width: var(--size-icon-xs);
+  height: var(--size-icon-xs);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.snap-chip--centred {
+  transform: translate(-50%, -50%);
+}
+/* Paused: an outline chip with a leading dot in the person's colour. */
+.snap-chip--outline {
+  background: var(--ov-chip-bg);
+  color: var(--ov-chip-text);
+  box-shadow:
+    inset 0 0 0 1.5px var(--c),
+    var(--ov-chip-shadow);
+}
+.snap-chip--outline::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+}
+.snap-chip--neutral {
+  background: var(--ov-chip-bg);
+  color: var(--ov-chip-text);
+  box-shadow:
+    0 0 0 1px var(--ov-chip-border),
+    var(--ov-chip-shadow);
+}
+.snap-chip--neutral .snap-chip__value {
+  color: var(--ov-chip-text-secondary);
+}
+.snap-chip--disc,
+.snap-chip[data-placement='disc'] {
+  justify-content: center;
+  width: var(--size-chip-disc);
+  height: var(--size-chip-disc);
+  padding: 0;
+  gap: 0;
+  border-radius: 50%;
+  font-size: var(--font-size-2xs);
+}
+/* Collapsed by the placement pass (UI.md section 9.8 rules 2-3): the person's initials; the full text stays in `title` and
+   the chip's text content, so test ids and data-* keep reading the whole chip. */
+.snap-chip[data-placement='disc']:not(.snap-chip--disc) > *,
+.snap-chip[data-placement='disc']:not(.snap-chip--disc)::before {
+  display: none;
+}
+.snap-chip[data-placement='disc']:not(.snap-chip--disc)::after {
+  content: attr(data-initials);
+}
+/* [N] The selected chip (UI.md section 9.8): name + km² on the neutral plate, a "me" ring and glow, a leading swatch. */
+.snap-chip--selected {
+  box-shadow:
+    0 0 0 1px var(--ov-chip-selected-border),
+    var(--ov-chip-selected-glow),
+    var(--ov-chip-shadow);
+}
+.snap-chip--selected::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-3xs);
+  background: color-mix(in srgb, var(--ov-selected-stroke) 32%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--ov-selected-stroke);
+}
+.snap-chip--selected .snap-chip__value {
+  color: var(--ov-chip-selected-text);
+}
+
+/* ------------------------------------------------------------------ edit handles (C-12; UI.md section 9.6) */
+.snap-handle {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  cursor: move;
+}
+.snap-handle__dot {
+  width: var(--ov-handle-size);
+  height: var(--ov-handle-size);
+  border-radius: 50%;
+  background: var(--ov-handle-fill);
+  border: var(--ov-handle-stroke-width) solid var(--ov-handle-stroke);
+  box-shadow: var(--ov-handle-shadow);
+  transition:
+    width var(--duration-fast),
+    height var(--duration-fast);
+}
+.snap-handle:hover .snap-handle__dot {
+  width: var(--ov-handle-size-hover);
+  height: var(--ov-handle-size-hover);
+}
+.snap-handle.is-selected .snap-handle__dot {
+  width: var(--ov-handle-size-selected);
+  height: var(--ov-handle-size-selected);
+  background: var(--ov-handle-stroke);
+  border: 3px solid var(--ov-handle-fill);
+  box-shadow:
+    0 0 0 1.5px var(--ov-handle-stroke),
+    var(--ov-handle-shadow);
+}
+/* *Move point* armed: a 4 px "me" halo round the selected point. */
+.snap-handle.is-armed .snap-handle__dot {
+  box-shadow:
+    0 0 0 1.5px var(--ov-handle-stroke),
+    0 0 0 5.5px color-mix(in srgb, var(--ov-handle-stroke) 22%, transparent),
+    var(--ov-handle-shadow);
+}
+.snap-handle--mid {
+  cursor: copy;
+}
+.snap-handle--mid .snap-handle__dot {
+  width: var(--ov-midpoint-size);
+  height: var(--ov-midpoint-size);
+  background: var(--ov-midpoint-fill);
+  border-width: 1.5px;
+  opacity: var(--ov-midpoint-opacity);
+}
+.snap-handle--mid:hover .snap-handle__dot {
+  width: var(--ov-midpoint-size-hover);
+  height: var(--ov-midpoint-size-hover);
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------------ area hover tooltip (C-08; UI.md section 9.3) */
+.snap-area-tooltip {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-elevated);
+  color: var(--color-text);
+  box-shadow: var(--shadow-3);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-medium);
+}
+.snap-area-tooltip::before {
+  display: none;
+}
+.snap-area-tooltip__value {
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  path.ov-pulse {
+    animation: none;
+  }
+}

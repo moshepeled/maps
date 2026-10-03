@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" role="img" aria-labelledby="t1 d1">
+  <title id="t1">Requirement traceability: one row of SPEC section 1</title>
+  <desc id="d1">Every assignment bullet gets an id and four columns: the design section, the implementation files and the proof. QA reviews the table; a row without proof is a finding that produces a new SPEC revision.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="560" fill="#111418"/>
+  <g font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#e8ebf0">
+    <text x="480" y="38" text-anchor="middle" font-size="20" font-weight="600">From assignment bullet to proof: the four columns of SPEC section 1</text>
+
+    <!-- column boxes -->
+    <rect x="30" y="80" width="200" height="120" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="130" y="108" text-anchor="middle" font-size="16" font-weight="600">1, Requirement</text>
+    <text x="130" y="132" text-anchor="middle" font-size="13" fill="#8b95a4">a bullet of instractions.md</text>
+    <text x="130" y="154" text-anchor="middle" font-size="13" fill="#8b95a4">gets an id: R0...R45, S1...S8</text>
+    <text x="130" y="178" text-anchor="middle" font-size="13" fill="#8b95a4">(numbered before any design)</text>
+
+    <rect x="270" y="80" width="200" height="120" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="370" y="108" text-anchor="middle" font-size="16" font-weight="600">2, Design</text>
+    <text x="370" y="132" text-anchor="middle" font-size="13" fill="#8b95a4">the SPEC section and ADR</text>
+    <text x="370" y="154" text-anchor="middle" font-size="13" fill="#8b95a4">that decide how it is met</text>
+    <text x="370" y="178" text-anchor="middle" font-size="13" fill="#8b95a4">e.g. section 8.5, ADR-0003</text>
+
+    <rect x="510" y="80" width="200" height="120" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="610" y="108" text-anchor="middle" font-size="16" font-weight="600">3, Implementation</text>
+    <text x="610" y="132" text-anchor="middle" font-size="13" fill="#8b95a4">file paths, not descriptions</text>
+    <text x="610" y="154" text-anchor="middle" font-size="13" fill="#8b95a4">B/ = backend, F/ = frontend,</text>
+    <text x="610" y="178" text-anchor="middle" font-size="13" fill="#8b95a4">S/ = packages/shared</text>
+
+    <rect x="750" y="80" width="200" height="120" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="850" y="108" text-anchor="middle" font-size="16" font-weight="600">4, Proof</text>
+    <text x="850" y="132" text-anchor="middle" font-size="13" fill="#8b95a4">a named test file or</text>
+    <text x="850" y="154" text-anchor="middle" font-size="13" fill="#8b95a4">recorded evidence;</text>
+    <text x="850" y="178" text-anchor="middle" font-size="13" fill="#8b95a4">the names are normative</text>
+
+    <line x1="230" y1="140" x2="268" y2="140" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="470" y1="140" x2="508" y2="140" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="710" y1="140" x2="748" y2="140" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- worked example row R6 -->
+    <text x="30" y="246" font-size="15" font-weight="600" fill="#22d3ee">Worked example: row R6 of docs/SPEC.md section 1.1</text>
+    <rect x="30" y="260" width="920" height="120" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <line x1="260" y1="260" x2="260" y2="380" stroke="#8b95a4" stroke-width="1" stroke-dasharray="4 4"/>
+    <line x1="470" y1="260" x2="470" y2="380" stroke="#8b95a4" stroke-width="1" stroke-dasharray="4 4"/>
+    <line x1="710" y1="260" x2="710" y2="380" stroke="#8b95a4" stroke-width="1" stroke-dasharray="4 4"/>
+
+    <text x="46" y="288" font-size="14" font-weight="600">R6</text>
+    <text x="46" y="312" font-size="14">Calculate and return</text>
+    <text x="46" y="332" font-size="14">area size in km²</text>
+    <text x="46" y="360" font-size="13" fill="#8b95a4">(assignment, Backend)</text>
+
+    <text x="276" y="288" font-size="14" font-weight="600">section 8.5 Area calculation</text>
+    <text x="276" y="312" font-size="14">WGS84 ellipsoid,</text>
+    <text x="276" y="332" font-size="14">Karney's algorithm</text>
+    <text x="276" y="360" font-size="13" fill="#8b95a4">(ADR-0003)</text>
+
+    <text x="486" y="288" font-size="14" font-weight="600">ST_Area(geom::geography)</text>
+    <text x="486" y="312" font-size="14">S/src/geo/geodesic.ts</text>
+    <text x="486" y="332" font-size="14">(same algorithm in the browser)</text>
+    <text x="486" y="360" font-size="13" fill="#8b95a4">server-authoritative number</text>
+
+    <text x="726" y="288" font-size="14" font-weight="600">S/src/geo/geodesic.test.ts</text>
+    <text x="726" y="312" font-size="14">all fixtures, rel <= 1e-6</text>
+    <text x="726" y="332" font-size="14">IT/areas/areas-crud.int.test.ts</text>
+    <text x="726" y="360" font-size="13" fill="#8b95a4">(areaKm2 within 1e-6 of fixture)</text>
+
+    <!-- QA loop -->
+    <rect x="130" y="420" width="700" height="70" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="480" y="448" text-anchor="middle" font-size="15" font-weight="600">QA design review (qa-expert)</text>
+    <text x="480" y="472" text-anchor="middle" font-size="13" fill="#8b95a4">a row without proof, or with a proof that cannot exist, is a finding -> resolved in the next SPEC revision (section 17, section 18)</text>
+    <path d="M830,455 L900,455 L900,205" fill="none" stroke="#8b95a4" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+    <path d="M130,455 L60,455 L60,205" fill="none" stroke="#8b95a4" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#arrow-muted)"/>
+
+    <text x="480" y="530" text-anchor="middle" font-size="14" fill="#8b95a4">Traceability turns a 50-bullet assignment into 54 checkable rows. The proof column is what makes the table honest.</text>
+  </g>
+</svg>

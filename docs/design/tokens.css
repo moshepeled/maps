@@ -1,0 +1,703 @@
+/* ==========================================================================
+   Snapland design tokens - v2.0 "Studio"
+   Owner: ui-design-expert. Spec: docs/design/UI.md v2 (every value is explained and verified there).
+   Imported once, before any component CSS, by frontend/src/main.tsx (single source of every visual value;
+   packages/shared parses the collaborator palette from this file, crossfade.test.ts the layer-fade timings).
+
+   Theme (decision D-5):
+     DARK is the default and lives on :root. The light "paper" theme is <html data-theme="light">.
+     The OS prefers-color-scheme setting is deliberately NOT followed. The choice is stored per browser in
+     localStorage "snapland.theme" ("dark" | "light") and applied before first paint (UI.md section 13).
+   Map tone:
+     Overlay, chip, attribution and map-focus tokens (--ov-*, --map-attr-*, --map-focus-*) resolve on the map
+     element and depend on the MAP TONE, not on the chrome theme: imagery (aerial, govmap-itm) and the tinted
+     OSM of the dark theme are "dark tone" (the :root values); only OSM in the light theme is "light tone"
+     (the [data-base-layer="map"] block below). Custom properties inherit as computed values, so every
+     tone-dependent token is re-declared literally in that block (never through var()).
+   Rules:
+     Components use SEMANTIC tokens (--color-*, --ov-*, --map-*, --size-*), never raw hex. The only exception
+     is a person's colour, which arrives from the server and is applied as an inline custom property --c.
+     Custom properties cannot be used inside @media conditions: breakpoints (600 / 900 / 1200) are written
+     literally in media queries.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* ------------------------------------------------------------ chrome surfaces (dark)
+     Four steps from the frame outwards, plus an inset well and a translucent float for map controls. */
+  --color-bg: #0a0c0f;                          /* frame: title bar, status bar, phone bottom bar, auth page */
+  --color-surface: #111418;                     /* rail, options bar, inspector, sheet, menus */
+  --color-surface-raised: #181c22;              /* secondary buttons, cards on a surface */
+  --color-surface-raised-hover: #20252d;        /* hover on a raised element; rail tool hover */
+  --color-surface-hover: #181c22;               /* hover on a surface or frame row/button */
+  --color-surface-pressed: #20252d;             /* active press, mode tag (neutral), tags */
+  --color-surface-inset: #0c0f13;               /* readout wells, message strip, inputs */
+  --color-surface-subtle: var(--color-surface-inset); /* v1 meaning kept: read-only fields, table headers */
+  --color-surface-sunken: #0c0f13;              /* disabled button fill, skeleton base */
+  --color-surface-float: rgb(12 15 19 / 0.92);  /* floating map controls (base-map switch, zoom, layer toggle) */
+  --color-input-bg: #0c0f13;                    /* text inputs: the inset fill keeps --color-border-strong >= 3:1 */
+  --color-elevated: #1a1e25;                    /* toasts, tooltips, popovers, menus, dialogs */
+  --color-elevated-hover: #242a33;
+  --color-skeleton-highlight: #20252d;
+  --color-scrim: rgb(0 0 0 / 0.6);
+  --color-handle: #3a414c;                      /* bottom-sheet grab handle (decorative) */
+
+  --color-border-subtle: #232831;               /* hairlines: bar edges, section dividers (decorative) */
+  --color-border: #2e343e;                      /* control rings paired with a fill, separators (decorative) */
+  --color-border-strong: #5c6676;               /* input boundaries (>= 3:1 on surface and input fill) */
+
+  --color-text: #e8ebf0;
+  --color-text-secondary: #a9b2bf;
+  --color-text-tertiary: #8b95a4;               /* meta, labels, placeholders; >= 4.5:1 on every chrome step */
+  --color-text-disabled: #5d6674;               /* exempt from contrast (WCAG 1.4.3) */
+  --color-text-on-accent: #03161a;
+  --color-text-on-danger: #0a0c0f;
+  --color-text-link: #67e8f9;
+  --color-icon: #a9b2bf;
+  --color-icon-strong: #e8ebf0;
+
+  /* ------------------------------------------------------------ accent = ME (dark)
+     My draft, my selection, my primary action, focus. Never used for anyone else. */
+  --color-accent: #22d3ee;
+  --color-accent-hover: #67e8f9;
+  --color-accent-active: #06b6d4;
+  --color-accent-text: #67e8f9;                 /* text/icons on accent tints and on surfaces */
+  --color-accent-faint: rgb(34 211 238 / 0.10); /* "You" tag, Current tag, toast action hover, previewing row */
+  --color-accent-subtle: rgb(34 211 238 / 0.16);/* pressed rail tool, mode tag, selected row */
+  --color-accent-subtle-hover: rgb(34 211 238 / 0.22);
+  --color-accent-border: rgb(34 211 238 / 0.32);
+
+  --color-focus-ring: var(--color-accent);
+  --color-focus-ring-halo: #05070a;             /* second ring of two-tone focus over the map */
+
+  --color-switch-track-off: var(--color-text-tertiary); /* switches live on elevated menus: >= 3:1 there */
+  --color-switch-thumb-off: var(--color-elevated);
+  --color-switch-track-on: var(--color-accent);
+  --color-switch-thumb-on: var(--color-text-on-accent);
+
+  --color-segment-selected: #20252d;            /* selected base-map segment fill */
+  --color-segment-selected-border: #6b7585;     /* its 1 px ring: the >= 3:1 state indicator, over any map pixel */
+  --color-on-segment-selected: #e8ebf0;
+
+  /* ------------------------------------------------------------ semantic (dark) */
+  --color-live: #34d399;
+  --color-success-text: #6ee7b7;
+  --color-success-icon: #34d399;
+  --color-success-bg: rgb(52 211 153 / 0.10);
+  --color-success-border: rgb(52 211 153 / 0.30);
+  --color-success-dot: var(--color-live);
+
+  --color-warning-text: #fcd34d;
+  --color-warning-icon: #fbbf24;
+  --color-warning-bg: rgb(251 191 36 / 0.10);
+  --color-warning-border: rgb(251 191 36 / 0.32);
+
+  --color-danger: #f87171;                      /* solid danger fill (rare), danger core in chrome */
+  --color-danger-hover: #fca5a5;
+  --color-danger-text: #fca5a5;
+  --color-danger-icon: #f87171;
+  --color-danger-bg: rgb(248 113 113 / 0.08);
+  --color-danger-bg-hover: rgb(248 113 113 / 0.14);
+  --color-danger-border: rgb(248 113 113 / 0.34);
+
+  --color-info-text: #93c5fd;
+  --color-info-icon: #60a5fa;
+  --color-info-bg: rgb(96 165 250 / 0.10);
+  --color-info-border: rgb(96 165 250 / 0.32);
+
+  --color-neutral-badge-bg: #20252d;            /* counts, version tags, +n, busy counter */
+  --color-neutral-badge-text: #a9b2bf;
+  --color-kbd-bg: #20252d;
+  --color-kbd-text: #e8ebf0;
+  --color-kbd-edge: rgb(0 0 0 / 0.35);          /* 1 px inset bottom edge of a key */
+  --color-badge-viewing-bg: #20252d;            /* presence "viewing" eye badge */
+  --color-badge-viewing-fg: #a9b2bf;
+
+  --brand-mark-bg: #161a20;
+  --brand-mark-edge: #343b46;
+  --brand-mark-fill: rgb(34 211 238 / 0.18);
+  --brand-mark-line: #22d3ee;
+  --brand-mark-vertex: #e8ebf0;
+
+  /* ------------------------------------------------------------ collaborator palette (decision D-6)
+     12 user colours. The server assigns users.color = USER_PALETTE[fnv1a32(userId) mod 12] (SPEC section 6.2);
+     USER_PALETTE (packages/shared) MUST equal these lowercase values in this order (constants.test.ts parses
+     this file). Theme-independent. Ink (--collab-ink) is drawn on them: initials, badge glyphs, chip text.
+     On maps they are always a bright core on a DARK casing (--ov-remote-casing). contrast-check.mjs gates them
+     (ink >= 4.5:1, CIEDE2000 >= 14 normal and >= 6 under deuteranopia / protanopia, core vs casing >= 3:1). */
+  --collab-count: 12;
+  --collab-1: #b4f500;   /* lime */
+  --collab-2: #f461ff;   /* orchid */
+  --collab-3: #ffab61;   /* tangerine */
+  --collab-4: #b86e3d;   /* copper */
+  --collab-5: #bcfab2;   /* mint */
+  --collab-6: #a64ef4;   /* violet */
+  --collab-7: #9888d7;   /* periwinkle */
+  --collab-8: #ff8fcb;   /* pink */
+  --collab-9: #f6dd79;   /* gold */
+  --collab-10: #447ec1;  /* cobalt */
+  --collab-11: #c44f9d;  /* plum */
+  --collab-12: #5eae29;  /* grass */
+  --collab-ink: #0a0c0f;
+  --shadow-collab-dot: 0 0 0 1.5px rgb(0 0 0 / 0.35);   /* ring of the 8 px person dot / history node on chrome */
+  --avatar-edge: inset 0 0 0 0 transparent;              /* light theme: a hairline so pale neon discs keep an edge */
+
+  /* ------------------------------------------------------------ v1 compatibility aliases (DEPRECATED)
+     Kept only so the v1 components render while they are restyled; remove each alias once
+     `grep -r "var(--<name>" frontend/src` finds no use (UI.md section 2.8 lists the replacements). */
+  --color-inverse-surface: var(--color-elevated);
+  --color-inverse-surface-hover: var(--color-elevated-hover);
+  --color-inverse-border: transparent;
+  --color-inverse-text: var(--color-text);
+  --color-inverse-text-secondary: var(--color-text-secondary);
+  --color-inverse-action: var(--color-accent-text);
+  --color-focus-ring-inverse: var(--color-focus-ring);
+  --collab-on: var(--collab-ink);
+  --red-400: var(--color-danger-icon);      /* v1 primitives used directly by two toast icons */
+  --green-400: var(--color-success-icon);
+
+  /* ------------------------------------------------------------ typography
+     IBM Plex, self-hosted (CSP font-src 'self'; @fontsource packages, UI.md section 3). Sans for the UI, Mono for every
+     value (areas, coordinates, times, versions, counts), Sans Hebrew for Hebrew names and attribution.
+     System fallbacks keep the layout usable if a font file fails. No text is smaller than 11 px. */
+  --font-sans: "IBM Plex Sans", "IBM Plex Sans Hebrew", system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Hebrew", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --font-hebrew: "IBM Plex Sans Hebrew", "IBM Plex Sans", system-ui, "Segoe UI", "Noto Sans Hebrew", Arial, sans-serif;
+
+  --font-size-2xs: 11px;      --line-height-2xs: 14px;      /* caps micro-labels, kbd, counts, tags, attribution */
+  --font-size-mono-xs: 11.5px; --line-height-mono-xs: 16px; /* mono meta: status bar, history times, activity meta */
+  --font-size-xs: 12px;       --line-height-xs: 16px;       /* meta, chips, pill, hints, properties */
+  --font-size-sm: 13px;       --line-height-sm: 18px;       /* UI body, buttons, rows, toasts, menu items */
+  --font-size-md: 14px;       --line-height-md: 20px;       /* wordmark, phone bar and sheet buttons */
+  --font-size-lg: 16px;       --line-height-lg: 24px;       /* inputs on touch */
+  --font-size-xl: 18px;       --line-height-xl: 24px;       /* titles: area name, dialog titles */
+  --font-size-2xl: 20px;      --line-height-2xl: 28px;      /* auth title */
+  --font-size-3xl: 24px;      --line-height-3xl: 32px;      /* reserved (no v2 use) */
+  --font-size-readout: 21px;  --line-height-readout: 24px;  /* options-bar live area (mono); 22/26 on phones */
+  --font-size-readout-sm: 17px;                             /* options-bar point count (mono) */
+  --font-size-readout-name: 15px;                           /* options-bar AreaSelected km² (mono) */
+  --font-size-figure: 34px;   --line-height-figure: 36px;   /* inspector area figure (mono) */
+  --font-size-figure-sm: 26px; --line-height-figure-sm: 28px; /* phone sheet area figure (mono) */
+  --font-size-input: 13px;                                  /* 16px on coarse pointers (below) */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --letter-spacing-tight: -0.01em;    /* titles >= 14px, wordmark */
+  --letter-spacing-title: -0.015em;   /* 18px titles */
+  --letter-spacing-normal: 0;
+  --letter-spacing-caps: 0.08em;      /* 11px uppercase micro-labels */
+  --letter-spacing-tag: 0.05em;       /* 11px uppercase tags (Current) */
+  --letter-spacing-mono: -0.01em;     /* mono values */
+  --letter-spacing-readout: -0.02em;  /* 21-26px mono values */
+  --letter-spacing-figure: -0.035em;  /* 34px mono figure */
+
+  /* ------------------------------------------------------------ spacing (4 px grid) */
+  --space-0: 0px;
+  --space-px: 1px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-3-5: 14px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --map-gutter: 12px;          /* distance of floating map controls, toasts and notices from the map edges */
+
+  /* ------------------------------------------------------------ radii */
+  --radius-3xs: 2px;    /* 8 px selected-chip swatch */
+  --radius-2xs: 3px;    /* 12 px name swatch, inline-link focus ring */
+  --radius-xs: 4px;     /* kbd, count, version tag, Current tag */
+  --radius-chip: 5px;   /* map chips, segment thumbs */
+  --radius-sm: 6px;     /* buttons, icon buttons, pill, mode tag, menu items */
+  --radius-row: 7px;    /* rail tools, list / timeline / people / activity rows */
+  --radius-md: 8px;     /* segmented track, zoom group, presence button, inputs, popovers, menus */
+  --radius-card: 9px;   /* readout well, toast, phone bar buttons, phone layer toggle */
+  --radius-lg: 12px;    /* overlay inspector, dialogs */
+  --radius-xl: 14px;    /* bottom sheet (top corners), auth card */
+  --radius-full: 9999px;/* avatars, badges, dots */
+
+  /* ------------------------------------------------------------ elevation (dark)
+     Docked chrome has no shadow (hairlines only). Shadows are for things that float. */
+  --shadow-0: none;
+  --shadow-1: 0 0 0 1px #2e343e, 0 6px 18px rgb(0 0 0 / 0.45);   /* floating map controls, chips */
+  --shadow-2: 0 0 0 1px #2e343e, 0 8px 22px rgb(0 0 0 / 0.5);    /* map notices, message strip */
+  --shadow-3: 0 0 0 1px #2d333d, 0 14px 34px rgb(0 0 0 / 0.55);  /* toasts, popovers, menus, tooltips, overlay inspector */
+  --shadow-4: 0 0 0 1px #2d333d, 0 24px 56px rgb(0 0 0 / 0.6);   /* dialogs */
+  --shadow-sheet: 0 -1px 0 #2e343e, 0 -12px 30px rgb(0 0 0 / 0.5); /* bottom sheet */
+  --shadow-inset-top: none;                                        /* v1 top-bar highlight; unused in v2 */
+  --shadow-kbd: inset 0 -1px 0 rgb(0 0 0 / 0.35), inset 0 0 0 1px #2e343e;
+
+  /* ------------------------------------------------------------ z-index
+     The Leaflet container gets isolation: isolate, so Leaflet's internal z-indices never compete with chrome. */
+  --z-map: 0;
+  --z-map-well: 5;            /* inner shadow of the map well (pointer-events: none) */
+  --z-map-reticle: 10;        /* keyboard reticle */
+  --z-map-focus: 20;          /* map focus frame (drawn by a pseudo-element: tiles would hide an inset ring) */
+  --z-chrome: 100;            /* title bar, rail, options bar, status bar, map controls, bottom bar */
+  --z-hud: 110;               /* options-bar message strip, top-centre notices */
+  --z-panel: 120;             /* overlay inspector (900-1199 px), bottom sheet */
+  --z-popover: 200;           /* menus, presence popover, pill popover, tooltips */
+  --z-toast: 300;
+  --z-scrim: 400;
+  --z-dialog: 410;
+  --z-skip-link: 500;
+  /* Leaflet panes (map.createPane(name).style.zIndex), inside the map stacking context */
+  --z-pane-tiles: 200;
+  --z-pane-pulse: 390;
+  --z-pane-locks: 395;
+  --z-pane-areas: 400;        /* canvas; its draw order (large first) is never changed */
+  --z-pane-selection: 405;    /* selection + hover copy (SVG, non-interactive) */
+  --z-pane-history: 410;
+  --z-pane-remote: 420;
+  --z-pane-own: 430;
+  --z-pane-handles: 610;
+  --z-pane-chips: 640;
+  --z-pane-cursors: 660;
+
+  /* ------------------------------------------------------------ motion */
+  --duration-0: 0ms;
+  --duration-instant: 80ms;     /* colour / background on hover */
+  --duration-fast: 120ms;       /* press, handle grow, chevron rotate, tooltip out */
+  --duration-base: 160ms;       /* popover / menu / tooltip in; dialog in */
+  --duration-point-pop: 150ms;
+  --duration-snap-back: 150ms;
+  --duration-panel: 200ms;      /* overlay inspector, section expand (UX PANEL_SLIDE_MS) */
+  --duration-sheet: 240ms;
+  --duration-toast-in: 200ms;
+  --duration-toast-out: 150ms;
+  --duration-layer-fade: 250ms; /* = SPEC section 8.4 LAYER_FADE_MS (crossfade.test.ts asserts parity) */
+  --duration-layer-fade-timeout: 1500ms;
+  --duration-layer-remove-cap: 5000ms;
+  --duration-fly: 700ms;
+  --duration-pulse: 1500ms;
+  --duration-pulse-static: 3000ms;
+  --duration-remote-fade: 300ms;
+  --duration-skeleton: 1400ms;
+  --duration-progress: 1200ms;
+  --duration-spinner: 800ms;
+  --duration-theme: 0ms;        /* a theme switch is instant: never transition every colour at once */
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-linear: linear;
+
+  /* ------------------------------------------------------------ sizes */
+  --size-topbar: 44px;                 /* title bar; 48 below 600 px */
+  --size-rail-width: 52px;
+  --size-rail-button: 36px;            /* rail tool, square */
+  --size-options-bar: 44px;            /* docked HUD; 58 below 900 px (phone frame) */
+  --size-message-strip: 28px;          /* hanging message strip under the options bar (Drawing / EditingShape) */
+  --size-status-bar: 26px;
+  --size-panel-width: 352px;           /* docked inspector; 340 as an overlay at 900-1199 px */
+  --size-section-header: 36px;         /* inspector section header; 32 in the overlay inspector */
+  --size-bottom-bar: 72px;             /* phone bottom bar, + env(safe-area-inset-bottom) */
+  --size-notice-max-width: 560px;
+  --size-toast-min-width: 344px;       /* phone: full width - 2 x gutter */
+  --size-toast-max-width: 480px;
+  --size-popover-width: 288px;
+  --size-menu-width: 248px;
+  --size-dialog-width: 440px;
+  --size-auth-card-width: 400px;
+  --size-sheet-peek: max(176px, 30dvh);
+  --size-sheet-expanded: min(85dvh, calc(100dvh - var(--size-topbar) - 160px)); /* control row, attribution and >= 60 px of map stay visible */
+  --size-sheet-conflict: 50dvh;
+  --size-control-xs: 24px;             /* 44 on coarse pointers */
+  --size-control-sm: 30px;             /* options-bar buttons */
+  --size-control-md: 32px;             /* inspector buttons, icon buttons, toast actions, menu items */
+  --size-control-lg: 44px;             /* phone bar / sheet / dialog buttons, auth */
+  --size-control-xl: 48px;             /* phone bottom-bar buttons */
+  --size-input: 36px;                  /* 44 on coarse pointers */
+  --size-pill: 24px;                   /* connection pill VISUAL height; 28 below 600 px; hit box >= --size-hit-min */
+  --size-tab: 36px;                    /* Details / History tabs in the section header row */
+  --size-segment: 28px;                /* base-map segment; track = 28 + 2 x 3 */
+  --size-kbd: 20px;                    /* 18 in the status bar */
+  --size-mode-tag: 26px;               /* 36 x 36 icon-only below 900 px */
+  --size-hit-min: 24px;                /* minimum HIT box of anything interactive; 44 whenever ANY pointer is coarse */
+  --size-status-badge: 16px;
+  --size-status-badge-icon: 10px;
+  --size-chip-disc: 20px;              /* collapsed person chip: initials disc (11 px initials) */
+  --size-icon-2xs: 10px;
+  --size-icon-xs: 12px;
+  --size-icon-sm: 14px;
+  --size-icon-md: 16px;
+  --size-icon-lg: 18px;                /* rail, phone bars */
+  --size-avatar-sm: 20px;              /* banners */
+  --size-avatar-md: 26px;              /* People / Activity rows */
+  --size-avatar-lg: 28px;              /* title-bar presence stack */
+  --size-person-dot: 8px;              /* person dot next to a name */
+  --size-history-node: 11px;
+  --size-focus-ring: 2px;
+  --size-focus-offset: 2px;
+
+  /* ------------------------------------------------------------ runtime layout properties (written by JS)
+     Defaults only; the layout component overwrites them on the app root (UI.md section 4). */
+  --map-inset-top: 0px;                /* message-strip height while it overlays the map (Drawing / EditingShape) */
+  --map-inset-right: 0px;              /* overlay inspector width + 2 x 10 while it is open (900-1199 px) */
+  --map-inset-bottom: 0px;             /* phone: current sheet height */
+  --map-attribution-h: 20px;           /* measured attribution height (ResizeObserver) */
+  --map-controls-w: 164px;             /* measured width of the top-left control column (base-map switch, zoom) */
+  --map-controls-h: 106px;             /* measured height of that column (fine pointer; 146 px with a coarse one) */
+
+  /* ------------------------------------------------------------ map backdrop and tile filters (theme)
+     Filters are applied PER TILE LAYER (className), never on the tile pane, so the outgoing layer of a
+     cross-fade keeps its own filter until it is removed. */
+  --map-backdrop-osm: #1b1e22;
+  --map-backdrop-imagery: #0b0e12;
+  --map-filter-osm: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.86) saturate(0.5); /* dark: OSM tinted */
+  --map-filter-imagery: brightness(0.74) saturate(0.82) contrast(1.06);                        /* imagery dimmed ~26 %, never inverted */
+
+  /* ------------------------------------------------------------ map tone: DARK (imagery, and OSM in the dark theme)
+     Every overlay line is a bright core on a dark casing. Widths are the core; casing = core + extra. */
+  --map-well-shadow: inset 0 10px 14px -12px rgb(0 0 0 / 0.7), inset 0 0 0 1px rgb(0 0 0 / 0.35);
+  --map-attr-bg: rgb(10 12 15 / 0.86);
+  --map-attr-text: #b9c1cc;
+  --map-attr-link: #67e8f9;
+  --map-focus-ring: #22d3ee;
+  --map-focus-halo: #05070a;
+  --map-focus-glow: rgb(34 211 238 / 0.22);
+
+  --ov-casing: #05070a;
+  --ov-casing-opacity: 0.85;
+  --ov-casing-extra: 4px;
+  --ov-halo-filter: drop-shadow(0 0 1px rgb(5 7 10 / 0.9)) drop-shadow(0 0 1px rgb(5 7 10 / 0.75)); /* canvas saved areas */
+  --ov-text-halo: 0 0 2px #05070a, 0 0 2px #05070a;
+
+  --ov-area-stroke: #eef1f5;                  /* saved areas: one calm neutral (colour is for people) */
+  --ov-area-stroke-width: 1.75px;
+  --ov-area-stroke-width-hover: 2.5px;
+  --ov-area-casing-extra: 3.5px;
+  --ov-area-fill: #ffffff;
+  --ov-area-fill-opacity: 0.12;
+  --ov-area-fill-opacity-hover: 0.18;
+
+  --ov-selected-stroke: #22d3ee;
+  --ov-selected-stroke-width: 2.75px;
+  --ov-selected-casing-extra: 4.5px;
+  --ov-selected-fill-opacity: 0.13;
+  --ov-selected-glow: drop-shadow(0 0 5px rgb(34 211 238 / 0.55));
+  --ov-bracket-size: 14px;                    /* CAD corner brackets around the selection bbox */
+  --ov-bracket-offset: 9px;
+  --ov-bracket-width: 1.5px;
+  --ov-bracket-casing-extra: 3px;
+  --ov-bracket-casing-opacity: 0.6;
+
+  --ov-own-stroke: #22d3ee;                   /* my draft / my edit */
+  --ov-own-stroke-width: 2.5px;
+  --ov-own-fill-opacity: 0.14;
+  --ov-rubber-width: 2px;
+  --ov-rubber-dash: 6 4;                      /* last point -> cursor */
+  --ov-rubber-casing-extra: 3.5px;
+  --ov-closing-dash: 1 5;                     /* cursor (touch: last point) -> first point, round caps = dots */
+  --ov-closing-opacity: 0.7;                  /* no casing with a pointer; touch: 0.8 on a 3 px casing */
+  --ov-closing-opacity-touch: 0.8;
+
+  --ov-remote-casing: #05070a;                /* others' drafts: always a dark casing, on every map tone */
+  --ov-remote-casing-opacity: 0.85;               /* >= 0.82 keeps every palette core >= 3:1 vs its casing */
+  --ov-remote-casing-extra: 4px;
+  --ov-remote-stroke-width: 2.5px;
+  --ov-remote-dash: 8 5;
+  --ov-remote-fill-opacity: 0.13;
+  --ov-remote-rubber-width: 2px;              /* thinner and shorter-dashed than the draft outline, still visible */
+  --ov-remote-rubber-dash: 3 4;
+  --ov-remote-rubber-opacity: 0.85;
+  --ov-remote-rubber-casing-extra: 2.5px;
+  --ov-remote-rubber-casing-opacity: 0.55;
+  --ov-remote-idle-opacity: 0.4;
+
+  --ov-ring-extra: 6px;                       /* lock ring / reduced-motion pulse ring band */
+  --ov-lock-dash: 10 5;
+  --ov-invalid: #f87171;
+  --ov-invalid-outline: #ffffff;              /* dark tone: a 0.75 px white edge outside the dark casing, so the */
+  --ov-invalid-outline-opacity: 0.9;          /* invalid edge reaches 3:1 on dark imagery too (no red can alone) */
+  --ov-invalid-outline-extra: 1.5px;          /* outline width = casing width + this */
+  --ov-invalid-dash: 2 3;
+  --ov-invalid-stroke-width: 3px;
+  --ov-invalid-tick-size: 14px;
+  --ov-invalid-glyph: #0a0c0f;                /* the x inside the 20 px invalid marker (on --ov-invalid) */
+  --ov-invalid-tick-bg: #0a0c0f;              /* disc of the 14 px x tick (ring and x in --ov-invalid) */
+  --ov-ghost-stroke: #eef1f5;                 /* history preview = the saved neutral, dotted */
+  --ov-ghost-dash: 0.5 5;
+  --ov-ghost-stroke-width: 3px;
+  --ov-ghost-fill-opacity: 0.06;
+  --ov-saving-core-opacity: 0.6;
+  --ov-pulse-opacity: 0.9;
+  --ov-pulse-extra-from: 3px;
+  --ov-pulse-extra-to: 12px;
+  --ov-conflict-theirs-dash: 8 5;
+
+  --ov-handle-size: 12px;
+  --ov-handle-size-hover: 16px;
+  --ov-handle-size-selected: 14px;
+  --ov-handle-hit: 24px;                      /* 44 on coarse pointers */
+  --ov-handle-fill: #ffffff;
+  --ov-handle-stroke: #22d3ee;
+  --ov-handle-stroke-width: 2px;
+  --ov-handle-shadow: 0 0 0 1.5px rgb(5 7 10 / 0.75), 0 1px 4px rgb(0 0 0 / 0.5);
+  --ov-glyph-shadow: 0 1px 4px rgb(0 0 0 / 0.5); /* drop shadow of point glyphs: remote dots, invalid tick / marker */
+  --ov-midpoint-size: 8px;
+  --ov-midpoint-size-hover: 12px;
+  --ov-midpoint-opacity: 0.75;
+  --ov-midpoint-fill: rgb(255 255 255 / 0.9);
+  --ov-point-size: 10px;                      /* placed draft point: white, 2 px accent ring, dark casing ring */
+  --ov-point-last-size: 11px;                 /* accent fill, 2 px white ring, glow */
+  --ov-point-first-size: 14px;                /* accent ring with a 6 px accent centre; 18 when "click to finish" */
+  --ov-point-first-size-hover: 18px;
+  --ov-own-unsaved-point-size: 8px;
+  --ov-remote-point-size: 7px;                /* --c dot, 1.5 px white ring, 1 px dark ring */
+  --ov-marker-invalid-size: 20px;
+
+  --ov-chip-height: 24px;
+  --ov-chip-radius: 5px;
+  --ov-chip-bg: rgb(9 11 14 / 0.9);           /* area-name / neutral chips */
+  --ov-chip-text: #e8ebf0;
+  --ov-chip-text-secondary: #a9b2bf;
+  --ov-chip-border: #343b46;
+  --ov-chip-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
+  --ov-chip-selected-border: #22d3ee;
+  --ov-chip-selected-text: #67e8f9;
+  --ov-chip-selected-glow: 0 0 12px rgb(34 211 238 / 0.35);
+  --ov-chip-ring: 0 0 0 1.5px rgb(5 7 10 / 0.85); /* person chips and discs (--c fill, --collab-ink text), every tone */
+  --ov-reticle-size: 56px;
+  --ov-reticle-line: #ffffff;
+  --ov-reticle-casing: #05070a;
+  --ov-cursor-stroke: #05070a;                /* [N] collaborator cursor arrow outline */
+}
+
+/* ============================================================== light "paper" theme (chrome) */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --color-bg: #e9ecf0;
+  --color-surface: #f6f7f9;
+  --color-surface-raised: #ffffff;
+  --color-surface-raised-hover: #e3e7ec;
+  --color-surface-hover: #ffffff;
+  --color-surface-pressed: #e3e7ec;
+  --color-surface-inset: #eef1f4;
+  --color-surface-sunken: #e3e7ec;
+  --color-surface-float: rgb(255 255 255 / 0.96);
+  --color-input-bg: #ffffff;
+  --color-elevated: #ffffff;
+  --color-elevated-hover: #eef1f4;
+  --color-skeleton-highlight: #f6f7f9;
+  --color-scrim: rgb(18 22 28 / 0.4);
+  --color-handle: #c3c9d2;
+
+  --color-border-subtle: #dce0e6;
+  --color-border: #cbd1d9;
+  --color-border-strong: #838c99;
+
+  --color-text: #12161c;
+  --color-text-secondary: #434c59;
+  --color-text-tertiary: #58616e;
+  --color-text-disabled: #9aa2ad;
+  --color-text-on-accent: #ffffff;
+  --color-text-on-danger: #ffffff;
+  --color-text-link: #0a5f63;
+  --color-icon: #434c59;
+  --color-icon-strong: #12161c;
+
+  --color-accent: #0d7377;
+  --color-accent-hover: #0a5f63;
+  --color-accent-active: #0a585b;
+  --color-accent-text: #0a5f63;
+  --color-accent-faint: rgb(13 115 119 / 0.08);
+  --color-accent-subtle: rgb(13 115 119 / 0.11);
+  --color-accent-subtle-hover: rgb(13 115 119 / 0.16);
+  --color-accent-border: rgb(13 115 119 / 0.36);
+
+  --color-focus-ring-halo: #ffffff;
+
+  --color-segment-selected: #e3e7ec;
+  --color-segment-selected-border: #838c99;
+  --color-on-segment-selected: #12161c;
+
+  --color-live: #047857;
+  --color-success-text: #065f46;
+  --color-success-icon: #047857;
+  --color-success-bg: rgb(5 150 105 / 0.09);
+  --color-success-border: rgb(5 150 105 / 0.32);
+
+  --color-warning-text: #92400e;
+  --color-warning-icon: #b45309;
+  --color-warning-bg: rgb(217 119 6 / 0.08);
+  --color-warning-border: rgb(217 119 6 / 0.34);
+
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-danger-text: #b91c1c;
+  --color-danger-icon: #dc2626;
+  --color-danger-bg: rgb(220 38 38 / 0.06);
+  --color-danger-bg-hover: rgb(220 38 38 / 0.10);
+  --color-danger-border: rgb(220 38 38 / 0.34);
+
+  --color-info-text: #1d4ed8;
+  --color-info-icon: #2563eb;
+  --color-info-bg: rgb(37 99 235 / 0.07);
+  --color-info-border: rgb(37 99 235 / 0.30);
+
+  --color-neutral-badge-bg: #e3e7ec;
+  --color-neutral-badge-text: #434c59;
+  --color-kbd-bg: #ffffff;
+  --color-kbd-text: #12161c;
+  --color-kbd-edge: rgb(15 23 42 / 0.14);
+  --color-badge-viewing-bg: #cfd5dd;
+  --color-badge-viewing-fg: #2b323c;
+
+  --brand-mark-bg: #12161c;
+  --brand-mark-edge: #12161c;
+  --brand-mark-fill: rgb(34 211 238 / 0.22);
+  --brand-mark-vertex: #ffffff;
+
+  --shadow-collab-dot: 0 0 0 1px rgb(15 23 42 / 0.22);
+  --avatar-edge: inset 0 0 0 1px rgb(15 23 42 / 0.18);
+  --shadow-1: 0 0 0 1px rgb(15 23 42 / 0.12), 0 4px 14px rgb(15 23 42 / 0.12);
+  --shadow-2: 0 0 0 1px rgb(15 23 42 / 0.12), 0 6px 18px rgb(15 23 42 / 0.14);
+  --shadow-3: 0 0 0 1px rgb(15 23 42 / 0.12), 0 14px 34px rgb(15 23 42 / 0.18);
+  --shadow-4: 0 0 0 1px rgb(15 23 42 / 0.14), 0 24px 56px rgb(15 23 42 / 0.26);
+  --shadow-sheet: 0 -1px 0 #cbd1d9, 0 -12px 30px rgb(15 23 42 / 0.16);
+  --shadow-kbd: inset 0 -1px 0 rgb(15 23 42 / 0.14), inset 0 0 0 1px #cbd1d9;
+
+  --map-backdrop-osm: #e8e4dc;
+  --map-filter-osm: none;
+}
+
+/* ============================================================== map tone: LIGHT (OSM "Map" in the light theme)
+   Dark cores on white casings for me / saved / invalid; collaborators keep their neon core on a dark casing.
+   Imagery in the light theme stays dark tone (it inherits the :root values). "osm" is accepted as an alias. */
+:root[data-theme="light"] [data-base-layer="map"],
+:root[data-theme="light"] [data-base-layer="osm"] {
+  --map-well-shadow: inset 0 8px 10px -10px rgb(15 23 42 / 0.35), inset 0 0 0 1px rgb(15 23 42 / 0.1);
+  --map-attr-bg: rgb(255 255 255 / 0.9);
+  --map-attr-text: #3c4450;
+  --map-attr-link: #0a5f63;
+  --map-focus-ring: #0d7377;
+  --map-focus-halo: #ffffff;
+  --map-focus-glow: rgb(13 115 119 / 0.22);
+
+  --ov-casing: #ffffff;
+  --ov-casing-opacity: 0.92;
+  --ov-halo-filter: drop-shadow(0 0 1px rgb(255 255 255 / 0.95)) drop-shadow(0 0 0.75px rgb(255 255 255 / 0.9));
+  --ov-text-halo: 0 0 2px #ffffff, 0 0 2px #ffffff;
+
+  --ov-area-stroke: #2f3a4a;
+  --ov-area-fill: #2f3a4a;
+  --ov-area-fill-opacity: 0.10;
+  --ov-area-fill-opacity-hover: 0.16;
+
+  --ov-selected-stroke: #0d7377;
+  --ov-selected-glow: drop-shadow(0 0 3px rgb(13 115 119 / 0.45));
+  --ov-own-stroke: #0d7377;
+
+  --ov-remote-casing-extra: 3px;
+
+  --ov-invalid: #b91c1c;
+  --ov-invalid-outline-opacity: 0;
+  --ov-invalid-glyph: #ffffff;
+  --ov-invalid-tick-bg: #ffffff;
+  --ov-ghost-stroke: #2f3a4a;
+
+  --ov-handle-stroke: #0d7377;
+  --ov-handle-shadow: 0 0 0 1px rgb(15 19 26 / 0.35), 0 1px 3px rgb(15 19 26 / 0.3);
+  --ov-glyph-shadow: 0 1px 3px rgb(15 19 26 / 0.3);
+
+  --ov-chip-bg: rgb(255 255 255 / 0.95);
+  --ov-chip-text: #12161c;
+  --ov-chip-text-secondary: #434c59;
+  --ov-chip-border: #c3c9d2;
+  --ov-chip-shadow: 0 2px 6px rgb(15 23 42 / 0.18);
+  --ov-chip-selected-border: #0d7377;
+  --ov-chip-selected-text: #0d7377;
+  --ov-chip-selected-glow: 0 0 0 0 transparent;
+  --ov-reticle-line: #12161c;
+  --ov-reticle-casing: #ffffff;
+}
+
+/* ============================================================== input modality
+   1. HIT boxes grow whenever ANY available pointer is coarse (phones, tablets AND touch laptops).
+   2. VISUAL control sizes grow only when the PRIMARY pointer is coarse. */
+@media (any-pointer: coarse) {
+  :root {
+    --size-hit-min: 44px;
+    --ov-handle-hit: 44px;
+  }
+}
+@media (pointer: coarse) {
+  :root {
+    --map-controls-h: 146px;
+    --size-control-xs: 44px;
+    --size-control-sm: 44px;
+    --size-control-md: 44px;
+    --size-input: 44px;
+    --size-tab: 44px;
+    --size-segment: 44px;
+    --size-hit-min: 44px;
+    --ov-handle-hit: 44px;
+    --ov-handle-size: 16px;
+    --ov-handle-size-selected: 18px;
+    --ov-midpoint-size: 12px;
+    --ov-point-size: 12px;
+    --ov-point-last-size: 13px;
+    --ov-point-first-size: 18px;
+    --font-size-input: 16px;        /* prevents the iOS focus zoom */
+  }
+}
+
+/* ============================================================== breakpoints */
+@media (max-width: 599.98px) {
+  :root {
+    --size-topbar: 48px;
+    --size-pill: 28px;
+    --font-size-readout: 22px;
+    --line-height-readout: 26px;
+  }
+}
+@media (max-width: 899.98px) {
+  :root {
+    --size-options-bar: 58px;       /* phone-frame HUD: readout row + exactly one message line */
+    --size-mode-tag: 36px;
+  }
+}
+@media (min-width: 900px) and (max-width: 1199.98px) {
+  :root {
+    --size-panel-width: 340px;      /* the inspector floats over the map */
+    --size-section-header: 32px;
+  }
+}
+
+/* ============================================================== reduced motion
+   Everything that moves becomes instant; the pulse becomes a static solid ring + "{user}, updated" chip for
+   --duration-pulse-static; shimmer / progress / toast countdown bar stop; spinners slow down. JS-driven motion
+   (layer cross-fade, flyToBounds, snap-back) MUST read matchMedia('(prefers-reduced-motion: reduce)'). */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-point-pop: 0ms;
+    --duration-snap-back: 0ms;
+    --duration-panel: 0ms;
+    --duration-sheet: 0ms;
+    --duration-toast-in: 0ms;
+    --duration-toast-out: 0ms;
+    --duration-layer-fade: 0ms;
+    --duration-fly: 0ms;
+    --duration-pulse: 0ms;
+    --duration-remote-fade: 0ms;
+    --duration-skeleton: 0ms;
+    --duration-progress: 0ms;
+    --duration-spinner: 1600ms;
+  }
+}

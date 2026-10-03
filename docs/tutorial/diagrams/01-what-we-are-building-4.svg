@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" role="img" aria-labelledby="t4 d4">
+  <title id="t4">Where the code lives</title>
+  <desc id="d4">An npm workspaces monorepo. packages/shared holds the contracts and is imported by backend and frontend. e2e, loadtest, docker, scripts and docs support them; loadtest is a k6 script, not a workspace.</desc>
+  <defs>
+    <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: #e8ebf0; }
+    .title { font-size: 20px; font-weight: 600; }
+    .label { font-size: 16px; font-weight: 600; }
+    .mono { font-family: ui-monospace, Consolas, monospace; font-size: 15px; font-weight: 600; fill: #22d3ee; }
+    .b { font-size: 14px; }
+    .small { font-size: 13px; fill: #8b95a4; }
+    .box { fill: #181c22; stroke: #5c6676; stroke-width: 1.5; rx: 10; }
+    .core { fill: #181c22; stroke: #22d3ee; stroke-width: 2; rx: 12; }
+    .flow { stroke: #22d3ee; stroke-width: 2; fill: none; }
+  </style>
+  <rect width="960" height="560" fill="#111418"/>
+  <text x="32" y="40" class="title">Where the code lives - one npm workspaces monorepo</text>
+
+  <!-- shared -->
+  <rect x="330" y="80" width="300" height="118" class="core"/>
+  <text x="350" y="108" class="mono">packages/shared</text>
+  <text x="350" y="130" class="b">@snapland/shared - the contracts</text>
+  <text x="350" y="150" class="small">zod schemas, WebSocket protocol, polygon</text>
+  <text x="350" y="168" class="small">validation, geodesic area, LIMITS, RATE_LIMITS</text>
+  <text x="350" y="188" class="small">no I/O, no Node or DOM APIs</text>
+
+  <!-- backend -->
+  <path d="M330,140 L262,140" class="flow" marker-end="url(#a4)"/>
+  <rect x="32" y="80" width="230" height="118" class="box"/>
+  <text x="52" y="108" class="mono">backend/</text>
+  <text x="52" y="130" class="b">Fastify 5 API + WS gateway</text>
+  <text x="52" y="150" class="small">src/modules: health, meta, auth,</text>
+  <text x="52" y="168" class="small">areas, realtime, admin, retention;</text>
+  <text x="52" y="188" class="small">migrations/*.sql (PostGIS)</text>
+
+  <!-- frontend -->
+  <path d="M630,140 L698,140" class="flow" marker-end="url(#a4)"/>
+  <rect x="700" y="80" width="228" height="118" class="box"/>
+  <text x="720" y="108" class="mono">frontend/</text>
+  <text x="720" y="130" class="b">React 19 + Leaflet 1.9 + Vite</text>
+  <text x="720" y="150" class="small">src/map (drawing, layers, ITM)</text>
+  <text x="720" y="168" class="small">src/realtime, src/state (zustand)</text>
+  <text x="720" y="188" class="small">src/components, src/workspace</text>
+
+  <text x="270" y="126" class="small">imports</text>
+  <text x="640" y="126" class="small">imports</text>
+
+  <!-- support row -->
+  <rect x="32" y="250" width="280" height="96" class="box"/>
+  <text x="52" y="278" class="mono">e2e/</text>
+  <text x="52" y="300" class="b">Playwright, two browser contexts</text>
+  <text x="52" y="320" class="small">tests/: studio-frame, ux-touch, two-users-</text>
+  <text x="52" y="338" class="small">realtime, layer-switch, degradation, xss</text>
+
+  <rect x="340" y="250" width="280" height="96" class="box"/>
+  <text x="360" y="278" class="mono">loadtest/</text>
+  <text x="360" y="300" class="b">k6 load test of the bbox read path</text>
+  <text x="360" y="320" class="small">bbox.js (runs in k6, not a workspace);</text>
+  <text x="360" y="338" class="small">results in docs/BENCHMARKS.md</text>
+
+  <rect x="648" y="250" width="280" height="96" class="box"/>
+  <text x="668" y="278" class="mono">docker/</text>
+  <text x="668" y="300" class="b">nginx image + config, postgres init</text>
+  <text x="668" y="320" class="small">docker-compose.yml and</text>
+  <text x="668" y="338" class="small">docker-compose.e2e.yml sit at the root</text>
+
+  <rect x="32" y="376" width="434" height="96" class="box"/>
+  <text x="52" y="404" class="mono">scripts/</text>
+  <text x="52" y="426" class="b">repo tooling, Node built-ins only</text>
+  <text x="52" y="446" class="small">setup-env.mjs, check-banned-deps.mjs, check-publishable.mjs</text>
+  <text x="52" y="464" class="small">(each with a *.test.mjs)</text>
+
+  <rect x="494" y="376" width="434" height="96" class="box"/>
+  <text x="514" y="404" class="mono">docs/</text>
+  <text x="514" y="426" class="b">SPEC.md (source of truth), adr/, design/</text>
+  <text x="514" y="446" class="small">design/UX.md, UI.md, tokens.css, concepts/, fixtures/ -</text>
+  <text x="514" y="464" class="small">benchmarks/, superpowers/ (briefs and plans), tutorial/ (this)</text>
+
+  <line x1="32" y1="498" x2="928" y2="498" stroke="#5c6676"/>
+  <text x="32" y="524" class="small">Caption: the arrows are the only cross-package imports. backend and frontend never import each other; both import</text>
+  <text x="32" y="544" class="small">@snapland/shared, so a limit changed once changes both sides at once (ADR-0001). Root package.json lists the four workspaces.</text>
+</svg>

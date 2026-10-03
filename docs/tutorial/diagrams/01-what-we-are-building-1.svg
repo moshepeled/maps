@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" role="img" aria-labelledby="t1 d1">
+  <title id="t1">One shared map, three kinds of traffic</title>
+  <desc id="d1">Three clients (a desktop browser drawing, a keyboard-first browser drawing, a phone drawing while a crew watches) exchange three kinds of traffic with the Snapland server: live drafts, saved areas and presence. Only saved areas reach the database.</desc>
+  <defs>
+    <marker id="arrowAccent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrowMuted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; fill: #e8ebf0; }
+    .title { font-size: 20px; font-weight: 600; }
+    .label { font-size: 15px; }
+    .small { font-size: 13px; fill: #8b95a4; }
+    .accent { fill: #22d3ee; }
+    .box { fill: #181c22; stroke: #5c6676; stroke-width: 1.5; rx: 10; }
+    .server { fill: #181c22; stroke: #22d3ee; stroke-width: 2; rx: 12; }
+    .lane { stroke: #22d3ee; stroke-width: 2; fill: none; }
+    .laneMuted { stroke: #8b95a4; stroke-width: 2; fill: none; stroke-dasharray: 6 5; }
+  </style>
+  <rect width="960" height="540" fill="#111418"/>
+  <text x="32" y="40" class="title">One shared map, three kinds of traffic</text>
+
+  <!-- Clients -->
+  <rect x="32" y="84" width="250" height="100" class="box"/>
+  <text x="48" y="110" class="label">Noa, desktop browser</text>
+  <text x="48" y="130" class="small">mouse, aerial imagery, is <tspan class="accent">drawing</tspan></text>
+  <text x="48" y="148" class="small">wants a km² figure she can trust</text>
+  <text x="48" y="166" class="small">and a history she can roll back</text>
+
+  <rect x="32" y="204" width="250" height="100" class="box"/>
+  <text x="48" y="230" class="label">Rina, keyboard-first browser</text>
+  <text x="48" y="250" class="small">no mouse, screen reader some days</text>
+  <text x="48" y="268" class="small">draws, names and saves by keys only</text>
+  <text x="48" y="286" class="small">needs a text alternative to the map</text>
+
+  <rect x="32" y="324" width="250" height="100" class="box"/>
+  <text x="48" y="350" class="label">Avi, phone in a vehicle</text>
+  <text x="48" y="370" class="small">patchy 4G, one hand, is <tspan class="accent">drawing</tspan></text>
+  <text x="48" y="388" class="small">work zones while his crews watch</text>
+  <text x="48" y="406" class="small">keeps working when the socket drops</text>
+
+  <!-- Server -->
+  <rect x="660" y="90" width="268" height="328" class="server"/>
+  <text x="680" y="122" class="label" style="font-weight:600">Snapland</text>
+  <text x="680" y="146" class="small">nginx edge + two backend replicas</text>
+  <line x1="680" y1="160" x2="908" y2="160" stroke="#5c6676"/>
+  <text x="680" y="188" class="label">PostgreSQL + PostGIS</text>
+  <text x="680" y="208" class="small">areas, versions, users, sessions, audit</text>
+  <text x="680" y="228" class="small">computes km² on the WGS84 ellipsoid</text>
+  <text x="680" y="266" class="label">Redis</text>
+  <text x="680" y="286" class="small">drafts, presence, locks, rate limits</text>
+  <text x="680" y="306" class="small">pub/sub between the two replicas</text>
+  <text x="680" y="344" class="label">WebSocket gateway</text>
+  <text x="680" y="364" class="small">subprotocol snapland.v1, one socket</text>
+  <text x="680" y="384" class="small">per browser tab, filtered by viewport</text>
+
+  <!-- Lanes -->
+  <path d="M282,134 L658,134" class="lane" marker-end="url(#arrowAccent)" marker-start="url(#arrowAccent)"/>
+  <text x="300" y="124" class="label">Live draft, every point as it is placed</text>
+  <text x="300" y="152" class="small">ephemeral, at most 10 updates/s, never stored</text>
+
+  <path d="M282,254 L658,254" class="lane" marker-end="url(#arrowAccent)" marker-start="url(#arrowAccent)"/>
+  <text x="300" y="244" class="label">Saved area, name + polygon -> authoritative km²</text>
+  <text x="300" y="272" class="small">durable, versioned, written once over REST, then broadcast</text>
+
+  <path d="M282,374 L658,374" class="laneMuted" marker-end="url(#arrowMuted)" marker-start="url(#arrowMuted)"/>
+  <text x="300" y="364" class="label">Presence, who is viewing or drawing right now</text>
+  <text x="300" y="392" class="small">ephemeral, refreshed every 15 s, expires when a tab closes</text>
+
+  <!-- Caption -->
+  <line x1="32" y1="450" x2="928" y2="450" stroke="#5c6676"/>
+  <text x="32" y="478" class="small">Caption: every browser talks to the same server, but only the saved area reaches the database. Drafts and presence</text>
+  <text x="32" y="498" class="small">are relayed through Redis and forgotten. Chapter 2 draws the full system model; this picture only names the three flows.</text>
+</svg>

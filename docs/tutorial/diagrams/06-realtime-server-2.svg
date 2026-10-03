@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 700" width="960" height="700" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="14">
+  <title>Cross-instance fan-out: two replicas, one Redis channel, origin filtering</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b95a4"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f87171"/>
+    </marker>
+  </defs>
+  <rect width="960" height="700" fill="#111418"/>
+  <text x="480" y="34" text-anchor="middle" fill="#e8ebf0" font-size="18" font-weight="600">Alice saves an area on backend-1; Bob's socket lives on backend-2</text>
+
+  <!-- browsers -->
+  <rect x="60" y="60" width="220" height="64" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="170" y="86" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">Alice (browser)</text>
+  <text x="170" y="108" text-anchor="middle" fill="#8b95a4">WS on backend-1, REST to any</text>
+
+  <rect x="680" y="60" width="220" height="64" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="790" y="86" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">Bob (browser)</text>
+  <text x="790" y="108" text-anchor="middle" fill="#8b95a4">WS on backend-2, has a viewport</text>
+
+  <!-- nginx -->
+  <rect x="330" y="150" width="300" height="70" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="480" y="176" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">nginx (upstream snapland_backend)</text>
+  <text x="480" y="196" text-anchor="middle" fill="#8b95a4">least_conn, no sticky sessions, /api and /ws</text>
+  <text x="480" y="212" text-anchor="middle" fill="#8b95a4">max_fails=3 fail_timeout=10s</text>
+
+  <!-- ① Alice's REST call -->
+  <line x1="200" y1="124" x2="400" y2="150" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="292" y="122" fill="#e8ebf0">① POST /api/v1/areas</text>
+
+  <!-- replicas -->
+  <rect x="60" y="300" width="300" height="150" rx="12" fill="#161b22" stroke="#2a313b"/>
+  <text x="210" y="326" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">backend-1  (INSTANCE_ID=backend-1)</text>
+  <text x="76" y="352" fill="#e8ebf0">AreasService.create -> PostGIS COMMIT</text>
+  <text x="76" y="374" fill="#e8ebf0">afterCommit: invalidate cache, then</text>
+  <text x="76" y="396" fill="#22d3ee">③ EventBus.publish('areas', payload)</text>
+  <text x="76" y="418" fill="#8b95a4">③a deliver to LOCAL subscribers first (sync)</text>
+  <text x="76" y="438" fill="#8b95a4">③b PUBLISH snap:ch:areas &lt;envelope JSON&gt;</text>
+
+  <rect x="600" y="300" width="300" height="150" rx="12" fill="#161b22" stroke="#2a313b"/>
+  <text x="750" y="326" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">backend-2  (INSTANCE_ID=backend-2)</text>
+  <text x="616" y="352" fill="#e8ebf0">RedisEventBus #onMessage:</text>
+  <text x="616" y="374" fill="#e8ebf0">validate envelope + payload (zod)</text>
+  <text x="616" y="396" fill="#e8ebf0">origin != me -> deliver to Fanout</text>
+  <text x="616" y="418" fill="#22d3ee">⑤ area.changed (critical lane) to</text>
+  <text x="616" y="438" fill="#22d3ee">   interest ∩ (new bbox ∪ prev bbox)</text>
+
+  <!-- ② nginx routes the REST call -->
+  <line x1="400" y1="220" x2="260" y2="300" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="362" y="266" fill="#e8ebf0">② routed to backend-1</text>
+
+  <!-- PostGIS -->
+  <rect x="60" y="560" width="300" height="70" rx="10" fill="#1a1f26" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="210" y="586" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">PostgreSQL / PostGIS</text>
+  <text x="210" y="608" text-anchor="middle" fill="#8b95a4">areas, area_versions (changeSeq), sessions</text>
+  <line x1="150" y1="450" x2="150" y2="560" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+  <text x="160" y="530" fill="#8b95a4">INSERT, COMMIT</text>
+
+  <!-- Redis -->
+  <rect x="400" y="500" width="360" height="160" rx="12" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="580" y="526" text-anchor="middle" fill="#e8ebf0" font-size="15" font-weight="600">Redis 7.4 (shared by both replicas)</text>
+  <text x="580" y="548" text-anchor="middle" fill="#22d3ee">pub/sub channels: snap:ch:areas | snap:ch:drafts</text>
+  <text x="580" y="566" text-anchor="middle" fill="#22d3ee">snap:ch:presence | snap:ch:locks | snap:ch:sessions</text>
+  <text x="580" y="588" text-anchor="middle" fill="#e8ebf0">envelope { v: 1, origin: "backend-1", ts, payload }</text>
+  <text x="580" y="610" text-anchor="middle" fill="#8b95a4">also keyed state: snap:wsticket:*, snap:draft:* -</text>
+  <text x="580" y="628" text-anchor="middle" fill="#8b95a4">snap:presence:conns/seen, snap:locks (HPEXPIRE)</text>
+  <text x="580" y="648" text-anchor="middle" fill="#8b95a4">delivery is at-most-once (no replay)</text>
+
+  <!-- ③b publish, and the echo that is dropped -->
+  <line x1="300" y1="450" x2="430" y2="500" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="366" y="498" text-anchor="end" fill="#e8ebf0">③b PUBLISH snap:ch:areas</text>
+  <line x1="480" y1="500" x2="350" y2="452" stroke="#f87171" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#arrow-red)"/>
+  <text x="452" y="476" fill="#f87171">own copy: dropped (origin == me)</text>
+
+  <!-- ④ subscriber message on backend-2 -->
+  <line x1="720" y1="500" x2="760" y2="450" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="768" y="480" fill="#e8ebf0">④ message</text>
+
+  <!-- to Bob -->
+  <line x1="820" y1="300" x2="820" y2="124" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="832" y="214" fill="#22d3ee">⑤ area.changed</text>
+  <text x="832" y="232" fill="#8b95a4">(WS, via nginx)</text>
+  <!-- to Alice -->
+  <line x1="140" y1="300" x2="140" y2="124" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="20" y="214" fill="#22d3ee">③a area.changed</text>
+  <text x="20" y="232" fill="#8b95a4">(WS, via nginx)</text>
+  <text x="20" y="250" fill="#8b95a4">then ⑥ HTTP 201</text>
+
+  <text x="480" y="684" text-anchor="middle" fill="#8b95a4" font-size="13">③ is awaited before the 201 is sent, so Alice's next draft.end can never overtake the area.changed it caused (mutation-effects.ts).</text>
+</svg>

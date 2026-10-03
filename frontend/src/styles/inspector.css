@@ -1,0 +1,298 @@
+/* ==========================================================================
+   Inspector (UX C-28, C-31 v2; UI.md v2 section 10.8): the docked column (>= 1,200 px) or overlay card (600-1,199 px) with
+   its sections - the primary slot (Selection), History, People and Activity - and the phone bottom sheet.
+   Inner panel content (area details, list, save form, conflict, history timeline) is styled in panels.css.
+   ========================================================================== */
+
+.inspector {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border-subtle);
+}
+.inspector[hidden] {
+  display: none;
+}
+.app[data-layout='overlay'] .inspector {
+  border-left: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-3);
+  animation: inspector-in var(--duration-panel) var(--ease-enter);
+}
+@keyframes inspector-in {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+}
+
+/* Focused elements scroll into view clear of the sticky section headers (UX section 8.3). */
+.inspector :focus {
+  scroll-margin: calc(var(--size-section-header) + 8px) 0 16px;
+}
+
+/* ------------------------------------------------------------------ sections */
+.insp-section {
+  flex: none;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.insp-section:last-child {
+  border-bottom: 0;
+}
+
+/* Section header: a sticky 36 px bar (32 in the overlay) - chevron + caps label + count, then trailing controls. */
+.insp-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--size-section-header);
+  padding: 0 8px 0 10px;
+  background: var(--color-surface);
+}
+.app[data-layout='overlay'] .insp-head {
+  min-height: 32px;
+}
+/* The primary slot's header is not collapsible and scrolls with its content; its kicker lines up with the body. */
+.insp-head--primary {
+  position: static;
+  padding-left: 16px;
+}
+.insp-head__title {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+}
+.insp-head__title--static {
+  align-items: center;
+  gap: 8px;
+  padding-left: 6px;
+}
+.insp-kicker {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  outline: none;
+}
+
+.insp-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: var(--size-section-header);
+  padding: 0 8px 0 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.app[data-layout='overlay'] .insp-toggle {
+  height: 32px;
+}
+.insp-toggle:hover .micro {
+  color: var(--color-text-secondary);
+}
+.insp-toggle__chevron {
+  color: var(--color-text-tertiary);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+.insp-toggle[aria-expanded='false'] .insp-toggle__chevron {
+  transform: rotate(-90deg);
+}
+
+.insp-body {
+  padding: 0 16px 14px;
+}
+.insp-body[hidden] {
+  display: none;
+}
+/* Lists (History, People, Activity) hang 4 px from the edges; their rows carry the 12 px inner padding. */
+.insp-body--list {
+  padding: 0 4px 8px;
+}
+.insp-empty {
+  padding: 2px 12px 6px;
+  color: var(--color-text-secondary);
+}
+
+/* The docked empty state of the primary slot (UI.md section 10.8.8). */
+.selection-empty .insp-empty {
+  padding: 0 16px 16px;
+}
+
+/* The overlay's own close, when it holds only People / Activity (UX C-28). */
+.insp-head--close {
+  position: static;
+}
+
+/* [N] The People header's live note (UI.md section 10.8.6): the pill's live dot and success text. */
+.people-live {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding-right: 10px;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-success-text);
+  white-space: nowrap;
+}
+.people-live__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-live);
+}
+
+/* "Toasts held while you draw" (UX section 6.5): in the Activity header, visible even when the section is collapsed. */
+.held-note {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  max-width: 60%;
+  padding-right: 6px;
+  overflow: hidden;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.held-note .ic {
+  color: var(--color-text-tertiary);
+}
+
+/* ------------------------------------------------------------------ Activity rows (UI.md section 10.8.6) */
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 6px 6px 12px;
+  border-radius: var(--radius-row);
+}
+.activity-row:hover {
+  background: var(--color-surface-hover);
+}
+.activity-row__text {
+  flex: 1;
+  min-width: 0;
+}
+.activity-row__line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+/* The area names stand out in the sentence ("Dana saved Yarkon Park Plot", UI.md section 10.8.6). */
+.activity-row__name {
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+}
+.activity-row__meta {
+  margin-top: 2px;
+  font-size: var(--font-size-mono-xs);
+  line-height: var(--line-height-mono-xs);
+  color: var(--color-text-tertiary);
+}
+.activity-row .btn-text {
+  flex: none;
+}
+
+/* ------------------------------------------------------------------ phone bottom sheet (UI.md section 10.13) */
+.sheet {
+  display: flex;
+  flex-direction: column;
+  height: var(--size-sheet-peek);
+  max-height: calc(100dvh - var(--frame-topbar) - 60px);
+  background: var(--color-surface);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: var(--shadow-sheet);
+  padding: 0 0 env(safe-area-inset-bottom);
+  overflow: hidden;
+}
+.sheet--expanded {
+  height: var(--size-sheet-expanded);
+}
+.sheet--conflict {
+  height: var(--size-sheet-conflict);
+}
+.sheet--naming {
+  height: auto;
+}
+.sheet-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: none;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 0 4px 0 16px;
+}
+.sheet-head .icon-btn {
+  width: 44px;
+  height: 44px;
+}
+.sheet-head .icon-btn .ic {
+  width: var(--size-icon-lg);
+  height: var(--size-icon-lg);
+}
+.sheet-handle {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-handle);
+  transform: translateX(-50%);
+}
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  /* Focus scrolled into view stays clear of the pinned action row (WCAG 2.4.11). */
+  scroll-padding-bottom: 56px;
+  display: flex;
+  flex-direction: column;
+}
+/* In the sheet, section headers are plain rows (the sheet is the scroll container, UX section 3.2). */
+.sheet .insp-head {
+  position: static;
+  background: transparent;
+}
+.sheet .insp-section {
+  border-bottom: 0;
+  border-top: 1px solid var(--color-border-subtle);
+}
+/* The peek ends under the actions (UX section 3.2): the description's separator belongs to the expanded sheet. */
+.sheet--peek .details {
+  border-top-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app[data-layout='overlay'] .inspector {
+    animation: none;
+  }
+  .insp-toggle__chevron {
+    transition: none;
+  }
+}

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" role="img" aria-labelledby="title3">
+  <title id="title3">Loading a region: bbox pages are snapshots at asOfChangeSeq, the catch-up reads the change feed from min(restCursor, minAsOf), and only then the region counts as fetched</title>
+  <defs>
+    <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <rect width="960" height="600" fill="#111418"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e8ebf0">
+    <text x="480" y="34" text-anchor="middle" font-size="18" font-weight="600">Region load = bbox pages + catch-up from the change feed (areasSync.loadRegion)</text>
+
+    <!-- pages -->
+    <text x="60" y="80" font-weight="600">1. GET /areas?bbox=... pages (applyListPage: never moves restCursor)</text>
+    <rect x="60" y="96" width="220" height="64" rx="10" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="170" y="122" text-anchor="middle">page 1, asOfChangeSeq 120</text>
+    <text x="170" y="144" text-anchor="middle" font-size="13" fill="#8b95a4">snapshot of the DB at seq 120</text>
+    <rect x="310" y="96" width="220" height="64" rx="10" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="420" y="122" text-anchor="middle">page 2, asOfChangeSeq 124</text>
+    <text x="420" y="144" text-anchor="middle" font-size="13" fill="#8b95a4">snapshot of the DB at seq 124</text>
+    <rect x="560" y="96" width="220" height="64" rx="10" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="670" y="122" text-anchor="middle">page 3, asOfChangeSeq 131</text>
+    <text x="670" y="144" text-anchor="middle" font-size="13" fill="#8b95a4">snapshot of the DB at seq 131</text>
+    <text x="810" y="130" font-size="13" fill="#22d3ee">minAsOf = 120</text>
+    <text x="480" y="186" text-anchor="middle" font-size="13" fill="#8b95a4">the hole: an area created at seq 122 whose id sorts below the page-2 cursor is on no page - only the catch-up finds it</text>
+
+    <!-- axis -->
+    <text x="60" y="210" font-weight="600">2. changeSeq (global order of committed changes)</text>
+    <line x1="80" y1="260" x2="900" y2="260" stroke="#8b95a4" stroke-width="2" marker-end="url(#arr3)"/>
+    <g stroke="#8b95a4" stroke-width="2">
+      <line x1="200" y1="250" x2="200" y2="270"/>
+      <line x1="280" y1="250" x2="280" y2="270"/>
+      <line x1="440" y1="250" x2="440" y2="270"/>
+      <line x1="640" y1="250" x2="640" y2="270"/>
+      <line x1="760" y1="250" x2="760" y2="270"/>
+    </g>
+    <text x="200" y="292" text-anchor="middle" font-size="13">118</text>
+    <text x="200" y="310" text-anchor="middle" font-size="13" fill="#22d3ee">restCursor before</text>
+    <text x="280" y="292" text-anchor="middle" font-size="13">120</text>
+    <text x="280" y="310" text-anchor="middle" font-size="13" fill="#8b95a4">minAsOf</text>
+    <text x="440" y="292" text-anchor="middle" font-size="13">124</text>
+    <text x="640" y="292" text-anchor="middle" font-size="13">131</text>
+    <text x="760" y="292" text-anchor="middle" font-size="13">134</text>
+    <text x="760" y="310" text-anchor="middle" font-size="13" fill="#22d3ee">feed nextSince</text>
+
+    <!-- catch-up bracket -->
+    <path d="M200 340 L200 356 L760 356 L760 340" stroke="#22d3ee" stroke-width="2" fill="none"/>
+    <text x="480" y="382" text-anchor="middle" font-size="14" fill="#22d3ee">3. catch-up: GET /areas/changes?since = min(restCursor 118, minAsOf 120) = 118 (<= 10 pages of 500)</text>
+    <text x="480" y="404" text-anchor="middle" font-size="13" fill="#8b95a4">every item goes through applyChange; re-applying old items is harmless (version rule)</text>
+    <text x="480" y="432" text-anchor="middle" font-size="14">4. completeRegion: region -> fetched, restCursor <- max(118, 134) = 134</text>
+
+    <!-- rules -->
+    <rect x="40" y="460" width="430" height="120" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="56" y="486" font-weight="600">applyChange rule (areasStore.ts)</text>
+    <text x="56" y="510" font-size="13">upsert only if version &gt; max(knownVersion, tombstoneVersion)</text>
+    <text x="56" y="530" font-size="13">delete -> area removed + tombstone {version, at}</text>
+    <text x="56" y="550" font-size="13">unknown id outside fetched ∪ loading regions -> dropped</text>
+    <text x="56" y="570" font-size="13">(unless requested: my own write / detail read)</text>
+
+    <rect x="490" y="460" width="430" height="120" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="506" y="486" font-weight="600">When the feed cannot catch up</text>
+    <text x="506" y="510" font-size="13">410 CHANGE_FEED_EXPIRED or more than 10 pages behind</text>
+    <text x="506" y="530" font-size="13">-> reloadViewport: evict every area outside the view,</text>
+    <text x="506" y="550" font-size="13">forget regions, restCursor = null, load the view again</text>
+    <text x="506" y="570" font-size="13" fill="#8b95a4">pullFeed is single-flight: resync, anti-entropy, polling</text>
+  </g>
+</svg>

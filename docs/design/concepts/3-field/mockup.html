@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>Snapland</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // mockup switches: ?density=office (quiet desktop density) · ?view=states (specimen board)
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.get('density') === 'office') document.documentElement.classList.add('office');
+    if (q.get('view') === 'states') document.documentElement.classList.add('states');
+  })();
+</script>
+<style>
+/* ==========================================================================
+   Snapland — Concept 3 "Field": high-contrast, sunlight-readable, bottom-sheet first.
+   Rule of the system: every coloured thing is outlined in ink; text on colour is ink.
+   Two densities: Field (default, outdoor/touch) and Office (html.office, desk planners).
+   ========================================================================== */
+:root {
+  /* ink + paper */
+  --ink: #0b0b0c;          /* text, outlines, console */
+  --ink-3: #4a4c52;        /* secondary text on paper: 8.6:1 */
+  --paper: #ffffff;
+  --paper-2: #f3f3ef;
+  --paper-3: #e7e7e1;
+  --on-ink: #ffffff;
+  --on-ink-2: #b9bbc0;     /* secondary text on console: 10.2:1 */
+  --console-line: #3a3b40; /* decorative dividers on the console */
+  --ghost-line: #6b6d73;   /* ghost-button border on ink: 3.8:1 */
+
+  /* signal */
+  --signal: #ffd400;       /* safety yellow = me + primary action + selection band */
+  --live: #1ed760;
+  --warn: #ff9a3c;         /* Limited pill (always with icon + text) */
+  --off: #ff6b6b;          /* Offline pill on ink (always with icon + text) */
+  --danger: #c8102e;       /* 5.9:1 on paper */
+
+  /* collaborators (12, CVD-checked; ink text >= 6.3:1). Dana = 1, Omer = 2 */
+  --collab-1: #ff4fa3; --collab-2: #1fa8ff; --collab-3: #ff7a1a; --collab-4: #14d1c0;
+  --collab-5: #ccffbb; --collab-6: #ffbbff; --collab-7: #ff55dd; --collab-8: #22aaaa;
+  --collab-9: #dd9977; --collab-10: #44ffdd; --collab-11: #9988cc; --collab-12: #ff99aa;
+  --c-you: var(--signal);
+  --c-dana: var(--collab-1);
+  --c-omer: var(--collab-2);
+
+  /* type */
+  --font: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --font-num: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+  --caps: uppercase;       /* Office density sets none */
+  --track: .08em;
+
+  /* geometry */
+  --gutter: 16px;
+  --strip-h: 56px;
+  --r-card: 20px;
+  --r-btn: 12px;
+  --bw: 2px;               /* the one outline weight */
+  --hit: 52px;             /* touch target (>= 48) */
+  --lift: 0 3px 0 var(--ink);         /* hard "sticker" shadow: reads in glare, no blur */
+  --lift-soft: 0 10px 30px rgba(11,11,12,.18);
+  --sheet-h: 240px;        /* set from JS */
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+body { overflow: hidden; }
+button { font: inherit; color: inherit; }
+p { margin: 0; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+svg.i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.board { display: none; }
+
+/* ------------------------------------------------------------------ map */
+#map { position: fixed; inset: 0; background: #e9e9e4; z-index: 0; }
+.leaflet-container { font-family: var(--font); }
+/* Field base: OSM, 60% desaturated — parks/water keep a hint of colour, overlays still own the saturation */
+.leaflet-tile-pane { filter: grayscale(.6) contrast(1.05) brightness(1.02); }
+#map .leaflet-bottom { bottom: calc(var(--sheet-h) + 8px); }
+.leaflet-control-attribution.leaflet-control {
+  margin: 0 var(--gutter) 0 0; padding: 3px 8px; border-radius: 8px;
+  background: rgba(255,255,255,.94); color: var(--ink); font: 600 12px/1.3 var(--font);
+  border: 1.5px solid var(--ink);
+}
+.leaflet-control-attribution a { color: var(--ink); text-decoration: underline; }
+.leaflet-left .leaflet-control { clear: none; }
+.leaflet-control-scale.leaflet-control { margin: 0 0 0 var(--gutter); }
+.leaflet-control-scale-line {
+  height: 28px; border: 3px solid var(--ink); border-top: none; background: rgba(255,255,255,.94);
+  color: var(--ink); font: 800 13px/1 var(--font); padding: 9px 6px 0; text-shadow: none;
+}
+.coords { display: flex; flex-direction: column; gap: 4px; padding-left: 4px; font: 600 14px/1 var(--font-num); font-variant-numeric: tabular-nums; color: var(--on-ink-2); white-space: nowrap; letter-spacing: .02em; }
+.coords span:first-child { color: var(--on-ink); font-weight: 700; }
+.coord.leaflet-control {
+  margin: 0 0 0 8px; height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: 8px;
+  background: rgba(255,255,255,.94); border: 1.5px solid var(--ink); color: var(--ink);
+  font: 700 14px/1 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: .01em; white-space: nowrap;
+}
+.coord .lbl { font: 800 11px/1 var(--font); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+
+/* map chips & handles (divIcons) */
+.lf-chip { background: none; border: 0; }
+.chip {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  height: 32px; padding: 0 12px 0 10px; border-radius: 999px;
+  border: var(--bw) solid var(--ink); box-shadow: var(--lift);
+  font: 800 14px/1 var(--font); color: var(--ink); background: var(--paper);
+  pointer-events: none;
+}
+.chip svg.i { width: 16px; height: 16px; stroke-width: 3; }
+.chip .k { font-family: var(--font-num); font-size: 16px; font-weight: 800; }
+.chip.ink { background: var(--ink); color: var(--on-ink); }
+.chip.omer { background: var(--c-omer); }
+.chip.right { transform: translate(14px, -50%); }
+.chip.left { transform: translate(calc(-100% - 14px), -50%); }
+.chip.below { transform: translate(-50%, 16px); }
+/* Selected tag: ink "SELECTED" plate + name — never yellow-filled, so it never reads as my draft */
+.chip.selx { padding: 0; gap: 0; overflow: hidden; height: 34px; }
+.chip.selx .tag { display: inline-flex; align-items: center; gap: 6px; height: 100%; padding: 0 10px 0 9px; background: var(--ink); color: var(--signal);
+  font: 800 12px/1 var(--font); letter-spacing: .12em; text-transform: uppercase; }
+.chip.selx .tag svg.i { width: 14px; height: 14px; stroke-width: 3.4; }
+.chip.selx .nm { padding: 0 13px 0 10px; font-size: 15px; }
+.chip.selx.solo .tag { padding-right: 11px; }
+.chip.selx.left { transform: translate(calc(-100% - 7px), -50%); }
+
+.vtx { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); pointer-events: none; }
+.vtx.pt { width: 18px; height: 18px; background: var(--paper); border: 3px solid var(--ink); border-radius: 4px; }
+.vtx.last { width: 22px; height: 22px; background: var(--ink); border: 3px solid var(--signal); border-radius: 5px; box-shadow: 0 0 0 2px var(--ink); }
+.vtx.first { width: 30px; height: 30px; border-radius: 50%; background: var(--signal); border: 3px solid var(--ink); box-shadow: 0 0 0 4px rgba(255,255,255,.9); }
+.vtx.first::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: var(--ink); }
+.vtx.other { width: 13px; height: 13px; border-radius: 50%; background: var(--c-omer); border: 2.5px solid var(--ink); }
+.cursor-x { position: absolute; left: 0; top: 0; width: 44px; height: 44px; transform: translate(-50%, -50%); pointer-events: none; }
+
+/* --------------------------------------------------------------- strip */
+.strip {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--strip-h); z-index: 1000;
+  display: flex; align-items: center; gap: 14px; padding: 0 var(--gutter);
+  background: var(--ink); color: var(--on-ink);
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+.mark { width: 36px; height: 36px; flex: none; }
+.word { font: 800 25px/1 var(--font-num); letter-spacing: .06em; text-transform: uppercase; }
+.vsep { width: 2px; height: 28px; background: var(--console-line); flex: none; }
+.pill-live {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 12px;
+  border-radius: 999px; border: var(--bw) solid var(--live); background: transparent; color: var(--on-ink);
+  font: 800 15px/1 var(--font); letter-spacing: var(--track); text-transform: var(--caps); cursor: pointer; white-space: nowrap;
+}
+.pill-live .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 4px rgba(30,215,96,.25); flex: none; }
+.inview { display: inline-flex; align-items: center; gap: 9px; height: 36px; padding: 0 12px 0 10px; border-radius: 10px; border: var(--bw) solid var(--console-line); background: transparent; color: var(--on-ink-2); font: 600 14px/1 var(--font); cursor: pointer; white-space: nowrap; }
+.inview svg.i { width: 18px; height: 18px; color: var(--on-ink); }
+.inview .lbl { color: var(--on-ink); font-weight: 800; letter-spacing: var(--track); text-transform: var(--caps); }
+.inview b { color: var(--on-ink); font-weight: 800; }
+.inview .num { font-size: 16px; }
+.inview kbd { font: 800 12px/1 var(--font); color: var(--on-ink-2); border: 1.5px solid var(--ghost-line); border-radius: 5px; padding: 2px 5px; }
+.spacer { flex: 1; }
+.presence { display: flex; align-items: center; gap: 10px; padding-right: 6px; }
+.pav { position: relative; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.pav .av { width: 36px; height: 36px; font-size: 13px; }
+.pav .stb { position: absolute; right: -6px; bottom: -3px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--paper); color: var(--ink); border: 2px solid var(--ink); }
+.pav .stb svg.i { width: 11px; height: 11px; stroke-width: 3.2; }
+.pav.self .av { box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--signal); }
+.presence .cnt { font: 700 13px/1.15 var(--font); color: var(--on-ink-2); margin-right: 2px; text-align: right; }
+.presence .cnt b { display: block; color: var(--on-ink); font-weight: 800; letter-spacing: var(--track); text-transform: var(--caps); font-size: 12px; }
+.seg {
+  display: inline-flex; height: 44px; padding: 3px; gap: 3px; border-radius: 12px; background: #1d1e21; border: var(--bw) solid var(--console-line);
+}
+.seg button {
+  display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--on-ink); font: 800 14px/1 var(--font); letter-spacing: var(--track); text-transform: var(--caps); cursor: pointer;
+}
+.seg button svg.i { width: 18px; height: 18px; }
+.seg button[aria-pressed="true"] { background: var(--signal); color: var(--ink); }
+.me {
+  display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 10px 0 14px; border-radius: 12px;
+  border: var(--bw) solid var(--console-line); background: transparent; color: var(--on-ink); font: 700 15px/1 var(--font); cursor: pointer;
+}
+.me .av { display: none; }
+.av {
+  display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 50%;
+  border: var(--bw) solid var(--ink); color: var(--ink); font: 800 13px/1 var(--font); letter-spacing: .02em;
+}
+.av.you { background: var(--c-you); }
+.av.dana { background: var(--c-dana); }
+.av.omer { background: var(--c-omer); }
+.iconbtn {
+  display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; cursor: pointer;
+  border: var(--bw) solid var(--console-line); background: transparent; color: var(--on-ink);
+}
+
+/* --------------------------------------------------------------- toast */
+/* Notifications region: bottom-centre, 12 px above the sheet (phone: above the control row) */
+.toast {
+  position: fixed; z-index: 900; left: 50%; bottom: calc(var(--sheet-h) + 12px); transform: translateX(-50%);
+  width: max-content; max-width: min(560px, calc(100vw - 2 * var(--gutter)));
+  display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 4px 0 16px;
+  background: var(--ink); color: var(--on-ink); border-radius: 14px; border: var(--bw) solid var(--ink);
+  box-shadow: 0 0 0 2px var(--paper), var(--lift-soft); overflow: hidden;
+}
+.toast .edge { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--c-dana); }
+.toast .av { width: 30px; height: 30px; font-size: 12px; border-color: var(--ink); box-shadow: 0 0 0 2px var(--on-ink); }
+.toast .t { flex: 1; min-width: 0; font: 600 15px/1 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toast .t b { font-weight: 800; }
+.toast .t .num { font-size: 17px; font-weight: 800; }
+.toast .t .when { color: var(--on-ink-2); }
+.toast .iconbtn { width: 44px; height: 44px; border-color: transparent; }
+
+/* -------------------------------------------------------- map controls */
+.zoom { position: fixed; z-index: 800; right: var(--gutter); top: calc(var(--strip-h) + 12px); display: flex; flex-direction: column;
+  border: var(--bw) solid var(--ink); border-radius: 14px; overflow: hidden; background: var(--paper); box-shadow: var(--lift); }
+.zoom button { display: grid; place-items: center; width: 56px; height: 56px; border: 0; background: var(--paper); cursor: pointer; }
+.zoom button + button { border-top: var(--bw) solid var(--ink); }
+.zoom svg.i { width: 26px; height: 26px; stroke-width: 3; }
+
+.fab {
+  position: fixed; z-index: 850; right: 24px; bottom: calc(var(--sheet-h) + 46px);
+  width: 88px; height: 88px; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center; align-content: center; gap: 3px;
+  background: var(--signal); color: var(--ink); border: 3px solid var(--ink); box-shadow: 0 5px 0 var(--ink), var(--lift-soft);
+  font: 800 13px/1 var(--font); letter-spacing: .1em; text-transform: var(--caps);
+}
+.fab svg { width: 34px; height: 34px; }
+.fab .lamp { display: none; }
+/* pressed = drawing mode is on (press again = cancel): sunk (no lift), ink body, yellow ring + ON lamp */
+.fab[aria-pressed="true"] { transform: translateY(5px); background: var(--ink); color: var(--signal);
+  box-shadow: 0 0 0 5px var(--signal), 0 0 0 7px var(--ink), inset 0 4px 0 rgba(0,0,0,.6), var(--lift-soft); }
+.fab[aria-pressed="true"] .lamp { display: inline-flex; align-items: center; gap: 5px; }
+.fab[aria-pressed="true"] .lamp::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 0 3px rgba(255,212,0,.3); }
+.fab[aria-pressed="true"] .lbl-off { display: none; }
+.fab .kbd { position: absolute; top: -6px; right: -6px; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--paper); color: var(--ink); border: var(--bw) solid var(--ink); font: 800 13px/1 var(--font); letter-spacing: 0; }
+
+/* ---------------------------------------------------------------- sheet */
+.sheet {
+  position: fixed; z-index: 950; left: var(--gutter); right: var(--gutter); bottom: 12px;
+  background: var(--paper); border: var(--bw) solid var(--ink); border-radius: var(--r-card);
+  box-shadow: 0 4px 0 var(--ink), var(--lift-soft); overflow: hidden;
+}
+/* mode console (Drawing) = the sheet's header */
+.console {
+  display: flex; align-items: center; gap: 18px; padding: 5px 8px 5px 18px; min-height: 62px;
+  background: var(--ink); color: var(--on-ink);
+}
+.handle { display: none; }
+.mode-tag {
+  display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 11px; border-radius: 8px;
+  background: var(--signal); color: var(--ink); font: 800 13px/1 var(--font); letter-spacing: .1em; text-transform: var(--caps);
+}
+.mode-tag .rec { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); }
+.readout { display: flex; align-items: baseline; gap: 6px; color: var(--signal); line-height: 1; }
+.readout .v { font: 800 50px/0.9 var(--font-num); letter-spacing: -.01em; }
+.readout .u { font: 800 25px/1 var(--font-num); }
+.readout .u sup { font-size: .6em; }
+.cinfo { display: flex; flex-direction: column; gap: 5px; }
+.cinfo .a { font: 800 18px/1 var(--font); }
+.cinfo .b { font: 600 15px/1.2 var(--font); color: var(--on-ink-2); }
+.cinfo.sec { padding-left: 18px; border-left: 2px solid var(--console-line); }
+.cinfo .num2 { font-family: var(--font-num); font-size: 22px; font-weight: 800; color: var(--on-ink); }
+.cinfo kbd { font: 800 13px/1 var(--font); color: var(--ink); background: var(--on-ink); border-radius: 5px; padding: 2px 6px; }
+.cbtns { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+/* C-06.10: Cancel ········ Undo · Finish — destructive Cancel stands apart as a ghost */
+.cbtns .cancel { margin-right: 18px; }
+.cbtns .gap-rule { width: 2px; height: 32px; background: var(--console-line); margin-right: 8px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: var(--hit); padding: 0 20px;
+  border-radius: var(--r-btn); border: var(--bw) solid var(--ink); background: var(--paper); color: var(--ink);
+  font: 800 16px/1 var(--font); letter-spacing: .06em; text-transform: var(--caps); cursor: pointer; white-space: nowrap;
+}
+.btn.ghost-on-ink { background: transparent; color: var(--on-ink); border-color: var(--ghost-line); }
+.btn.text-on-ink { background: transparent; color: var(--on-ink-2); border-color: transparent; padding: 0 12px; }
+.btn.go { background: var(--signal); color: var(--ink); border-color: var(--signal); min-width: 150px; }
+.btn.primary { background: var(--ink); color: var(--on-ink); box-shadow: var(--lift); }
+.btn.danger { background: var(--paper); color: var(--danger); border-color: var(--danger); }
+.btn:focus-visible, .iconbtn:focus-visible, .fab:focus-visible, .seg button:focus-visible {
+  outline: 3px solid var(--signal); outline-offset: 3px; box-shadow: 0 0 0 6px var(--ink);
+}
+
+.panes { display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(0, .9fr) minmax(0, .8fr); }
+.pane { padding: 11px 22px 12px; min-width: 0; }
+.pane + .pane { border-left: var(--bw) solid var(--paper-3); }
+.kicker {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 7px; height: 18px;
+  font: 800 13px/1 var(--font); letter-spacing: .12em; text-transform: var(--caps); color: var(--ink-3);
+}
+.kicker .count { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 6px; border-radius: 6px; background: var(--ink); color: var(--on-ink); letter-spacing: 0; font-size: 12px; }
+.kicker .seltag { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px 0 6px; border-radius: 6px; background: var(--ink); color: var(--signal); letter-spacing: .12em; font-size: 11px; }
+.kicker .seltag svg.i { width: 12px; height: 12px; stroke-width: 3.6; }
+.pane-tools { margin-left: auto; display: flex; gap: 8px; }
+.pane-tools .iconbtn { width: 38px; height: 38px; border-radius: 10px; border-color: var(--ink); color: var(--ink); }
+.pane.people .kicker { height: 38px; margin: -10px 0 4px; }
+
+/* area pane */
+.area { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 22px; }
+.aname { display: flex; align-items: center; gap: 10px; margin: 0; font: 800 29px/1.05 var(--font); letter-spacing: -.005em; }
+.aname .iconbtn { width: 38px; height: 38px; border-radius: 10px; border-color: var(--ink); color: var(--ink); }
+.aname .iconbtn svg.i { width: 18px; height: 18px; }
+.big { display: flex; align-items: flex-end; gap: 20px; margin-top: 8px; }
+.big .val { display: flex; align-items: baseline; gap: 5px; line-height: .85; }
+.big .val .v { font: 800 68px/.82 var(--font-num); letter-spacing: -.015em; }
+.big .val .u { font: 800 29px/1 var(--font-num); }
+.big .val .u sup { font-size: .6em; }
+.stats { display: grid; grid-template-columns: repeat(3, auto); gap: 0; padding-bottom: 2px; }
+.stat { padding: 0 14px; border-left: var(--bw) solid var(--paper-3); }
+.stat:first-child { border-left: 0; padding-left: 0; }
+.stat .l { font: 800 12px/1 var(--font); letter-spacing: .12em; text-transform: var(--caps); color: var(--ink-3); }
+.stat .n { margin-top: 6px; font: 800 26px/1 var(--font-num); }
+.stat .n small { font-size: 17px; font-weight: 700; }
+.arow { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 6px; }
+.arow .kicker { margin: 0; }
+.byline { display: flex; align-items: center; gap: 7px; font: 600 14px/1.2 var(--font); color: var(--ink-3); white-space: nowrap; }
+.byline b { color: var(--ink); font-weight: 800; }
+.pdot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); flex: none; }
+.pdot.you { background: var(--c-you); } .pdot.dana { background: var(--c-dana); } .pdot.omer { background: var(--c-omer); }
+.acts { display: flex; flex-direction: column; gap: 10px; justify-content: flex-end; }
+.acts .btn { min-width: 168px; justify-content: flex-start; }
+
+/* history */
+.tl { list-style: none; margin: 0; padding: 0; position: relative; }
+.tl::before { content: ""; position: absolute; left: 19px; top: 12px; bottom: 12px; width: 2px; background: var(--paper-3); }
+.tl li { position: relative; display: grid; grid-template-columns: 40px minmax(0,1fr); gap: 12px; align-items: start; padding: 2px 0 3px; }
+.vb { position: relative; z-index: 1; display: grid; place-items: center; width: 40px; height: 26px; border-radius: 7px; background: var(--paper); border: var(--bw) solid var(--ink); font: 800 15px/1 var(--font-num); }
+.tl li.cur .vb { background: var(--ink); color: var(--on-ink); }
+.tl .what { font: 700 15px/1.25 var(--font); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl .cur-tag { display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 5px; background: var(--paper-2); border: 1.5px solid var(--ink); font: 800 11px/1.1 var(--font); letter-spacing: .1em; text-transform: var(--caps); vertical-align: 2px; }
+.tl .who { margin-top: 1px; display: flex; align-items: center; gap: 6px; font: 600 13.5px/1.2 var(--font); color: var(--ink-3); }
+.tl .who b { color: var(--ink); font-weight: 800; }
+.tl .who .pdot { width: 10px; height: 10px; }
+
+/* people (docked presence list) */
+.crew { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.crew li { display: flex; align-items: center; gap: 10px; min-height: 34px; }
+.crew .av { position: relative; width: 32px; height: 32px; font-size: 12px; }
+.crew .nm { font: 800 15px/1.1 var(--font); white-space: nowrap; }
+.crew .st { display: flex; align-items: center; gap: 4px; margin-top: 2px; font: 700 12px/1 var(--font); letter-spacing: .06em; text-transform: var(--caps); color: var(--ink-3); white-space: nowrap; }
+.crew .st svg.i { width: 12px; height: 12px; stroke-width: 3; }
+
+.tabs { display: none; }
+.expand { display: none; }
+
+/* ================================================================ phone */
+@media (max-width: 600px) {
+  :root { --gutter: 12px; --strip-h: 60px; }
+  .strip { gap: 10px; padding: 0 12px; }
+  .word, .inview, .coords, .presence, .strip .vsep, .me .nm, .me .chev { display: none; }
+  .pill-live { height: 48px; padding: 0 14px 0 12px; font-size: 14px; }
+  .seg { height: 48px; padding: 0; gap: 0; overflow: hidden; }
+  .seg button { height: 44px; padding: 0 14px; font-size: 13px; border-radius: 10px; }
+  .seg button[aria-pressed="true"] { box-shadow: inset 0 0 0 3px #1d1e21; border-radius: 10px; }
+  .seg button svg.i { display: none; }
+  .me { height: 48px; width: 48px; padding: 0; justify-content: center; border-radius: 999px; }
+  .me .av { display: inline-grid; width: 36px; height: 36px; border-color: var(--on-ink); }
+
+  /* control row above the sheet: zoom (left); scale + attribution under it; DRAW hidden while drawing */
+  .zoom { left: 12px; right: auto; top: auto; bottom: calc(var(--sheet-h) + 36px); flex-direction: row; border-radius: 14px; }
+  .zoom button { width: 52px; height: 52px; }
+  .zoom button + button { border-top: 0; border-left: var(--bw) solid var(--ink); }
+  .leaflet-control-scale.leaflet-control { margin-left: 12px; }
+  .leaflet-control-scale-line { height: 24px; padding-top: 6px; }
+  #map .leaflet-bottom { bottom: calc(var(--sheet-h) + 6px); }
+  .leaflet-control-attribution.leaflet-control { margin-right: 8px; font-size: 11px; padding: 2px 6px; }
+  .fab { display: none; }
+
+  /* toast: one line, full width, above the control row */
+  .toast { left: 12px; right: 12px; width: auto; max-width: none; transform: none; bottom: calc(var(--sheet-h) + 36px + 52px + 10px); height: 50px; padding-left: 14px; }
+  .toast .t { font-size: 14.5px; }
+  .toast .t .num { font-size: 16px; }
+
+  .sheet { left: 0; right: 0; bottom: 0; border-radius: 22px 22px 0 0; border-width: 2px 0 0; box-shadow: 0 -8px 24px rgba(11,11,12,.22); padding-bottom: env(safe-area-inset-bottom); }
+  .console { position: relative; flex-wrap: wrap; align-items: center; gap: 0 14px; padding: 20px 12px 12px; min-height: 0; }
+  .handle { display: block; position: absolute; top: 7px; left: 50%; width: 44px; height: 5px; margin-left: -22px; border-radius: 3px; background: var(--ghost-line); }
+  .mode-tag { display: none; }
+  .readout .v { font-size: 46px; }
+  .readout .u { font-size: 22px; }
+  .cinfo { gap: 4px; }
+  .cinfo .a { font-size: 17px; }
+  .cinfo .b { font-size: 14px; }
+  .cbtns { flex-basis: 100%; margin: 12px 0 0; gap: 8px; }
+  .cbtns .gap-rule { display: none; }
+  .cbtns .btn { height: 54px; padding: 0 14px; font-size: 15px; gap: 7px; letter-spacing: .04em; }
+  .cbtns .btn svg.i { width: 20px; height: 20px; }
+  .cbtns .cancel { margin-right: auto; padding: 0 12px 0 4px; }
+  .cbtns .btn.ghost-on-ink { padding: 0 13px; }
+  .cbtns .btn.go { min-width: 0; flex: 0 0 120px; }
+
+  /* tabs: Area · Areas (C-10 text alternative) · People (presence) */
+  .tabs { display: flex; gap: 0; padding: 0 6px; border-bottom: var(--bw) solid var(--paper-3); }
+  .tab { flex: 1 1 auto; position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 52px; padding: 0 8px; border: 0; background: transparent;
+    font: 800 14px/1 var(--font); letter-spacing: .08em; text-transform: var(--caps); color: var(--ink-3); cursor: pointer; white-space: nowrap; }
+  .tab svg.i { width: 18px; height: 18px; }
+  .tab[aria-selected="true"] { color: var(--ink); }
+  .tab[aria-selected="true"]::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -2px; height: 4px; border-radius: 2px 2px 0 0; background: var(--ink); }
+  .tab .count { display: inline-grid; place-items: center; min-width: 22px; height: 20px; padding: 0 6px; border-radius: 6px; background: var(--ink); color: var(--on-ink); font-size: 12px; letter-spacing: 0; }
+  .tab .sw { width: 13px; height: 13px; border-radius: 4px; background: var(--paper); border: 2.5px solid var(--ink); box-shadow: 0 0 0 2px var(--signal); }
+  .tab .minis { display: inline-flex; gap: 7px; }
+  .tab .mini { position: relative; display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ink); color: var(--ink); font: 800 10.5px/1 var(--font); letter-spacing: 0; }
+  .tab .mini .stb { position: absolute; right: -5px; bottom: -4px; width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; background: var(--paper); border: 1.5px solid var(--ink); }
+  .tab .mini .stb svg.i { width: 8px; height: 8px; stroke-width: 3.6; }
+
+  .panes { display: block; }
+  .pane { padding: 10px 12px 12px; }
+  .pane + .pane { border-left: 0; }
+  .pane.hist, .pane.people { display: none; }
+
+  /* area peek: one row — selection swatch · name · km² · expand (Edit shape / Delete / history live in the expanded sheet) */
+  .arow { display: none; }
+  .area { display: flex; align-items: center; gap: 12px; min-height: 50px; }
+  .area > div:first-child { display: contents; }
+  .aname { flex: 1 1 auto; min-width: 0; font-size: 21px; gap: 10px; white-space: nowrap; }
+  .aname bdi { overflow: hidden; text-overflow: ellipsis; }
+  .aname::before { content: ""; flex: none; width: 12px; height: 12px; border-radius: 3px; background: var(--paper); border: 2.5px solid var(--ink); box-shadow: 0 0 0 3px var(--signal), 0 0 0 4.5px var(--ink); margin-left: 4px; }
+  .aname .iconbtn { display: none; }
+  .big { flex: none; margin: 0; }
+  .big .stats { display: none; }
+  .big .val .v { font-size: 36px; }
+  .big .val .u { font-size: 19px; }
+  .acts { flex-direction: row; }
+  .acts .btn { display: none; }
+  .expand { display: inline-grid; width: 48px; height: 48px; border-radius: 12px; border-color: var(--ink); color: var(--ink); }
+}
+
+/* ======================================================= office density */
+/* Desk planners: same system, quieter — sentence case, smaller numerals, 44 px targets, softer lift */
+html.office { --caps: none; --track: 0; --strip-h: 52px; --hit: 44px; --r-btn: 10px; }
+html.office .word { font-size: 22px; }
+html.office .mark { width: 32px; height: 32px; }
+html.office .pill-live { height: 32px; font-size: 14px; font-weight: 700; }
+html.office .inview { height: 34px; }
+html.office .inview .lbl { font-weight: 700; }
+html.office .seg { height: 40px; }
+html.office .seg button { height: 30px; font-size: 14px; font-weight: 700; }
+html.office .me { height: 40px; font-size: 14px; }
+html.office .pav .av { width: 32px; height: 32px; font-size: 12px; }
+html.office .presence .cnt b { font-size: 13px; }
+html.office .zoom button { width: 44px; height: 44px; }
+html.office .zoom svg.i { width: 22px; height: 22px; stroke-width: 2.6; }
+html.office .fab { width: 68px; height: 68px; font-size: 12px; letter-spacing: .02em; border-width: 2px; }
+html.office .fab svg { width: 26px; height: 26px; }
+html.office .console { min-height: 54px; gap: 16px; }
+html.office .mode-tag { height: 26px; font-size: 13px; letter-spacing: .02em; }
+html.office .readout .v { font-size: 36px; }
+html.office .readout .u { font-size: 19px; }
+html.office .cinfo .a { font-size: 16px; }
+html.office .cinfo .b { font-size: 14px; }
+html.office .cinfo .num2 { font-size: 19px; }
+html.office .btn { font-size: 15px; font-weight: 700; letter-spacing: 0; padding: 0 16px; }
+html.office .btn.go { min-width: 120px; }
+html.office .kicker { font-size: 13px; font-weight: 700; letter-spacing: 0; color: var(--ink-3); }
+html.office .kicker .seltag { letter-spacing: .02em; font-size: 12px; text-transform: none; }
+html.office .aname { font-size: 24px; }
+html.office .big .val .v { font-size: 50px; }
+html.office .big .val .u { font-size: 23px; }
+html.office .stat .l { font-size: 12.5px; font-weight: 700; letter-spacing: 0; }
+html.office .stat .n { font-size: 22px; }
+html.office .tl .cur-tag, html.office .crew .st { letter-spacing: 0; font-size: 12.5px; font-weight: 600; }
+html.office .chip { height: 28px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 0 var(--ink); }
+html.office .chip .k { font-size: 15px; }
+html.office .chip.selx { height: 30px; }
+html.office .chip.selx .tag { letter-spacing: .02em; text-transform: none; font-size: 12.5px; }
+html.office .chip.selx .nm { font-size: 13.5px; }
+html.office .toast { height: 46px; }
+html.office .toast .t { font-size: 14px; }
+html.office .sheet { box-shadow: 0 3px 0 var(--ink), var(--lift-soft); }
+html.office .acts .btn { min-width: 150px; }
+html.office .pane { padding-top: 10px; padding-bottom: 10px; }
+
+/* ======================================================= specimen board */
+html.states body { overflow: auto; background: var(--paper-2); }
+html.states .app { display: none; }
+html.states .board { display: block; padding: 28px 36px 32px; }
+.bhead { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.bhead h1 { margin: 0; font: 800 26px/1 var(--font); letter-spacing: -.01em; }
+.bhead p { font: 600 15px/1.3 var(--font); color: var(--ink-3); margin-left: auto; }
+.brow { display: grid; grid-template-columns: 560px 330px minmax(0,1fr); gap: 16px; margin-bottom: 16px; }
+.card { background: var(--paper); border: var(--bw) solid var(--ink); border-radius: 18px; box-shadow: var(--lift); padding: 16px 18px; min-width: 0; }
+.card.inkc { background: var(--ink); color: var(--on-ink); box-shadow: 0 3px 0 #3a3b40; }
+.card h2 { margin: 0 0 12px; font: 800 13px/1 var(--font); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.card.inkc h2 { color: var(--on-ink-2); }
+.pills { display: grid; grid-template-columns: auto auto minmax(0,1fr); gap: 10px 14px; align-items: center; }
+.pills .hd { font: 700 12px/1 var(--font); color: var(--on-ink-2); letter-spacing: .06em; text-transform: uppercase; }
+.pills .desc { font: 600 13.5px/1.25 var(--font); color: var(--on-ink-2); }
+.pill-live svg.i { width: 16px; height: 16px; stroke-width: 3; }
+.pill-live.retry { border-color: var(--on-ink-2); border-style: dashed; }
+.pill-live.limited { border-color: var(--warn); }
+.pill-live.limited svg.i { color: var(--warn); }
+.pill-live.offline { border-color: var(--off); }
+.pill-live.offline svg.i { color: var(--off); }
+.pill-live.short { height: 48px; font-size: 14px; }
+.fabs { display: flex; gap: 26px; align-items: flex-start; justify-content: center; padding-top: 8px; }
+.fabs figure { margin: 0; width: 150px; display: grid; justify-items: center; gap: 16px; }
+.fabs .fab { position: relative; right: auto; bottom: auto; }
+.fabs figcaption { font: 700 13px/1.3 var(--font); color: var(--ink-3); text-align: center; }
+.fabs figcaption b { display: block; color: var(--ink); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; }
+.pal { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 10px 8px; }
+.pal .sw { display: grid; justify-items: center; gap: 5px; }
+.pal .dot { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--ink); font: 800 12px/1 var(--font); }
+.pal .hx { font: 700 11.5px/1 var(--font-num); color: var(--ink-3); letter-spacing: .02em; }
+.pal-note { margin-top: 10px; font: 600 12.5px/1.35 var(--font); color: var(--ink-3); }
+.pal-note b { color: var(--ink); }
+.mapcard { position: relative; padding: 0; overflow: hidden; }
+#bmap { position: relative; height: 470px; background: #e9e9e4; }
+#bmap.kbd-focus::after { content: ""; position: absolute; inset: 0; z-index: 700; pointer-events: none;
+  border: 4px solid var(--signal); box-shadow: inset 0 0 0 3px var(--ink); border-radius: 16px; }
+.cap { position: absolute; left: 0; top: 0; transform: translate(-50%, 0); display: grid; gap: 3px; justify-items: center; white-space: nowrap; pointer-events: none;
+  padding: 7px 11px 8px; border-radius: 10px; background: rgba(255,255,255,.96); border: 1.5px solid var(--ink); }
+.cap b { font: 800 12px/1 var(--font); letter-spacing: .12em; text-transform: uppercase; }
+.cap span { font: 600 12.5px/1.2 var(--font); color: var(--ink-3); }
+.mapcard .mlabel { position: absolute; z-index: 800; left: 18px; top: 16px; display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 10px;
+  background: var(--ink); color: var(--on-ink); font: 700 13.5px/1.2 var(--font); }
+.mapcard .mlabel kbd { font: 800 12px/1 var(--font); color: var(--ink); background: var(--on-ink); border-radius: 5px; padding: 2px 5px; }
+.reticle { position: absolute; left: 0; top: 0; width: 64px; height: 64px; transform: translate(-50%, -50%); pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ============================ STATUS STRIP ============================ -->
+<header class="strip" role="banner">
+  <a class="brand" href="#" aria-label="Snapland">
+    <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
+      <rect x="1" y="1" width="34" height="34" rx="9" fill="#ffd400" stroke="#0b0b0c" stroke-width="2"/>
+      <path d="M9.5 24.5 L12 10 L26 12.5 L24 26 Z" fill="#0b0b0c" fill-opacity=".14" stroke="#0b0b0c" stroke-width="3" stroke-linejoin="round"/>
+      <rect x="7" y="22" width="5" height="5" rx="1" fill="#0b0b0c"/><rect x="9.5" y="7.5" width="5" height="5" rx="1" fill="#0b0b0c"/>
+      <rect x="23.5" y="10" width="5" height="5" rx="1" fill="#0b0b0c"/><rect x="21.5" y="23.5" width="5" height="5" rx="1" fill="#0b0b0c"/>
+    </svg>
+    <span class="word">Snapland</span>
+  </a>
+  <span class="vsep" aria-hidden="true"></span>
+  <button class="pill-live" aria-label="Connection: Live. Show details"><span class="dot"></span>Live</button>
+  <button class="inview" aria-label="Areas in view: 2 areas, 0.96 square kilometers. Open list (A)">
+    <svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke-width="3.4"/></svg>
+    <span class="lbl">Areas</span><span><b>2</b> in view · <b class="num">0.96</b> km²</span><kbd aria-hidden="true">A</kbd></button>
+  <div class="coords" title="Pointer position: WGS84 and Israeli Transverse Mercator (ITM)"><span>32.087330, 34.779660</span><span>ITM E 179351.7 N 666081.2</span></div>
+  <span class="spacer"></span>
+
+  <!-- presence (C-02 / §6.1): me first, then drawing/editing, then viewing; 10 px gaps; status badges -->
+  <div class="presence" role="group" aria-label="On the map: 3 people. Open list (P)">
+    <span class="cnt" aria-hidden="true"><b>On map</b>3 people</span>
+    <button class="pav self" aria-label="You — drawing" title="You — drawing"><span class="av you">MO</span>
+      <span class="stb" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></span></button>
+    <button class="pav" aria-label="Omer Cohen — drawing" title="Omer Cohen — drawing"><span class="av omer">OC</span>
+      <span class="stb" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></span></button>
+    <button class="pav" aria-label="Dana Levi — viewing" title="Dana Levi — viewing"><span class="av dana">DL</span></button>
+  </div>
+  <span class="vsep" aria-hidden="true"></span>
+
+  <div class="seg" role="group" aria-label="Base map">
+    <button aria-pressed="true"><svg class="i" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Map</button>
+    <button aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M12 3 21 8l-9 5-9-5 9-5z"/><path d="m3 13 9 5 9-5"/></svg>Aerial</button>
+  </div>
+  <button class="me" aria-haspopup="menu" aria-label="Moshe, account menu">
+    <span class="av you">MO</span><span class="nm">Moshe</span>
+    <svg class="i chev" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+</header>
+
+<!-- ============================== MAP ============================== -->
+<div id="map" tabindex="0" aria-label="Map. Drawing mode: 5 points placed."></div>
+
+<div class="zoom" role="group" aria-label="Zoom">
+  <button aria-label="Zoom in"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button aria-label="Zoom out"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+</div>
+
+<!-- DRAW toggle: pressed while drawing (desktop); hidden on phones while drawing (Cancel does its job) -->
+<button class="fab" aria-pressed="true" aria-label="Draw area" aria-keyshortcuts="D" title="Drawing is on — press again to cancel">
+  <svg viewBox="0 0 36 36" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round">
+    <path d="M8 26 L11 9 L27 12 L25 27 Z"/>
+    <rect x="5.5" y="23.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="8.5" y="6.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/>
+    <rect x="24.5" y="9.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="22.5" y="24.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/>
+  </svg>
+  <span class="lbl-off">Draw</span><span class="lamp">On</span>
+  <span class="kbd" aria-hidden="true">D</span>
+</button>
+
+<!-- collaboration toast: bottom-centre, above the sheet (phone: above the control row) -->
+<div class="toast" role="region" aria-label="Notifications">
+  <span class="edge" aria-hidden="true"></span>
+  <span class="av dana" aria-hidden="true">DL</span>
+  <p class="t"><b>Dana</b> saved <b>Yarkon Park Plot</b> · <span class="num">0.84</span> km²<span class="when d-only"> · just now</span></p>
+  <button class="iconbtn" aria-label="Dismiss"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+</div>
+
+<!-- ============================ BOTTOM SHEET ============================ -->
+<section class="sheet" aria-label="Workspace sheet">
+  <!-- mode console (Drawing) -->
+  <div class="console" role="group" aria-label="Drawing">
+    <span class="handle" aria-hidden="true"></span>
+    <span class="mode-tag"><span class="rec"></span>Drawing</span>
+    <div class="readout" tabindex="0" aria-label="Area 1.27 square kilometers" title="127.0 ha · perimeter 4.28 km">
+      <span class="v num">1.27</span><span class="u">km<sup>2</sup></span>
+    </div>
+    <div class="cinfo">
+      <span class="a">5 points</span>
+      <span class="b d-only">Press <kbd>Enter</kbd> to finish · click the first point</span>
+      <span class="b m-only">Tap the first point or Finish</span>
+    </div>
+    <div class="cinfo sec d-only">
+      <span class="a num2">127.0 ha</span>
+      <span class="b">4.28 km perimeter</span>
+    </div>
+    <div class="cbtns">
+      <button class="btn text-on-ink cancel">
+        <svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>Cancel</button>
+      <span class="gap-rule" aria-hidden="true"></span>
+      <button class="btn ghost-on-ink" aria-label="Undo last point">
+        <svg class="i" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span class="d-only">Undo point</span><span class="m-only">Undo</span></button>
+      <button class="btn go">
+        <svg class="i" viewBox="0 0 24 24" style="stroke-width:3.2"><path d="M4 12.5l5 5L20 6.5"/></svg>Finish</button>
+    </div>
+  </div>
+
+  <!-- phone: section tabs (Areas = C-10 list, the text alternative to the map) -->
+  <div class="tabs" role="tablist" aria-label="Sheet sections">
+    <button class="tab" role="tab" aria-selected="true"><svg class="i" viewBox="0 0 24 24"><path d="M5 18 7 6l12 2-1.5 11L5 18z"/></svg>Area</button>
+    <button class="tab" role="tab" aria-selected="false" aria-label="Areas in view, 2">
+      <svg class="i" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke-width="3.4"/></svg>Areas <span class="count">2</span></button>
+    <button class="tab" role="tab" aria-selected="false" aria-label="People on the map, 3: You drawing, Omer Cohen drawing, Dana Levi viewing">
+      <span class="minis" aria-hidden="true">
+        <span class="mini" style="background:var(--c-you)">MO<span class="stb"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></span></span>
+        <span class="mini" style="background:var(--c-omer)">OC<span class="stb"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></span></span>
+        <span class="mini" style="background:var(--c-dana)">DL</span>
+      </span></button>
+  </div>
+
+  <div class="panes">
+    <!-- AREA -->
+    <div class="pane area-pane">
+      <div class="arow">
+        <p class="kicker"><span class="seltag"><svg class="i" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg>Selected</span>Area details</p>
+        <div class="byline"><span>Created by</span><span class="pdot dana"></span><b>Dana</b><span>· today 10:42 · Version 3</span></div>
+      </div>
+      <div class="area">
+        <div>
+          <h2 class="aname"><bdi>Yarkon Park Plot</bdi>
+            <button class="iconbtn" aria-label="Rename"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/></svg></button>
+          </h2>
+          <div class="big">
+            <div class="val" aria-label="0.84 square kilometers"><span class="v num">0.84</span><span class="u">km<sup>2</sup></span></div>
+            <div class="stats">
+              <div class="stat"><div class="l">Hectares</div><div class="n num">84.0</div></div>
+              <div class="stat"><div class="l">Perimeter</div><div class="n num">3.91 <small>km</small></div></div>
+              <div class="stat"><div class="l">Points</div><div class="n num">6</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="acts">
+          <button class="btn primary"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/></svg>Edit shape</button>
+          <button class="btn danger"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="m6 7 1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg>Delete</button>
+          <button class="iconbtn expand" aria-label="Expand sheet: details and history">
+            <svg class="i" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="pane hist">
+      <p class="kicker">History <span class="count">3</span></p>
+      <ol class="tl">
+        <li class="cur"><span class="vb">v3</span>
+          <div><div class="what">Renamed from “Yarkon North”</div>
+          <div class="who"><span class="pdot you"></span><b>You</b> · today 11:20<span class="cur-tag">Current</span></div></div></li>
+        <li><span class="vb">v2</span>
+          <div><div class="what">Reshaped · 0.79 → 0.84 km²</div>
+          <div class="who"><span class="pdot dana"></span><b>Dana</b> · today 11:05</div></div></li>
+        <li><span class="vb">v1</span>
+          <div><div class="what">Created · 0.79 km²</div>
+          <div class="who"><span class="pdot dana"></span><b>Dana</b> · today 10:42</div></div></li>
+      </ol>
+    </div>
+
+    <!-- PEOPLE (docked presence list; the strip avatars keep awareness when the sheet is closed) -->
+    <div class="pane people">
+      <p class="kicker">On the map <span class="count">3</span>
+        <span class="pane-tools">
+          <button class="iconbtn" aria-label="Collapse sheet"><svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button class="iconbtn" aria-label="Close area details"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </span>
+      </p>
+      <ul class="crew">
+        <li><span class="av you">MO</span><div><div class="nm">You</div><div class="st"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>Drawing</div></div></li>
+        <li><span class="av omer">OC</span><div><div class="nm">Omer Cohen</div><div class="st"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>Drawing · 0.46 <span style="text-transform:none">km²</span></div></div></li>
+        <li><span class="av dana">DL</span><div><div class="nm">Dana Levi</div><div class="st">Viewing</div></div></li>
+      </ul>
+    </div>
+  </div>
+</section>
+</div><!-- /.app -->
+
+<!-- ============================ SPECIMEN BOARD (?view=states) ============================ -->
+<main class="board" aria-label="Field concept: states and specimens">
+  <div class="bhead">
+    <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
+      <rect x="1" y="1" width="34" height="34" rx="9" fill="#ffd400" stroke="#0b0b0c" stroke-width="2"/>
+      <path d="M9.5 24.5 L12 10 L26 12.5 L24 26 Z" fill="#0b0b0c" fill-opacity=".14" stroke="#0b0b0c" stroke-width="3" stroke-linejoin="round"/>
+      <rect x="7" y="22" width="5" height="5" rx="1" fill="#0b0b0c"/><rect x="9.5" y="7.5" width="5" height="5" rx="1" fill="#0b0b0c"/>
+      <rect x="23.5" y="10" width="5" height="5" rx="1" fill="#0b0b0c"/><rect x="21.5" y="23.5" width="5" height="5" rx="1" fill="#0b0b0c"/>
+    </svg>
+    <h1>Field · states &amp; specimens</h1>
+    <p>Connection pill · Draw toggle · collaborator palette · map overlay states with keyboard focus</p>
+  </div>
+  <div class="brow">
+    <section class="card inkc" aria-label="Connection pill states">
+      <h2>Connection pill (C-16)</h2>
+      <div class="pills">
+        <span class="hd">≥ 600 px</span><span class="hd">&lt; 600 px</span><span class="hd">Signal</span>
+        <button class="pill-live"><span class="dot"></span>Live</button>
+        <button class="pill-live short"><span class="dot"></span>Live</button>
+        <span class="desc">Solid green ring + dot</span>
+        <button class="pill-live retry"><svg class="i" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>Reconnecting…</button>
+        <button class="pill-live retry short"><svg class="i" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>Retrying…</button>
+        <span class="desc">Dashed grey ring, turning arrow</span>
+        <button class="pill-live limited"><svg class="i" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>Limited connection</button>
+        <button class="pill-live limited short"><svg class="i" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>Limited</button>
+        <span class="desc">Amber ring + warning icon (polling)</span>
+        <button class="pill-live offline"><svg class="i" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M8.5 8.6A5 5 0 0 0 7 18h10.5M20.3 16.4A4 4 0 0 0 17 10h-.3A6 6 0 0 0 10.7 6"/></svg>Offline</button>
+        <button class="pill-live offline short"><svg class="i" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M8.5 8.6A5 5 0 0 0 7 18h10.5M20.3 16.4A4 4 0 0 0 17 10h-.3A6 6 0 0 0 10.7 6"/></svg>Offline</button>
+        <span class="desc">Coral ring + crossed cloud; saves disabled</span>
+      </div>
+    </section>
+    <section class="card" aria-label="Draw toggle">
+      <h2>Draw toggle (D)</h2>
+      <div class="fabs">
+        <figure><button class="fab" aria-pressed="false" aria-label="Draw area">
+          <svg viewBox="0 0 36 36" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"><path d="M8 26 L11 9 L27 12 L25 27 Z"/><rect x="5.5" y="23.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="8.5" y="6.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="24.5" y="9.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="22.5" y="24.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/></svg>
+          <span class="lbl-off">Draw</span><span class="lamp">On</span><span class="kbd" aria-hidden="true">D</span></button>
+          <figcaption><b>Off</b>Raised on a 5 px ink lift</figcaption></figure>
+        <figure><button class="fab" aria-pressed="true" aria-label="Draw area">
+          <svg viewBox="0 0 36 36" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"><path d="M8 26 L11 9 L27 12 L25 27 Z"/><rect x="5.5" y="23.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="8.5" y="6.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="24.5" y="9.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="22.5" y="24.5" width="5" height="5" rx="1" fill="currentColor" stroke="none"/></svg>
+          <span class="lbl-off">Draw</span><span class="lamp">On</span><span class="kbd" aria-hidden="true">D</span></button>
+          <figcaption><b>On · aria-pressed</b>Sunk, ink body, yellow ring. Hidden on phones while drawing</figcaption></figure>
+      </div>
+    </section>
+    <section class="card" aria-label="Collaborator palette">
+      <h2>Collaborators · 12 colours, ink initials</h2>
+      <div class="pal" id="pal"></div>
+      <p class="pal-note">Every colour ≥ <b>ΔE00 11</b> from signal yellow (me) and ≥ <b>17</b> from danger in normal, protan, deutan and tritan simulation. Palette-wide minimum: normal 10.3, protan 5.4, deutan 6.3, tritan 4.5 (was 1.0) — names and initials carry identity.</p>
+    </section>
+  </div>
+  <section class="card mapcard" aria-label="Map overlay states with keyboard focus">
+    <div id="bmap" class="kbd-focus"></div>
+    <div class="mlabel">Keyboard focus on map: yellow ring + centre reticle · <kbd>Space</kbd> add point · <kbd>Enter</kbd> finish · <kbd>Esc</kbd> cancel</div>
+  </section>
+</main>
+
+<script>
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(function () {
+  const R = 6371007.18, rad = (d) => d * Math.PI / 180;
+  const areaKm2 = (ring) => { let s = 0; for (let i = 0; i < ring.length; i++) { const [a1, o1] = ring[i], [a2, o2] = ring[(i + 1) % ring.length]; s += rad(o2 - o1) * (2 + Math.sin(rad(a1)) + Math.sin(rad(a2))); } return Math.abs(s * R * R / 2) / 1e6; };
+  const INK = '#0b0b0c', SIG = '#ffd400', OMERC = '#1fa8ff';
+  const pen = '<svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>';
+  const check = '<svg class="i" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+
+  // ---------- shared overlay painters ----------
+  function painters(map) {
+    const pane = (name, z) => { map.createPane(name).style.zIndex = z; return L.svg({ pane: name, padding: 0.5 }); };
+    const r = { saved: pane('saved', 410), sel: pane('sel', 420), other: pane('other', 430), own: pane('own', 440) };
+    map.createPane('handles').style.zIndex = 620; map.createPane('chips').style.zIndex = 650;
+    const base = { interactive: false, lineJoin: 'round', lineCap: 'round' };
+    const poly = (ll, o, rr) => L.polygon(ll, Object.assign({ renderer: rr }, base, o)).addTo(map);
+    const line = (ll, o, rr) => L.polyline(ll, Object.assign({ renderer: rr }, base, o)).addTo(map);
+    const html = (ll, h, p = 'chips') => L.marker(ll, { pane: p, interactive: false, keyboard: false,
+      icon: L.divIcon({ className: 'lf-chip', html: h, iconSize: [0, 0] }) }).addTo(map);
+    const defs = (rr, markup) => { const svg = rr._container; let d = svg.querySelector('defs');
+      if (!d) { d = document.createElementNS('http://www.w3.org/2000/svg', 'defs'); svg.insertBefore(d, svg.firstChild); }
+      d.insertAdjacentHTML('beforeend', markup); };
+
+    return {
+      html,
+      // saved (neutral): ink line on a paper halo, faint ink fill
+      saved(ll) { poly(ll, { color: '#ffffff', weight: 8, opacity: .95, fill: false }, r.saved);
+                  poly(ll, { color: INK, weight: 3.5, fillColor: INK, fillOpacity: .10 }, r.saved); },
+      // selected: yellow band OUTSIDE the edge only (masked), ink double line on the edge, NO fill
+      selected(ll, id, s = 1) {
+        const outer = poly(ll, { color: INK, weight: 30 * s, fill: false }, r.sel);
+        const band = poly(ll, { color: SIG, weight: 26 * s, fill: false }, r.sel);
+        poly(ll, { color: INK, weight: 9 * s, fill: false }, r.sel);
+        const gap = poly(ll, { color: '#ffffff', weight: 3 * s, fill: false }, r.sel);
+        const d = gap._path.getAttribute('d');
+        defs(r.sel, `<mask id="${id}" maskUnits="userSpaceOnUse" x="-20000" y="-20000" width="60000" height="60000">
+          <rect x="-20000" y="-20000" width="60000" height="60000" fill="#fff"/><path d="${d}" fill="#000"/></mask>`);
+        outer._path.setAttribute('mask', `url(#${id})`); band._path.setAttribute('mask', `url(#${id})`);
+      },
+      // my draft: sparse hatch (2.6 px stripe + 0.8 px ink edge every 18 px = 19 %), yellow line in an ink casing
+      draft(placed, provisional, id, opts = {}) {
+        const ring = provisional ? placed.concat([provisional]) : placed;
+        poly(ring, { stroke: false, fillColor: `url(#${id})`, fillOpacity: 1 }, r.own);
+        defs(r.own, `<pattern id="${id}" patternUnits="userSpaceOnUse" width="18" height="18" patternTransform="rotate(45)">
+          <rect width="18" height="18" fill="rgba(255,212,0,.06)"/><rect width="2.6" height="18" fill="#ffd400"/><rect x="2.6" width=".8" height="18" fill="rgba(11,11,12,.3)"/></pattern>`);
+        line(placed, { color: INK, weight: 10 }, r.own);
+        line(placed, { color: SIG, weight: 5 }, r.own);
+        const last = placed[placed.length - 1];
+        if (provisional) {   // mouse / keyboard: hazard rubber band + dotted closing preview through the cursor
+          line([last, provisional], { color: INK, weight: 8, lineCap: 'butt' }, r.own);
+          line([last, provisional], { color: SIG, weight: 5, dashArray: '12 10', lineCap: 'butt' }, r.own);
+        }
+        const closeFrom = provisional || last;
+        line([closeFrom, placed[0]], { color: '#ffffff', weight: 6, opacity: .9, dashArray: '2 9' }, r.own);
+        line([closeFrom, placed[0]], { color: INK, weight: 3, dashArray: '2 9' }, r.own);
+        placed.forEach((p, i) => html(p, `<span class="vtx ${i === 0 ? 'first' : i === placed.length - 1 ? 'last' : 'pt'}"></span>`, 'handles'));
+      },
+      // someone else's draft: dashed colour over a dashed ink casing, light fill, dots, optional streamed rubber band
+      other(ll, color, cursor) {
+        poly(ll, { color: INK, weight: 8, dashArray: '14 10', fill: false }, r.other);
+        poly(ll, { color, weight: 4.5, dashArray: '14 10', fillColor: color, fillOpacity: .16 }, r.other);
+        if (cursor) {
+          line([ll[ll.length - 1], cursor], { color: INK, weight: 6, opacity: .9, dashArray: '1 9' }, r.other);
+          line([ll[ll.length - 1], cursor], { color, weight: 3, dashArray: '1 9' }, r.other);
+        }
+        ll.forEach((p) => html(p, '<span class="vtx other"></span>', 'handles'));
+      },
+    };
+  }
+
+  // ================================================================ SPECIMEN BOARD
+  if (document.documentElement.classList.contains('states')) {
+    const pal = ['#ff4fa3','#1fa8ff','#ff7a1a','#14d1c0','#ccffbb','#ffbbff','#ff55dd','#22aaaa','#dd9977','#44ffdd','#9988cc','#ff99aa'];
+    const ini = ['DL','OC','AB','NK','YS','RG','TM','EL','HB','SP','IZ','GF'];
+    document.getElementById('pal').innerHTML = pal.map((c, i) =>
+      `<div class="sw"><span class="dot" style="background:${c}">${ini[i]}</span><span class="hx">${c.toUpperCase()}</span></div>`).join('');
+
+    const bm = L.map('bmap', { zoomControl: false, attributionControl: false, inertia: false, fadeAnimation: false, zoomAnimation: false });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(bm);
+    L.control.attribution({ prefix: false, position: 'bottomright' }).addAttribution('© OpenStreetMap contributors').addTo(bm);
+    bm.setView([32.0795, 34.7845], 16, { animate: false });
+    const P = painters(bm);
+    const ll = (pts) => pts.map(([x, y]) => { const q = bm.containerPointToLatLng([x, y]); return [q.lat, q.lng]; });
+    const saved = ll([[80, 120], [290, 104], [300, 300], [90, 318]]);
+    const sel = ll([[380, 110], [596, 124], [586, 318], [400, 330], [362, 222]]);
+    const mine = ll([[790, 112], [960, 98], [1000, 250], [910, 330]]);
+    const cur = ll([[694, 235]])[0];
+    const oth = ll([[1080, 112], [1300, 124], [1292, 316], [1098, 300]]);
+    P.saved(saved); P.selected(sel, 'bsel'); P.other(oth, OMERC, null); P.draft(mine, cur, 'bhatch');
+    const km = (x) => areaKm2(x).toFixed(3);
+    P.html(ll([[185, 212]])[0], `<span class="chip ink">Saved area · <span class="k">${km(saved)}</span> km²</span>`);
+    P.html(ll([[480, 222]])[0], `<span class="chip selx solo"><span class="tag">${check}Selected</span></span>`);
+    P.html(ll([[1098, 300]])[0], `<span class="chip omer below">${pen}Omer · drawing · <span class="k">${km(oth)}</span> km²</span>`);
+    const cap = (x, t, s) => P.html(ll([[x, 368]])[0], `<span class="cap"><b>${t}</b><span>${s}</span></span>`);
+    cap(190, 'Saved', 'Ink line on paper halo, 10 % ink fill');
+    cap(480, 'Selected', 'Ink double line + outer yellow band, no fill');
+    cap(850, 'My draft', 'Yellow line in ink casing · 19 % hatch · handles');
+    cap(1190, 'Other’s draft', 'Dashed colour + ink casing · name chip');
+    // keyboard reticle at the map centre (the provisional point)
+    const c = bm.getSize().divideBy(2);
+    P.html(bm.containerPointToLatLng(c), `<svg class="reticle" viewBox="0 0 64 64" aria-hidden="true"><g stroke-linecap="square">
+      <path d="M32 4v18M32 42v18M4 32h18M42 32h18" stroke="#fff" stroke-width="8"/>
+      <path d="M32 4v18M32 42v18M4 32h18M42 32h18" stroke="#0b0b0c" stroke-width="3.5"/></g>
+      <circle cx="32" cy="32" r="9" fill="none" stroke="#fff" stroke-width="6"/><circle cx="32" cy="32" r="9" fill="none" stroke="#ffd400" stroke-width="3"/>
+      <circle cx="32" cy="32" r="2.5" fill="#0b0b0c"/></svg>`, 'handles');
+    return;
+  }
+
+  // ================================================================ APP MOCKUP
+  const phone = window.matchMedia('(max-width: 600px)').matches;
+  document.querySelectorAll(phone ? '.d-only' : '.m-only').forEach((n) => n.remove());
+
+  // sheet height drives map-control offsets (scale, attribution, FAB, toast)
+  const sheet = document.querySelector('.sheet');
+  const setSheet = () => document.documentElement.style.setProperty('--sheet-h', (sheet.getBoundingClientRect().height + (phone ? 0 : 12)) + 'px');
+  setSheet();
+
+  const map = L.map('map', { zoomControl: false, attributionControl: false, zoomSnap: 1, inertia: false, fadeAnimation: false });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  L.control.attribution({ prefix: false, position: 'bottomright' })
+    .addAttribution('© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors').addTo(map);
+  L.control.scale({ imperial: false, maxWidth: 110, position: 'bottomleft' }).addTo(map);
+
+  // ---------------- scenario geometry (real lat/lng, measured) ----------------
+  const RABIN  = [[32.08292,34.77962],[32.08288,34.78318],[32.07968,34.78330],[32.07960,34.77985]];                       // 0.12 km², You
+  const YARKON = [[32.09959,34.80032],[32.09767,34.80684],[32.09959,34.81067],[32.09347,34.81019],[32.08971,34.80698],[32.09051,34.80031]]; // 0.84 km², 3.91 km, 6 pts, Dana
+  const DRAFT  = [[32.09260,34.78396],[32.09250,34.79396],[32.08697,34.79559],[32.08237,34.79264],[32.08277,34.78605]]; // my 5 points (mouse)
+  const CURSOR = [32.08733,34.77966];                                                                                     // + cursor = 1.27 km², 4.28 km
+  const DRAFT_TOUCH = [DRAFT[0], DRAFT[1], DRAFT[2], [32.08075,34.78800], CURSOR];                                       // touch: 5 placed, closed = 1.27 km²
+  const OMER   = [[32.08651,34.80205],[32.08637,34.81078],[32.08135,34.81083],[32.08111,34.80271]];                        // 0.46 km²
+  const OMER_CURSOR = [32.08420, 34.80020];
+
+  // ---------------- framing: fit everything into the free map area ----------------
+  const shapes = [].concat(RABIN, YARKON, phone ? DRAFT_TOUCH : DRAFT.concat([CURSOR]), OMER);
+  const all = L.latLngBounds(shapes);
+  const Z = phone ? 14 : 15;
+  const W = window.innerWidth, H = window.innerHeight;
+  const stripH = phone ? 60 : 56;
+  const toastTop = document.querySelector('.toast').getBoundingClientRect().top;
+  const pNW = map.project(all.getNorthWest(), Z), pSE = map.project(all.getSouthEast(), Z);
+  // desktop: bbox top 30 px under the strip, centred slightly left of the toast axis (Omer's chip goes right)
+  // phone: bbox between the strip and the toast
+  const bw = pSE.x - pNW.x, bh = pSE.y - pNW.y;
+  const top = phone ? Math.max(stripH + 40, stripH + (toastTop - 44 - stripH - bh) / 2 + 24) : stripH + 30;
+  const left = phone ? 16 : W / 2 - 40 - bw / 2;
+  const targetNW = L.point(left, top);
+  const centre = pNW.subtract(targetNW).add(L.point(W / 2, H / 2));
+  map.setView(map.unproject(centre, Z), Z, { animate: false });
+
+  const P = painters(map);
+  P.saved(RABIN);
+  P.selected(YARKON, 'selmask', phone ? .75 : 1);
+  P.other(OMER, OMERC, phone ? null : OMER_CURSOR);
+  if (phone) P.draft(DRAFT_TOUCH, null, 'hatch');                 // touch: placed points only, closed
+  else {
+    P.draft(DRAFT, CURSOR, 'hatch');                               // mouse: rubber band to the cursor
+    P.html(CURSOR, `<svg class="cursor-x" viewBox="0 0 44 44"><g stroke-linecap="square">
+      <path d="M22 4v12M22 28v12M4 22h12M28 22h12" stroke="#fff" stroke-width="7"/>
+      <path d="M22 4v12M22 28v12M4 22h12M28 22h12" stroke="#0b0b0c" stroke-width="3"/></g>
+      <circle cx="22" cy="22" r="3.5" fill="#0b0b0c" stroke="#fff" stroke-width="2"/></svg>`, 'handles');
+  }
+
+  // chips (copy.collab.draftChip / draftChipArea; UX C-07/C-08)
+  if (!phone) {
+    P.html([32.08390, 34.81083], `<span class="chip omer right">${pen}Omer · drawing · <span class="k">0.46</span> km²</span>`);
+    P.html([32.09640, 34.80031], `<span class="chip selx left"><span class="tag">${check}Selected</span><span class="nm">Yarkon Park Plot · <span class="k">0.84</span> km²</span></span>`);
+    P.html([32.08126, 34.77962], `<span class="chip ink left">Rabin Square Event Zone · <span class="k">0.12</span> km²</span>`);
+  } else {
+    // < 600 px: chips drop the km²; labels only for shapes >= 80 px on screen, so no Rabin label at z14
+    P.html([32.08111, 34.80271], `<span class="chip omer below">${pen}Omer · drawing</span>`);
+    P.html([32.09720, 34.80031], `<span class="chip selx solo left"><span class="tag">${check}Selected</span></span>`);
+  }
+
+  window.addEventListener('resize', setSheet);
+});
+</script>
+</body>
+</html>

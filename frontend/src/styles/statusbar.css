@@ -1,0 +1,126 @@
+/* ==========================================================================
+   Status bar (UX C-29 v2; UI.md v2 section 10.9), >= 600 px: locate icon, coordinates, zoom, scale, viewport summary -
+   context key hints. 26 px, mono values, never focusable, never a live region. When space runs out the key hints
+   go first, then the scale, then the zoom; the coordinates and the summary always stay.
+   ========================================================================== */
+
+.statusbar {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  height: var(--frame-status);
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-mono-xs);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.statusbar__cell {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border-right: 1px solid var(--color-border-subtle);
+  flex: none;
+}
+.statusbar__icon {
+  justify-content: center;
+  width: var(--frame-rail);
+  padding: 0;
+  color: var(--color-text-tertiary);
+}
+/* The coordinates and the summary are never dropped or clipped (UX C-29); the key hints give way first. */
+.statusbar__coords,
+.statusbar__summary {
+  flex: none;
+}
+.statusbar__spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The readout and summary sit in the bar as plain values (their components are shared with the phone list). */
+.statusbar .coord-readout,
+.statusbar .summary {
+  display: block;
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: text;
+}
+.statusbar .coord-prefix {
+  font-family: var(--font-sans);
+  color: var(--color-text-tertiary);
+}
+
+.scale-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.scale-bar__line {
+  display: inline-block;
+  height: 6px;
+  border: 1.5px solid var(--color-text-secondary);
+  border-top: 0;
+}
+
+/* Hints that do not fit wrap onto a hidden second row, so they drop whole, last first, instead of being cut. The
+   empty first item lets even the first hint wrap away (a line never starts empty). */
+.statusbar__hints {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  height: 100%;
+  column-gap: 14px;
+  padding: 0 12px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-mono-xs);
+}
+.statusbar__hints::before {
+  content: '';
+  height: 100%;
+  margin-right: -14px;
+}
+.statusbar__hints .key-hint {
+  height: 100%;
+}
+.statusbar__hints kbd {
+  height: 18px;
+  min-width: 18px;
+}
+.statusbar__hints .key-hint__label {
+  color: var(--color-text-tertiary);
+}
+
+/* Drop order at narrow widths (UX C-29): hints (only `?` below 1,200 px), then the scale, then the zoom. */
+@media (max-width: 1199.98px) {
+  .statusbar .key-hint--wide {
+    display: none;
+  }
+}
+@media (max-width: 899.98px) {
+  .statusbar__icon,
+  .statusbar__scale,
+  .statusbar__hints {
+    display: none;
+  }
+  /* 600 px must fit the coordinates and the summary unclipped (UX-AC-120): 11 px is the text floor (UI.md section 3). */
+  .statusbar {
+    font-size: var(--font-size-2xs);
+  }
+  .statusbar__cell {
+    padding: 0 8px;
+  }
+}
+@media (max-width: 719.98px) {
+  .statusbar__zoom {
+    display: none;
+  }
+}

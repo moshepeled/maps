@@ -1,0 +1,63 @@
+
+ RUN  v5.0.2 D:/dev/fullstack/Snapland/backend
+
+
+[migrations.int] zoom-14 1280×720 plan (9.602 ms):
+Nested Loop  (cost=34.24..68554.81 rows=674 width=218) (actual time=0.091..9.446 rows=2001 loops=1)
+  Buffers: shared hit=5372
+  ->  Subquery Scan on p  (cost=34.08..67681.65 rows=674 width=226) (actual time=0.067..5.197 rows=2001 loops=1)
+        Filter: ((p.rn = 1) OR ((p.cum_positions - p.vertex_count) <= 150000))
+        Buffers: shared hit=5370
+        ->  Limit  (cost=34.08..67646.63 rows=2001 width=230) (actual time=0.066..4.969 rows=2001 loops=1)
+              Buffers: shared hit=5370
+              ->  WindowAgg  (cost=34.08..188545.03 rows=5579 width=230) (actual time=0.065..4.814 rows=2001 loops=1)
+                    Buffers: shared hit=5370
+                    ->  Index Scan using areas_pkey on areas a  (cost=0.29..188447.40 rows=5579 width=214) (actual time=0.046..3.878 rows=2002 loops=1)
+                          Filter: ((deleted_at IS NULL) AND (bbox_extent_deg >= '0.000171661376953125'::double precision) AND st_intersects(geom, '0103000020E6100000010000000500000000000000C05B4140EF3CA01C6B03404000000000C05B41404AF63D787A16404000000000407241404AF63D787A1640400000000040724140EF3CA01C6B03404000000000C05B4140EF3CA01C6B034040'::geometry))
+                          Rows Removed by Filter: 3348
+                          Buffers: shared hit=5370
+  ->  Memoize  (cost=0.16..0.19 rows=1 width=80) (actual time=0.000..0.000 rows=1 loops=2001)
+        Cache Key: p.updated_by
+        Cache Mode: logical
+        Hits: 2000  Misses: 1  Evictions: 0  Overflows: 0  Memory Usage: 1kB
+        Buffers: shared hit=2
+        ->  Index Scan using users_pkey on users u  (cost=0.15..0.18 rows=1 width=80) (actual time=0.007..0.007 rows=1 loops=1)
+              Index Cond: (id = p.updated_by)
+              Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.385 ms
+Execution Time: 9.602 ms
+
+[migrations.int] zoom-12 region plan (8.365 ms):
+Nested Loop  (cost=16.44..32934.61 rows=674 width=218) (actual time=0.072..8.205 rows=2001 loops=1)
+  Buffers: shared hit=2705
+  ->  Subquery Scan on p  (cost=16.28..32061.44 rows=674 width=226) (actual time=0.052..3.898 rows=2001 loops=1)
+        Filter: ((p.rn = 1) OR ((p.cum_positions - p.vertex_count) <= 150000))
+        Buffers: shared hit=2703
+        ->  Limit  (cost=16.28..32026.42 rows=2001 width=230) (actual time=0.051..3.668 rows=2001 loops=1)
+              Buffers: shared hit=2703
+              ->  WindowAgg  (cost=16.28..188653.76 rows=11792 width=230) (actual time=0.051..3.515 rows=2001 loops=1)
+                    Buffers: shared hit=2703
+                    ->  Index Scan using areas_pkey on areas a  (cost=0.29..188447.40 rows=11792 width=214) (actual time=0.035..2.596 rows=2002 loops=1)
+                          Filter: ((deleted_at IS NULL) AND (bbox_extent_deg >= '0.0006866455078125'::double precision) AND st_intersects(geom, '0103000020E6100000010000000500000000000000003A41401C5FDF0044A73F4000000000003A41405662B829FF1F404000000000009441405662B829FF1F404000000000009441401C5FDF0044A73F4000000000003A41401C5FDF0044A73F40'::geometry))
+                          Rows Removed by Filter: 690
+                          Buffers: shared hit=2703
+  ->  Memoize  (cost=0.16..0.19 rows=1 width=80) (actual time=0.000..0.000 rows=1 loops=2001)
+        Cache Key: p.updated_by
+        Cache Mode: logical
+        Hits: 2000  Misses: 1  Evictions: 0  Overflows: 0  Memory Usage: 1kB
+        Buffers: shared hit=2
+        ->  Index Scan using users_pkey on users u  (cost=0.15..0.18 rows=1 width=80) (actual time=0.006..0.006 rows=1 loops=1)
+              Index Cond: (id = p.updated_by)
+              Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.351 ms
+Execution Time: 8.365 ms
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  20:51:21
+   Duration  4.49s (tests 43%, import 37%, transform 19%, setup 2%)
+

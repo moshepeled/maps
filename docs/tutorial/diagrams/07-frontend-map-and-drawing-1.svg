@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="960" height="620" role="img" aria-labelledby="t1 d1">
+  <title id="t1">Frontend layers: React chrome, workspace flows and stores, MapController and Leaflet</title>
+  <desc id="d1">Three horizontal bands. React components read stores through selectors and call flow commands; flows patch the stores; the MapController subscribes to the stores and renders one stacked Leaflet map per animation frame. Geometry lives only in the stores as WGS84 lng/lat.</desc>
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#8b95a4"/>
+    </marker>
+    <marker id="c1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <rect width="960" height="620" fill="#111418"/>
+  <g font-family="ui-sans-serif, system-ui, sans-serif" fill="#e8ebf0" font-size="15">
+    <text x="480" y="34" text-anchor="middle" font-size="20" font-weight="600">Frontend layers: geometry lives in the stores, Leaflet only draws it</text>
+
+    <!-- band 1: React components -->
+    <rect x="40" y="60" width="880" height="110" rx="12" fill="#161a20" stroke="#2e343e"/>
+    <text x="60" y="84" fill="#8b95a4" font-size="14">1, React components (the Studio chrome): useStore(selector) to read, flow commands from event handlers</text>
+    <g fill="#1a1e25" stroke="#3a414c">
+      <rect x="60" y="100" width="130" height="48" rx="8"/>
+      <rect x="200" y="100" width="130" height="48" rx="8"/>
+      <rect x="340" y="100" width="130" height="48" rx="8"/>
+      <rect x="480" y="100" width="130" height="48" rx="8"/>
+      <rect x="620" y="100" width="130" height="48" rx="8"/>
+      <rect x="760" y="100" width="130" height="48" rx="8" stroke="#22d3ee"/>
+    </g>
+    <g text-anchor="middle">
+      <text x="125" y="129">TitleBar</text>
+      <text x="265" y="129">ToolRail</text>
+      <text x="405" y="129">OptionsBar</text>
+      <text x="545" y="129">Inspector</text>
+      <text x="685" y="129">StatusBar</text>
+      <text x="825" y="122">MapView</text>
+      <text x="825" y="141" font-size="14" fill="#8b95a4">role=application</text>
+    </g>
+
+    <!-- band 2: workspace -->
+    <rect x="40" y="200" width="880" height="150" rx="12" fill="#161a20" stroke="#2e343e"/>
+    <text x="60" y="224" fill="#8b95a4" font-size="14">2, Workspace (one per signed-in user): stores hold the state, flows hold the rules</text>
+    <rect x="60" y="240" width="390" height="90" rx="10" fill="#1a1e25" stroke="#22d3ee"/>
+    <text x="255" y="264" text-anchor="middle" font-size="16" font-weight="600">zustand stores (state/*.ts)</text>
+    <text x="255" y="290" text-anchor="middle" font-size="14">workspace, drawing, edit, areas, mapView</text>
+    <text x="255" y="312" text-anchor="middle" font-size="14" fill="#22d3ee">geometry = WGS84 [lng, lat], never pixels</text>
+    <rect x="490" y="240" width="400" height="90" rx="10" fill="#1a1e25" stroke="#3a414c"/>
+    <text x="690" y="264" text-anchor="middle" font-size="16" font-weight="600">flows (workspace/*.ts)</text>
+    <text x="690" y="290" text-anchor="middle" font-size="14">DrawingFlow, EditFlow, AreaFlow, ConflictFlow</text>
+    <text x="690" y="312" text-anchor="middle" font-size="14">keyboard.ts: key press -> command</text>
+
+    <!-- band 3: map controller -->
+    <rect x="40" y="380" width="880" height="210" rx="12" fill="#161a20" stroke="#2e343e"/>
+    <text x="320" y="404" fill="#8b95a4" font-size="14">3, MapController + Leaflet (map/*.ts): a view of the stores</text>
+    <rect x="60" y="420" width="220" height="150" rx="10" fill="#1a1e25" stroke="#3a414c"/>
+    <text x="170" y="446" text-anchor="middle" font-size="16" font-weight="600">MapController</text>
+    <text x="170" y="472" text-anchor="middle" font-size="14">subscribe -> render()</text>
+    <text x="170" y="492" text-anchor="middle" font-size="14">one render per frame</text>
+    <text x="170" y="512" text-anchor="middle" font-size="14">clicks / keys -> flows</text>
+    <text x="170" y="532" text-anchor="middle" font-size="14">implements MapBridge</text>
+    <text x="170" y="552" text-anchor="middle" font-size="14" fill="#8b95a4">1-2 bundles in a CRS switch</text>
+    <rect x="310" y="420" width="580" height="150" rx="10" fill="#1a1e25" stroke="#3a414c"/>
+    <text x="600" y="446" text-anchor="middle" font-size="16" font-weight="600">Bundle = one Leaflet map (EPSG:3857 or EPSG:2039)</text>
+    <g fill="#20252d" stroke="#3a414c">
+      <rect x="330" y="462" width="170" height="40" rx="8"/>
+      <rect x="510" y="462" width="170" height="40" rx="8"/>
+      <rect x="690" y="462" width="180" height="40" rx="8"/>
+      <rect x="330" y="514" width="170" height="40" rx="8"/>
+      <rect x="510" y="514" width="170" height="40" rx="8"/>
+      <rect x="690" y="514" width="180" height="40" rx="8"/>
+    </g>
+    <g text-anchor="middle" font-size="14">
+      <text x="415" y="487">base layers + fade</text>
+      <text x="595" y="487">AreasLayer (canvas)</text>
+      <text x="780" y="487">OwnDraftLayer (SVG)</text>
+      <text x="415" y="539">VertexEditor</text>
+      <text x="595" y="539">RemoteDraftsLayer</text>
+      <text x="780" y="539">DecorationsLayer</text>
+    </g>
+
+    <!-- arrows -->
+    <g stroke="#8b95a4" stroke-width="1.6" fill="none" marker-end="url(#a1)">
+      <line x1="700" y1="170" x2="700" y2="240"/>
+      <line x1="250" y1="240" x2="250" y2="170"/>
+      <line x1="490" y1="285" x2="450" y2="285"/>
+      <polyline points="240,420 240,368 600,368 600,330"/>
+    </g>
+    <g stroke="#22d3ee" stroke-width="1.6" fill="none" marker-end="url(#c1)">
+      <line x1="160" y1="330" x2="160" y2="420"/>
+      <line x1="280" y1="495" x2="310" y2="495"/>
+    </g>
+    <g font-size="14" fill="#8b95a4">
+      <text x="712" y="210">commands: start, place, select...</text>
+      <text x="262" y="210">useStore(selector)</text>
+      <text x="470" y="276" text-anchor="middle">patch()</text>
+      <text x="300" y="360">place, pointer, finish, select</text>
+      <text x="168" y="392" fill="#22d3ee">subscribe</text>
+      <text x="168" y="408" fill="#22d3ee">-> render()</text>
+      <text x="295" y="486" text-anchor="middle" fill="#22d3ee">sync()</text>
+    </g>
+    <text x="480" y="608" text-anchor="middle" font-size="14" fill="#8b95a4">Rebuilding a Leaflet map loses nothing: every overlay is re-mounted from the stores (SPEC section 8.4).</text>
+  </g>
+</svg>

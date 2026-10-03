@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" width="960" height="680" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="14">
+  <title>Client connection state machine (the pill) with its timers, plus the heartbeat clocks</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b95a4"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f87171"/>
+    </marker>
+  </defs>
+  <rect width="960" height="680" fill="#111418"/>
+  <text x="480" y="34" text-anchor="middle" fill="#e8ebf0" font-size="18" font-weight="600">The connection pill: a client-side state machine driven by timers, not by the server</text>
+
+  <!-- states -->
+  <g font-size="15" font-weight="600">
+    <rect x="60" y="90" width="160" height="54" rx="27" fill="#1a1f26" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="140" y="123" text-anchor="middle" fill="#e8ebf0">connecting</text>
+
+    <rect x="400" y="90" width="160" height="54" rx="27" fill="#0f2a2e" stroke="#22d3ee" stroke-width="2"/>
+    <text x="480" y="123" text-anchor="middle" fill="#22d3ee">live</text>
+
+    <rect x="400" y="250" width="160" height="54" rx="27" fill="#2a2412" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="480" y="283" text-anchor="middle" fill="#fbbf24">reconnecting</text>
+
+    <rect x="400" y="410" width="160" height="54" rx="27" fill="#2a2412" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="480" y="443" text-anchor="middle" fill="#fbbf24">limited (REST mode)</text>
+
+    <rect x="740" y="410" width="160" height="54" rx="27" fill="#2a1616" stroke="#f87171" stroke-width="1.5"/>
+    <text x="820" y="443" text-anchor="middle" fill="#f87171">offline</text>
+
+    <rect x="740" y="90" width="160" height="54" rx="27" fill="#1a1f26" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="820" y="123" text-anchor="middle" fill="#e8ebf0">signed-out</text>
+  </g>
+
+  <!-- transitions -->
+  <line x1="220" y1="117" x2="392" y2="117" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="306" y="108" text-anchor="middle" fill="#e8ebf0">welcome received</text>
+
+  <path d="M 140 144 L 140 277 L 392 277" fill="none" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+  <text x="150" y="204" fill="#8b95a4">no welcome</text>
+  <text x="150" y="222" fill="#8b95a4">for 3 s (grace)</text>
+
+  <path d="M 500 144 L 500 242" fill="none" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+  <text x="512" y="200" fill="#e8ebf0">socket closed, still no socket after 3 s</text>
+  <text x="512" y="218" fill="#8b95a4">(a shorter blip is invisible)</text>
+
+  <path d="M 460 250 L 460 152" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="450" y="195" text-anchor="end" fill="#22d3ee">welcome again -> resync</text>
+  <text x="450" y="213" text-anchor="end" fill="#8b95a4">(feed since restCursor)</text>
+
+  <path d="M 500 304 L 500 402" fill="none" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+  <text x="512" y="350" fill="#e8ebf0">10 s without a socket (degrade)</text>
+  <text x="512" y="368" fill="#8b95a4">polls: changes 5 s, presence 15 s</text>
+
+  <path d="M 440 410 C 200 420, 200 150, 400 138" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="60" y="372" fill="#22d3ee">welcome (WS retried in background)</text>
+  <text x="60" y="390" fill="#8b95a4">-> live + resync pull</text>
+
+  <line x1="560" y1="437" x2="732" y2="437" stroke="#f87171" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <text x="646" y="428" text-anchor="middle" fill="#e8ebf0">3 REST failures in a row</text>
+  <text x="646" y="458" text-anchor="middle" fill="#8b95a4">or navigator.onLine === false</text>
+
+  <path d="M 736 464 C 700 540, 600 540, 564 464" fill="none" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+  <text x="650" y="541" text-anchor="middle" fill="#8b95a4">REST works again</text>
+
+  <line x1="560" y1="117" x2="732" y2="117" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#arrow-muted)"/>
+  <text x="646" y="108" text-anchor="middle" fill="#e8ebf0">close 4401 and refresh fails</text>
+  <text x="646" y="138" text-anchor="middle" fill="#8b95a4">(refresh succeeds -> reconnect)</text>
+
+  <!-- clocks box -->
+  <rect x="40" y="548" width="880" height="116" rx="12" fill="#161b22" stroke="#2a313b"/>
+  <text x="56" y="574" fill="#e8ebf0" font-weight="600">Clocks that drive the edges (packages/shared/src/constants.ts REALTIME, frontend/src/realtime/backoff.ts)</text>
+  <text x="56" y="594" fill="#8b95a4">server: protocol ping every 20 s, missed pong -> terminate (1006), client: app ping after 20 s with nothing RECEIVED</text>
+  <text x="56" y="612" fill="#8b95a4">client: no inbound frame for 45 s -> 4408, welcome late by 5 s -> 4408, attempt counter resets after 10 s open</text>
+  <text x="56" y="630" fill="#8b95a4">reconnect delay = random(0, min(30 s, 0.5 s, 2^attempt)), floors: 1013 -> 2 s, 4400 / 4429 -> 10 s, fresh ticket per attempt</text>
+  <text x="56" y="648" fill="#8b95a4">resync pull = GET /api/v1/areas/changes?since=restCursor, anti-entropy pull every 60 s while live</text>
+</svg>

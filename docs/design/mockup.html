@@ -1,0 +1,1733 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Snapland UI mockup</title>
+<!--
+  Snapland — static visual reference for the frontend (docs/design/UI.md v1.1). NOT production code.
+  Views (query string):
+    (none)              desktop 1440: composite (Drawing HUD + open area panel; exclusive in the app, labelled on the image)
+                        phone 390: Drawing, refused tap (crossing)
+    ?scenario=aerial    desktop: Browse on Aerial, presence list, truncation notice, collaboration toast + pulse
+    ?scenario=desk1024  desktop 1024: area selected, panel open, Undo toast lifted above the base-map switcher
+    ?scenario=sheet     phone: area selected, bottom sheet at peek (Aerial)
+    ?scenario=naming    phone: Naming with the on-screen keyboard open (&kb=0 hides the simulated keyboard)
+    ?scenario=editing   phone: EditingShape, point selected, two-row bottom bar
+    ?scenario=preview   phone: PreviewingVersion, sheet at 50 dvh with pinned Restore / Exit preview
+    ?scenario=limited   phone (render at 320 and 390): Limited connection + Quiet mode (&pill=reconnecting|offline|… to vary)
+    &itm=1              dev/E2E build with the third base map (Aerial 2022)
+    ?view=components    component sheet · add &theme=dark for the dark theme
+  Only external resources: Leaflet 1.9.4 (cdn.jsdelivr.net/npm) and map tiles.
+-->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<style>
+/* ------------------------------------------------------------------ base */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: var(--font-sans); font-size: var(--font-size-md); line-height: var(--line-height-md);
+  color: var(--color-text); background: var(--color-bg);
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+button { font: inherit; color: inherit; }
+.ic { width: var(--size-icon-md); height: var(--size-icon-md); flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.ic-sm { width: var(--size-icon-sm); height: var(--size-icon-sm); stroke-width: 2; }
+.ic-xs { width: 12px; height: 12px; stroke-width: 2.25; }
+.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+bdi { unicode-bidi: isolate; }
+
+/* ------------------------------------------------------------------ target sizes
+   Every interactive element reaches --size-hit-min (24 fine; 44 when ANY pointer is coarse).
+   Compact filled visuals (pill, presence count, quiet chip) sit inside a transparent .hit wrapper. */
+.hit {
+  display: inline-grid; place-items: center; min-width: var(--size-hit-min); min-height: var(--size-hit-min);
+  margin: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; border-radius: var(--radius-full);
+}
+.hit:focus-visible { outline: none; }
+.hit:focus-visible > *, .hit.is-focus > * { outline: var(--size-focus-ring) solid var(--color-focus-ring); outline-offset: var(--size-focus-offset); }
+.btn, .icon-btn, .tab, .segment, .select, .t-action, .t-close, .rail-btn, .presence-btn, .menu-item, .layer-menu-btn { min-height: var(--size-hit-min); }
+.icon-btn, .t-close { min-width: var(--size-hit-min); }
+
+/* ------------------------------------------------------------------ buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1-5);
+  height: var(--size-control-md); padding: 0 14px; border-radius: var(--radius-md);
+  border: 1px solid transparent; background: transparent; cursor: pointer; white-space: nowrap;
+  font-size: var(--font-size-md); line-height: var(--line-height-md); font-weight: var(--font-weight-medium);
+  transition: background-color var(--duration-instant) var(--ease-standard), border-color var(--duration-instant) var(--ease-standard), color var(--duration-instant) var(--ease-standard);
+}
+.btn .ic { width: 18px; height: 18px; }
+.btn-sm { height: var(--size-control-sm); padding: 0 10px; border-radius: var(--radius-sm); font-size: var(--font-size-sm); }
+.btn-sm .ic { width: 16px; height: 16px; stroke-width: 2; }
+.btn-lg { height: var(--size-control-lg); padding: 0 18px; font-size: var(--font-size-md); }
+.btn-block { width: 100%; }
+.btn-primary { background: var(--color-accent); color: var(--color-text-on-accent); }
+.btn-primary:hover, .btn-primary.is-hover { background: var(--color-accent-hover); }
+.btn-primary:active, .btn-primary.is-active { background: var(--color-accent-active); }
+.btn-secondary { background: var(--color-surface); border-color: var(--color-border); color: var(--color-text); }
+.btn-secondary:hover, .btn-secondary.is-hover { background: var(--color-surface-hover); }
+.btn-secondary:active, .btn-secondary.is-active { background: var(--color-surface-pressed); }
+.btn-secondary[aria-pressed="true"] { background: var(--color-accent-subtle); border-color: var(--color-accent-border); color: var(--color-accent-text); }
+.btn-ghost { color: var(--color-text); }
+.btn-ghost:hover, .btn-ghost.is-hover { background: var(--color-surface-hover); }
+.btn-danger { background: var(--color-danger); color: var(--color-text-on-danger); }
+.btn-danger:hover, .btn-danger.is-hover { background: var(--color-danger-hover); }
+.btn-danger-ghost { color: var(--color-danger-text); }
+.btn-danger-ghost:hover, .btn-danger-ghost.is-hover { background: var(--color-danger-bg); }
+.btn[aria-disabled="true"] { background: var(--color-surface-sunken); border-color: transparent; color: var(--color-text-disabled); cursor: not-allowed; }
+.btn-ghost[aria-disabled="true"] { background: transparent; }
+.btn:focus-visible, .btn.is-focus, .icon-btn:focus-visible, .icon-btn.is-focus, .tab:focus-visible, .tab.is-focus, .select:focus-visible { outline: var(--size-focus-ring) solid var(--color-focus-ring); outline-offset: var(--size-focus-offset); }
+.icon-btn {
+  display: inline-grid; place-items: center; width: var(--size-control-sm); height: var(--size-control-sm);
+  border: 0; border-radius: var(--radius-md); background: transparent; color: var(--color-icon); cursor: pointer;
+}
+.icon-btn:hover, .icon-btn.is-hover { background: var(--color-surface-hover); color: var(--color-icon-strong); }
+.icon-btn[aria-pressed="false"] { color: var(--color-text-tertiary); }
+.spinner { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin var(--duration-spinner) var(--ease-linear) infinite; flex: none; }
+.spinner.xs { width: 12px; height: 12px; border-width: 1.75px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+kbd {
+  font-family: var(--font-sans); font-size: var(--font-size-xs); line-height: 16px; min-width: 18px; padding: 0 4px;
+  border-radius: var(--radius-xs); background: var(--color-neutral-badge-bg); color: var(--color-neutral-badge-text);
+  box-shadow: inset 0 -1px 0 var(--color-border); display: inline-block; text-align: center;
+}
+.skip-link { position: fixed; left: 8px; top: -80px; z-index: var(--z-skip-link); display: inline-flex; align-items: center; height: var(--size-control-lg); padding: 0 16px; border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-weight: var(--font-weight-semibold); text-decoration: none; box-shadow: var(--shadow-3); }
+.skip-link:focus-visible, .skip-link.is-focus { top: 8px; outline: var(--size-focus-ring) solid var(--color-focus-ring); outline-offset: var(--size-focus-offset); }
+
+/* ------------------------------------------------------------------ app shell */
+.app { position: fixed; inset: 0; overflow: hidden; --map-inset-right: calc(var(--size-panel-width) + 2 * var(--map-gutter)); --map-inset-bottom: 0px; }
+.map { position: absolute; inset: var(--size-topbar) 0 0 0; z-index: var(--z-map); isolation: isolate; background: #e8e4dc; }
+.topbar {
+  position: absolute; inset: 0 0 auto 0; height: var(--size-topbar); z-index: var(--z-chrome);
+  display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-3) 0 var(--space-4);
+  background: var(--color-surface); border-bottom: 1px solid var(--color-border-subtle); box-shadow: var(--shadow-inset-top);
+}
+.brand { display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-lg); line-height: 24px; font-weight: var(--font-weight-bold); letter-spacing: var(--letter-spacing-tight); flex: none; }
+.brand svg { width: 28px; height: 28px; flex: none; }
+.topbar .divider { width: 1px; height: 24px; background: var(--color-border-subtle); flex: none; }
+.topbar .spacer { flex: 1; min-width: 0; }
+
+/* connection pill: 28 px visual inside a .hit wrapper */
+.pill {
+  display: inline-flex; align-items: center; gap: var(--space-1-5); height: var(--size-pill); padding: 0 10px 0 9px;
+  border-radius: var(--radius-full); border: 1px solid; font-size: var(--font-size-sm); line-height: 18px; font-weight: var(--font-weight-medium);
+  background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success-text); white-space: nowrap;
+}
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-success-dot); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-success-dot) 22%, transparent); }
+.pill .ic { width: 14px; height: 14px; stroke-width: 2.25; }
+.pill.warning { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning-text); }
+.pill.warning .ic { color: var(--color-warning-icon); }
+.pill.danger { background: var(--color-danger-bg); border-color: var(--color-danger-border); color: var(--color-danger-text); }
+.pill.danger .ic { color: var(--color-danger-icon); }
+.pill.neutral { background: var(--color-neutral-badge-bg); border-color: var(--color-border-subtle); color: var(--color-neutral-badge-text); }
+.pill .spinner { width: 12px; height: 12px; border-width: 1.75px; color: var(--color-warning-icon); }
+.pill.neutral .spinner { color: var(--color-icon); }
+.pill .short { display: none; }
+.chip-quiet { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 24px; min-width: 24px; padding: 0 8px; border-radius: var(--radius-full); background: var(--color-neutral-badge-bg); color: var(--color-neutral-badge-text); font-size: var(--font-size-xs); line-height: 16px; font-weight: var(--font-weight-medium); white-space: nowrap; }
+.quiet-hit { display: none; }
+html[data-quiet="1"] .quiet-hit { display: inline-grid; }
+
+/* avatars / presence */
+.avatar {
+  --c: var(--collab-7); position: relative; width: var(--size-avatar-lg); height: var(--size-avatar-lg); border-radius: 50%;
+  display: grid; place-items: center; background: var(--c); color: var(--collab-on);
+  font-size: var(--font-size-xs); line-height: 1; font-weight: var(--font-weight-semibold); letter-spacing: 0.01em; flex: none;
+}
+.avatar.md { width: var(--size-avatar-md); height: var(--size-avatar-md); }
+.avatar.sm { width: var(--size-avatar-sm); height: var(--size-avatar-sm); font-size: 10px; }
+/* status badge: 16 px disc in the user's colour, 10 px white glyph, 2 px surface ring */
+.avatar .badge {
+  position: absolute; right: -6px; bottom: -6px; width: var(--size-status-badge); height: var(--size-status-badge); border-radius: 50%;
+  display: grid; place-items: center; background: var(--c); color: var(--collab-on);
+  box-shadow: 0 0 0 2px var(--color-surface);
+}
+.avatar .badge .ic { width: var(--size-status-badge-icon); height: var(--size-status-badge-icon); stroke-width: 3; }
+.avatar.md .badge { right: -7px; bottom: -7px; }
+.presence-btn { display: flex; align-items: center; gap: var(--space-2-5); padding: 3px 10px 3px 3px; border: 0; background: transparent; border-radius: var(--radius-full); cursor: pointer; }
+.presence-btn:hover, .presence-btn.is-open { background: var(--color-surface-hover); }
+.presence-btn .avatar { box-shadow: 0 0 0 2px var(--color-surface); }
+.presence-btn:hover .avatar, .presence-btn.is-open .avatar, .presence-btn:hover .badge, .presence-btn.is-open .badge { box-shadow: 0 0 0 2px var(--color-surface-hover); }
+.avatar.more { background: var(--color-neutral-badge-bg); color: var(--color-neutral-badge-text); }
+.changes-count { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: var(--radius-full); background: var(--color-neutral-badge-bg); color: var(--color-neutral-badge-text); font-size: var(--font-size-xs); line-height: 16px; font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.user-btn { padding: 0 8px 0 12px; gap: 4px; }
+.presence-hit { display: none; }
+.presence-count { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border-radius: var(--radius-full); background: var(--color-neutral-badge-bg); color: var(--color-neutral-badge-text); font-weight: var(--font-weight-semibold); font-size: var(--font-size-sm); }
+.presence-count .ic { width: 16px; height: 16px; stroke-width: 2; }
+html[data-conn="limited"] .presence-count, html[data-conn="offline"] .presence-count, html[data-conn="reconnecting"] .presence-count { opacity: 0.55; }
+
+/* tool rail */
+.rail {
+  position: absolute; left: var(--map-gutter); top: calc(var(--size-topbar) + var(--map-gutter)); z-index: var(--z-chrome);
+  display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-1);
+  background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
+}
+.rail-btn {
+  width: var(--size-rail-button); height: 52px; border: 0; border-radius: var(--radius-md); background: transparent; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--color-text-secondary); font-size: var(--font-size-xs); line-height: 16px; font-weight: var(--font-weight-medium);
+}
+.rail-btn:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.rail-btn[aria-pressed="true"] { background: var(--color-accent-subtle); color: var(--color-accent-text); }
+
+/* HUD */
+.hud {
+  position: absolute; z-index: var(--z-hud); top: calc(var(--size-topbar) + var(--map-gutter));
+  left: calc((100% - var(--map-inset-right, 0px)) / 2); transform: translateX(-50%);
+  min-width: var(--size-hud-min-width); max-width: var(--size-hud-max-width);
+  background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-2);
+  display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-4); row-gap: var(--space-2);
+  padding: var(--space-2-5) var(--space-3) 0 var(--space-4);
+}
+.hud > .readout { flex: 1 1 auto; }
+.hud.compact { padding: var(--space-2-5) var(--space-4); min-height: 48px; } /* Naming: readout + point count only */
+.readout { display: flex; align-items: baseline; gap: var(--space-2); white-space: nowrap; border-radius: var(--radius-sm); }
+.readout .lbl { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); }
+.readout .val { font-size: var(--font-size-readout); line-height: var(--line-height-readout); font-weight: var(--font-weight-semibold); letter-spacing: var(--letter-spacing-tight); font-variant-numeric: tabular-nums; }
+.readout .pts, .readout .delta { font-size: var(--font-size-sm); color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; font-weight: var(--font-weight-regular); }
+.hud-kicker { flex: 1 0 100%; font-size: var(--font-size-xs); line-height: 16px; color: var(--color-text-tertiary); font-weight: var(--font-weight-medium); margin-bottom: -6px; }
+.hud-actions { display: flex; gap: var(--space-1-5); justify-content: flex-end; margin-left: auto; } /* wraps below the readout when the HUD is narrower than its content */
+.hud-msg {
+  flex: 1 0 100%; display: flex; align-items: flex-start; gap: var(--space-1-5); margin: var(--space-0-5) calc(-1 * var(--space-3)) 0 calc(-1 * var(--space-4));
+  padding: var(--space-2) var(--space-4); border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-sm); line-height: var(--line-height-sm); color: var(--color-text-secondary);
+  background: var(--color-surface-subtle); border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+.hud-msg .ic { width: 16px; height: 16px; margin-top: 1px; stroke-width: 2; color: var(--color-icon); }
+.hud-msg.error { color: var(--color-danger-text); background: var(--color-danger-bg); border-top-color: var(--color-danger-border); }
+.hud-msg.error .ic { color: var(--color-danger-icon); }
+.hud-msg.warning { color: var(--color-warning-text); background: var(--color-warning-bg); border-top-color: var(--color-warning-border); }
+.hud-msg.warning .ic { color: var(--color-warning-icon); }
+.hud-msg.armed { color: var(--color-accent-text); background: var(--color-accent-subtle); border-top-color: var(--color-accent-border); }
+.hud-msg.armed .ic { color: var(--color-accent-text); }
+.hud-msg kbd { margin: 0 1px; }
+.hud-msg.with-actions { align-items: center; justify-content: space-between; padding-top: 4px; padding-bottom: 4px; }
+.hud-msg .msg-text { display: flex; gap: 6px; align-items: center; min-width: 0; }
+.hud-msg .msg-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hud-msg .msg-acts { display: flex; gap: 6px; flex: none; }
+/* history preview banner in the HUD position */
+.hud.preview { align-items: center; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3); column-gap: var(--space-3); }
+.hud.preview > .ic { color: var(--color-accent-text); }
+.pv-text { font-size: var(--font-size-sm); line-height: var(--line-height-sm); }
+.pv-text b { font-weight: var(--font-weight-semibold); }
+.pv-legend { display: flex; gap: 12px; font-size: var(--font-size-xs); line-height: 16px; color: var(--color-text-secondary); }
+.pv-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.pv-legend svg { width: 22px; height: 8px; flex: none; }
+
+/* notices (top-centre slot) — buttons use the sm primitives (32; 44 on touch) */
+.notice {
+  position: absolute; z-index: var(--z-hud); top: calc(var(--size-topbar) + var(--map-gutter)); left: calc((100% - var(--map-inset-right, 0px)) / 2); transform: translateX(-50%);
+  max-width: var(--size-notice-max-width); display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1-5) var(--space-1-5) var(--space-1-5) var(--space-3);
+  background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-2); font-size: var(--font-size-sm); line-height: var(--line-height-sm); white-space: nowrap;
+}
+.notice > .ic { width: 18px; height: 18px; color: var(--color-info-icon); }
+.notice.warning > .ic { color: var(--color-warning-icon); }
+.notice.error > .ic { color: var(--color-danger-icon); }
+.progress { position: absolute; left: 0; right: 0; top: var(--size-topbar); height: 3px; z-index: var(--z-chrome); overflow: hidden; background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+.progress::after { content: ""; position: absolute; top: 0; bottom: 0; width: 30%; background: var(--color-accent); border-radius: 2px; animation: indet var(--duration-progress) var(--ease-in-out) infinite; }
+@keyframes indet { from { left: -30%; } to { left: 100%; } }
+.composite-label { position: absolute; z-index: var(--z-hud); top: calc(var(--size-topbar) + var(--map-gutter)); right: calc(var(--map-inset-right) + var(--map-gutter)); max-width: 220px; padding: 6px 10px; border-radius: var(--radius-md); border: 1.5px dashed var(--color-border-strong); background: color-mix(in srgb, var(--color-surface) 92%, transparent); color: var(--color-text-secondary); font-size: var(--font-size-xs); line-height: 16px; }
+.composite-label b { color: var(--color-text); display: block; }
+html:not([data-scenario="main"]) .composite-label { display: none; }
+
+/* side panel */
+.panel {
+  position: absolute; z-index: var(--z-panel); top: calc(var(--size-topbar) + var(--map-gutter)); right: var(--map-gutter); bottom: var(--map-gutter);
+  width: var(--size-panel-width); display: flex; flex-direction: column; overflow: hidden;
+  background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-2);
+}
+.panel-head { padding: var(--space-3) var(--space-3) 0 var(--space-5); }
+.panel-kicker { display: flex; align-items: center; justify-content: space-between; height: 32px; margin-bottom: var(--space-1); }
+.kicker-text { font-size: var(--font-size-xs); line-height: 16px; font-weight: var(--font-weight-medium); color: var(--color-text-tertiary); display: flex; align-items: center; gap: 6px; }
+.kicker-text .swatch { width: 10px; height: 10px; border-radius: 3px; background: var(--color-accent); box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / .5); }
+.title-row { display: flex; align-items: flex-start; gap: var(--space-1); padding-right: var(--space-2); }
+.area-name { margin: 0; flex: 1; font-size: var(--font-size-2xl); line-height: var(--line-height-2xl); font-weight: var(--font-weight-semibold); letter-spacing: var(--letter-spacing-tight); }
+.title-row .icon-btn { margin-top: -2px; }
+.pending-name { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; font-size: var(--font-size-xs); line-height: 16px; font-weight: var(--font-weight-regular); letter-spacing: 0; color: var(--color-text-tertiary); vertical-align: 3px; }
+.figure { display: flex; align-items: baseline; gap: var(--space-2); margin-top: var(--space-1); }
+.figure .km { font-size: var(--font-size-3xl); line-height: var(--line-height-3xl); font-weight: var(--font-weight-semibold); letter-spacing: var(--letter-spacing-tight); font-variant-numeric: tabular-nums; }
+.figure .ha { font-size: var(--font-size-md); color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.meta { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: var(--space-1); font-size: var(--font-size-sm); line-height: var(--line-height-sm); color: var(--color-text-secondary); }
+.meta li { display: flex; align-items: center; gap: var(--space-1-5); }
+.meta li > span, .p-status > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta .ic { width: 14px; height: 14px; stroke-width: 2; color: var(--color-text-tertiary); }
+.who { display: inline-flex; align-items: center; gap: 5px; vertical-align: baseline; color: var(--color-text); font-weight: var(--font-weight-medium); }
+.who::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--collab-7)); }
+.panel-actions { display: flex; gap: var(--space-2); margin: var(--space-4) 0 var(--space-4); }
+.panel-actions .btn { flex: none; }
+.panel-actions .push { margin-left: auto; }
+.tabs { display: flex; gap: var(--space-4); padding: 0 var(--space-5); border-bottom: 1px solid var(--color-border-subtle); }
+.tab { position: relative; height: var(--size-tab); padding: 0 2px; border: 0; background: none; cursor: pointer; font-weight: var(--font-weight-medium); color: var(--color-text-secondary); display: flex; align-items: center; gap: 6px; }
+.tab[aria-selected="true"] { color: var(--color-text); }
+.tab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px 2px 0 0; background: var(--color-accent); }
+.tab .count { font-size: var(--font-size-xs); color: var(--color-text-tertiary); font-variant-numeric: tabular-nums; }
+.panel-body { flex: 1; overflow: auto; padding: var(--space-2) var(--space-2) var(--space-4); }
+.timeline { list-style: none; margin: 0; padding: 0; }
+.tl-item { position: relative; display: grid; grid-template-columns: 20px 1fr; column-gap: var(--space-2); padding: var(--space-2-5) var(--space-3) var(--space-2-5) var(--space-2); border-radius: var(--radius-md); cursor: pointer; }
+.tl-item::before { content: ""; position: absolute; left: 17px; top: 0; bottom: 0; width: 2px; background: var(--color-border-subtle); }
+.tl-item:first-child::before { top: 18px; }
+.tl-item:last-child::before { bottom: calc(100% - 18px); }
+.tl-item:hover, .tl-item.is-hover { background: var(--color-surface-hover); }
+.tl-item[aria-current="true"] { background: var(--color-accent-subtle); }
+.tl-node { position: relative; z-index: 1; width: 12px; height: 12px; margin: 4px auto 0; border-radius: 50%; background: var(--color-surface); border: 2px solid var(--color-border-strong); }
+.tl-item.current .tl-node { background: var(--color-accent); border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-subtle); }
+.tl-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.ver { font-size: var(--font-size-xs); line-height: 18px; font-weight: var(--font-weight-semibold); padding: 0 6px; border-radius: var(--radius-xs); background: var(--color-neutral-badge-bg); color: var(--color-neutral-badge-text); font-variant-numeric: tabular-nums; }
+.tag-current { font-size: var(--font-size-xs); line-height: 18px; font-weight: var(--font-weight-semibold); padding: 0 8px; border-radius: var(--radius-full); background: var(--color-accent-subtle); color: var(--color-accent-text); }
+.tl-change { font-weight: var(--font-weight-medium); }
+.tl-change .arrow { color: var(--color-text-tertiary); }
+.tl-meta { display: flex; align-items: center; gap: var(--space-1-5); margin-top: 2px; font-size: var(--font-size-sm); line-height: var(--line-height-sm); color: var(--color-text-tertiary); }
+.tl-meta .who { font-weight: var(--font-weight-regular); color: var(--color-text-secondary); }
+/* Details tab */
+.details { padding: var(--space-2) var(--space-3) 0; display: grid; gap: var(--space-2); }
+.details .d-label { display: flex; align-items: center; justify-content: space-between; font-size: var(--font-size-sm); line-height: var(--line-height-sm); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); }
+.details .d-text { margin: 0; white-space: pre-wrap; unicode-bidi: plaintext; }
+.details .d-empty { margin: 0; color: var(--color-text-tertiary); }
+.status-line { display: flex; align-items: center; gap: 6px; margin: -8px 0 12px; font-size: var(--font-size-xs); line-height: 16px; color: var(--color-text-tertiary); }
+
+/* base-map switcher + map controls */
+.summary { position: absolute; z-index: var(--z-chrome); left: calc(var(--map-gutter) + var(--scale-w, 110px) + var(--space-2)); bottom: var(--map-gutter); height: 20px; display: flex; align-items: center; padding: 0 6px; border-radius: var(--radius-xs); background: color-mix(in srgb, var(--color-surface) 85%, transparent); color: var(--color-text-secondary); font-size: var(--font-size-xs); line-height: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.map-bl { position: absolute; z-index: var(--z-chrome); left: var(--map-gutter); bottom: calc(var(--map-gutter) + 26px); display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+.segmented { display: inline-flex; gap: 2px; padding: 3px; background: var(--color-surface); border-radius: 10px; box-shadow: var(--shadow-1); }
+.segment { height: var(--size-segment); padding: 0 12px 0 10px; display: flex; align-items: center; gap: 6px; border: 0; border-radius: 7px; background: transparent; cursor: pointer; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--color-text-secondary); white-space: nowrap; }
+.segment[hidden] { display: none; }
+.segment .ic { width: 16px; height: 16px; stroke-width: 2; }
+.segment:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.segment[aria-checked="true"] { background: var(--color-segment-selected); color: var(--color-on-segment-selected); }
+.segment[aria-checked="true"] .ver { background: rgb(255 255 255 / 0.18); color: inherit; }
+.layer-menu-btn, .layer-toggle { display: none; }
+.layer-menu-btn .chev { width: 16px; height: 16px; stroke-width: 2; color: var(--color-icon); }
+
+/* toasts — desktop region is laid out by JS between the bottom-left and bottom-right control columns (UI.md §10.12) */
+.toasts { position: absolute; z-index: var(--z-toast); left: var(--toast-left, 0px); right: var(--toast-right, 0px); bottom: var(--toast-bottom, 24px); display: flex; flex-direction: column; gap: var(--space-2); align-items: center; pointer-events: none; }
+.toasts > * { pointer-events: auto; }
+.toast {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: var(--space-2-5);
+  min-width: min(var(--size-toast-min-width), 100%); max-width: min(var(--size-toast-max-width), 100%); padding: var(--space-1-5) var(--space-1-5) var(--space-1-5) var(--space-3);
+  background: var(--color-inverse-surface); color: var(--color-inverse-text); border: 1px solid var(--color-inverse-border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-3); font-size: var(--font-size-md); line-height: var(--line-height-md);
+}
+.toast > .ic { width: 20px; height: 20px; color: var(--color-inverse-text-secondary); }
+.toast .msg { flex: 1; padding: var(--space-1-5) 0; }
+.toast .msg .sub { color: var(--color-inverse-text-secondary); }
+.toast .t-action { height: var(--size-control-sm); padding: 0 10px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-inverse-action); font-weight: var(--font-weight-semibold); cursor: pointer; }
+.toast .t-action:hover, .toast .t-action.is-hover { background: var(--color-inverse-surface-hover); }
+.toast .t-close { width: var(--size-control-sm); height: var(--size-control-sm); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-inverse-text-secondary); display: grid; place-items: center; cursor: pointer; }
+.toast .t-close:hover { background: var(--color-inverse-surface-hover); }
+.toast .t-close .ic { width: 16px; height: 16px; stroke-width: 2; }
+.toast .t-action:focus-visible, .toast .t-close:focus-visible, .toast .is-focus { outline: var(--size-focus-ring) solid var(--color-focus-ring-inverse); outline-offset: var(--size-focus-offset); }
+.toast .timer { position: absolute; left: 0; bottom: 0; height: 2px; width: 64%; background: var(--color-inverse-action); opacity: 0.7; }
+.toast .ok { color: var(--green-400); } .toast .err { color: var(--red-400); } .toast .inf { color: var(--blue-300); }
+.toast .avatar { width: 24px; height: 24px; font-size: 10px; box-shadow: 0 0 0 1.5px var(--color-inverse-surface); }
+.lane { display: flex; flex-direction: column; gap: var(--space-2); align-items: center; width: 100%; }
+
+/* popovers + menu */
+.popover { width: var(--size-popover-width); padding: var(--space-1-5); background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-3); }
+.presence-pop { position: absolute; z-index: var(--z-popover); top: calc(var(--size-topbar) - 4px); right: 132px; }
+.pop-head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-2) var(--space-2-5) var(--space-1-5); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); }
+.pop-head span { font-weight: var(--font-weight-regular); color: var(--color-text-tertiary); }
+.p-row { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; padding: var(--space-1-5) var(--space-2-5); border-radius: var(--radius-md); }
+.p-row:hover, .p-row.is-hover { background: var(--color-surface-hover); }
+.p-row .txt { flex: 1; min-width: 0; }
+.p-name { font-weight: var(--font-weight-medium); display: flex; gap: 6px; align-items: baseline; }
+.p-name .you { font-size: var(--font-size-xs); font-weight: var(--font-weight-regular); color: var(--color-text-tertiary); }
+.p-status { display: flex; align-items: center; gap: 5px; font-size: var(--font-size-xs); line-height: 16px; color: var(--color-text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-status .ic { width: 12px; height: 12px; stroke-width: 2.25; }
+.p-status.active { color: var(--color-text-secondary); }
+.p-sep { height: 1px; background: var(--color-border-subtle); margin: var(--space-1) var(--space-2); }
+.p-empty { padding: var(--space-2) var(--space-2-5) var(--space-2-5); font-size: var(--font-size-sm); line-height: var(--line-height-sm); color: var(--color-text-tertiary); }
+.in-view { margin-left: auto; font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
+.menu { width: 240px; }
+.menu-item { display: flex; align-items: center; gap: 10px; width: 100%; height: var(--size-control-md); padding: 0 10px; border: 0; border-radius: var(--radius-sm); background: transparent; text-align: left; cursor: pointer; }
+.menu-item:hover, .menu-item.is-hover { background: var(--color-surface-hover); }
+.menu-item .ic { width: 16px; height: 16px; stroke-width: 2; color: var(--color-icon); }
+.menu-item .grow { flex: 1; }
+.menu-item[aria-checked="true"] .check { visibility: visible; }
+.menu-item .check { visibility: hidden; color: var(--color-accent-text); }
+.menu-help { padding: 0 10px 8px 36px; margin-top: -4px; font-size: var(--font-size-xs); line-height: 16px; color: var(--color-text-tertiary); }
+.menu-sep { height: 1px; background: var(--color-border-subtle); margin: 4px 0; }
+.switch { position: relative; width: 36px; height: 20px; border-radius: var(--radius-full); background: var(--color-border-strong); flex: none; }
+.switch::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-1); }
+.switch.on { background: var(--color-accent); }
+.switch.on::after { left: 18px; }
+
+/* ------------------------------------------------------------------ Leaflet chrome */
+.leaflet-container { font-family: var(--font-sans); background: #e8e4dc; }
+.leaflet-right { right: var(--map-inset-right, 0px); }
+.leaflet-bottom { bottom: var(--map-inset-bottom, 0px); }
+.leaflet-control-zoom.leaflet-bar { border: 0; border-radius: var(--radius-lg); box-shadow: var(--shadow-1); overflow: hidden; margin: 0 var(--map-gutter) var(--space-2) 0 !important; }
+.leaflet-control-zoom a { width: max(36px, var(--size-hit-min)) !important; height: max(36px, var(--size-hit-min)) !important; line-height: 36px !important; display: grid !important; place-items: center; background: var(--color-surface) !important; color: var(--color-icon-strong) !important; border-bottom: 1px solid var(--color-border-subtle) !important; }
+.leaflet-control-zoom a:last-child { border-bottom: 0 !important; }
+.leaflet-control-zoom a:hover { background: var(--color-surface-hover) !important; }
+.leaflet-control-zoom a span { display: none; }
+.leaflet-control-zoom a::before { content: ""; width: 18px; height: 18px; background: currentColor; -webkit-mask: var(--m) center / 18px no-repeat; mask: var(--m) center / 18px no-repeat; }
+.leaflet-control-zoom-in { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 12h14M12 5v14'/%3E%3C/svg%3E"); }
+.leaflet-control-zoom-out { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E"); }
+.leaflet-control-attribution { margin: 0 !important; padding: 2px 8px !important; border-radius: var(--radius-sm) 0 0 0; background: color-mix(in srgb, var(--color-surface) 90%, transparent) !important; color: var(--color-text-secondary) !important; font-size: var(--font-size-xs) !important; line-height: 16px !important; }
+.leaflet-control-attribution a { color: var(--color-text-link) !important; border-radius: 3px; }
+.leaflet-control-attribution a:focus-visible, .leaflet-control-attribution a.is-focus { outline: none; box-shadow: inset 0 0 0 2px var(--color-focus-ring); padding: 0 2px; margin: 0 -2px; }
+.leaflet-control-attribution .leaflet-attribution-flag { display: none !important; }
+.leaflet-control-scale { margin: 0 0 var(--map-gutter) var(--map-gutter) !important; }
+.leaflet-control-scale-line { border: 2px solid var(--color-text); border-top: 0; background: color-mix(in srgb, var(--color-surface) 85%, transparent); color: var(--color-text); font-size: var(--font-size-xs); line-height: 16px; padding: 0 6px; font-variant-numeric: tabular-nums; }
+.leaflet-tooltip.area-tip { background: var(--color-inverse-surface); color: var(--color-inverse-text); border: 0; border-radius: var(--radius-sm); box-shadow: var(--shadow-3); padding: 4px 8px; font-size: var(--font-size-sm); line-height: 18px; font-weight: var(--font-weight-medium); }
+.leaflet-tooltip.area-tip::before { display: none; }
+.leaflet-tooltip.area-tip .dim { color: var(--color-inverse-text-secondary); font-weight: var(--font-weight-regular); font-variant-numeric: tabular-nums; }
+.map[data-base-layer="aerial"] .leaflet-container { background: #2b2f2a; }
+
+/* ------------------------------------------------------------------ map overlays (SVG) */
+.ov-outline { stroke: var(--ov-outline); fill: none; }
+.ov-casing { stroke: var(--ov-casing); stroke-opacity: var(--ov-casing-opacity); fill: none; }
+.ov-core { stroke: var(--c); fill: var(--c); }
+.ov-core.no-fill { fill: none; }
+.ov-area { --c: var(--ov-area-stroke); }
+.ov-selected, .ov-own { --c: var(--ov-own-stroke); }
+.ov-invalid { stroke: var(--ov-invalid) !important; }
+/* markers (divIcons) */
+.mk { position: absolute; left: 0; top: 0; }
+.pt { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; }
+.pt-draft { width: var(--ov-point-size); height: var(--ov-point-size); background: var(--ov-handle-fill); border: 2px solid var(--ov-own-stroke); box-shadow: var(--ov-handle-shadow); }
+.pt-unsaved { width: var(--ov-own-unsaved-point-size); height: var(--ov-own-unsaved-point-size); background: var(--ov-handle-fill); border: 2px solid var(--ov-own-stroke); box-shadow: var(--ov-handle-shadow); }
+.pt-last { width: var(--ov-point-last-size); height: var(--ov-point-last-size); background: var(--ov-own-stroke); border: 2px solid #fff; box-shadow: var(--ov-handle-shadow); }
+.pt-first { width: var(--ov-point-first-size); height: var(--ov-point-first-size); background: #fff; border: 2.5px solid var(--ov-own-stroke); box-shadow: var(--ov-handle-shadow); display: grid; place-items: center; }
+.pt-first::after { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--ov-own-stroke); }
+.pt-handle { width: var(--ov-handle-size); height: var(--ov-handle-size); background: var(--ov-handle-fill); border: var(--ov-handle-stroke-width) solid var(--ov-handle-stroke); box-shadow: var(--ov-handle-shadow); }
+.pt-handle.selected { width: var(--ov-handle-size-selected); height: var(--ov-handle-size-selected); background: var(--ov-handle-stroke); border: 3px solid #fff; box-shadow: 0 0 0 1.5px var(--ov-handle-stroke), var(--ov-handle-shadow); }
+.pt-mid { width: var(--ov-midpoint-size); height: var(--ov-midpoint-size); background: rgb(255 255 255 / 0.9); border: 1.5px solid var(--ov-handle-stroke); opacity: var(--ov-midpoint-opacity); box-shadow: 0 0 0 1px rgb(15 19 26 / 0.25); }
+.pt-remote { width: var(--ov-remote-point-size); height: var(--ov-remote-point-size); background: var(--c); box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px rgb(15 19 26 / 0.25); }
+.mk-invalid { position: absolute; transform: translate(-50%, -50%); width: var(--ov-marker-invalid-size); height: var(--ov-marker-invalid-size); border-radius: 50%; background: var(--ov-invalid); color: #fff; display: grid; place-items: center; box-shadow: 0 0 0 2px #fff, 0 1px 4px rgb(15 19 26 / 0.45); }
+.mk-invalid .ic { width: 12px; height: 12px; stroke-width: 3; }
+.mk-tick { position: absolute; transform: translate(-50%, -50%); width: var(--ov-invalid-tick-size); height: var(--ov-invalid-tick-size); border-radius: 50%; background: #fff; color: var(--ov-invalid); display: grid; place-items: center; box-shadow: 0 0 0 1.5px var(--ov-invalid), 0 1px 3px rgb(15 19 26 / 0.4); }
+.mk-tick .ic { width: 9px; height: 9px; stroke-width: 4; }
+.chip {
+  --c: var(--collab-1); position: absolute; display: inline-flex; align-items: center; gap: 4px; height: var(--ov-chip-height); padding: 0 8px 0 6px;
+  border-radius: var(--radius-full); background: var(--c); color: var(--collab-on); white-space: nowrap;
+  font-size: var(--font-size-xs); line-height: 16px; font-weight: var(--font-weight-semibold); box-shadow: var(--ov-chip-ring), var(--shadow-1);
+}
+.chip .ic { width: 12px; height: 12px; stroke-width: 2.25; }
+.chip .dim { opacity: 0.85; font-weight: var(--font-weight-medium); }
+.chip.at-vertex { transform: translate(10px, -50%); }
+.chip.at-vertex-left { transform: translate(calc(-100% - 10px), -50%); }
+.chip.centered { transform: translate(-50%, -50%); }
+.chip.idle { background: #fff; color: var(--c); box-shadow: inset 0 0 0 1.5px var(--c), var(--shadow-1); }
+.chip.area, .chip.neutral { --c: #ffffff; color: #191f2a; box-shadow: 0 0 0 1px #dbe0e7, var(--shadow-1); font-variant-numeric: tabular-nums; }
+.chip.neutral .spinner { width: 12px; height: 12px; border-width: 1.75px; color: #4f596a; }
+.chip.disc { width: var(--size-chip-disc); height: var(--size-chip-disc); padding: 0; justify-content: center; font-size: 10px; line-height: 1; letter-spacing: 0.01em; }
+.cursor-fake { position: absolute; transform: translate(-50%, -50%); width: 22px; height: 22px; }
+
+/* ------------------------------------------------------------------ phone and tablet portrait (< 900) */
+.bottombar, .sheet, .edit-points, .kb { display: none; }
+@media (max-width: 899.98px) {
+  .rail, .panel, .presence-btn, .topbar .help, .user-btn, .composite-label { display: none; }
+  .presence-hit { display: inline-grid; }
+  .topbar { gap: var(--space-2); padding: 0 var(--space-1) 0 var(--space-4); }
+  .topbar .menu-btn { width: 44px; height: 44px; display: grid; }
+  .brand { font-size: var(--font-size-md); }
+  .brand svg { width: 26px; height: 26px; }
+  .app { --map-inset-bottom: var(--size-bottom-bar); --map-inset-right: 0px; }
+  .hud { left: var(--map-gutter); right: var(--map-gutter); transform: none; min-width: 0; max-width: none; padding: var(--space-2-5) var(--space-4) 0; }
+  .hud.compact { padding: var(--space-2-5) var(--space-4); }
+  .hud .hud-actions { display: none; }
+  .hud-msg { margin: var(--space-0-5) calc(-1 * var(--space-4)) 0; }
+  .hud-kicker { margin-bottom: -4px; }
+  .bottombar {
+    display: flex; flex-direction: column; justify-content: center; gap: var(--space-2); position: absolute; z-index: var(--z-chrome); left: 0; right: 0; bottom: 0; min-height: calc(var(--size-bottom-bar) + env(safe-area-inset-bottom));
+    padding: var(--space-2-5) var(--space-4) calc(var(--space-2-5) + env(safe-area-inset-bottom));
+    background: var(--color-surface); border-top: 1px solid var(--color-border-subtle); box-shadow: 0 -4px 16px rgb(15 19 26 / 0.08);
+  }
+  .bottombar .bb-row { display: flex; align-items: center; gap: var(--space-2); }
+  .bottombar .btn { height: var(--size-control-lg); padding: 0 16px; }
+  .bottombar .grow { flex: 1; }
+  .bottombar .edit-points { display: none; }
+    .bottombar .edit-points .btn { flex: 1; }
+  .app { --map-controls-bottom: calc(var(--map-inset-bottom) + var(--map-attribution-h, 16px) + var(--space-2)); }
+  .leaflet-control-attribution { max-width: calc(100vw - 2 * var(--map-gutter)); }
+  .map-bl { bottom: var(--map-controls-bottom); }
+  .segmented { display: none; }
+  html:not([data-itm="1"]) .layer-toggle, html[data-itm="1"] .layer-menu-btn { display: inline-flex; }
+  .layer-menu-btn, .layer-toggle { height: var(--size-control-lg); padding: 0 12px 0 12px; gap: 6px; background: var(--color-surface); border: 0; border-radius: var(--radius-lg); box-shadow: var(--shadow-1); font-weight: var(--font-weight-medium); color: var(--color-text); }
+  .leaflet-control-scale, .summary { display: none; }
+  .leaflet-control-zoom.leaflet-bar { display: flex; margin-bottom: var(--space-2) !important; }
+  .leaflet-control-zoom a { width: 44px !important; height: 44px !important; border-bottom: 0 !important; }
+  .leaflet-control-zoom a:first-child { border-right: 1px solid var(--color-border-subtle) !important; }
+  .toasts { left: var(--map-gutter); right: var(--map-gutter); bottom: calc(var(--map-controls-bottom) + var(--size-control-lg) + var(--space-2)); } /* above the layer / zoom row, never over attribution */
+  .toast { min-width: 0; width: 100%; max-width: none; }
+}
+/* phone (< 600): short pill labels, wordmark only while Live, icon-only Quiet chip */
+@media (max-width: 599.98px) {
+  .pill .full { display: none; }
+  .pill .short { display: inline; }
+  html[data-quiet="1"] .quiet-hit { display: none; }            /* phone: Quiet shows as a badge on the menu button */
+  html[data-quiet="1"] .menu-badge { display: grid; }
+}
+@media (max-width: 399.98px) { .brand .wordmark, .divider-brand { display: none; } }
+.menu-btn { position: relative; }
+.menu-badge { display: none; position: absolute; right: 4px; top: 4px; width: 16px; height: 16px; border-radius: 50%; place-items: center; background: var(--color-neutral-badge-bg); color: var(--color-neutral-badge-text); box-shadow: 0 0 0 2px var(--color-surface); }
+.menu-badge .ic { width: 10px; height: 10px; stroke-width: 2.5; }
+
+/* bottom sheet (phone) */
+.sheet {
+  position: absolute; z-index: var(--z-panel); left: 0; right: 0; bottom: 0; height: max(176px, var(--size-sheet-peek));
+  flex-direction: column; background: var(--color-surface); border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: var(--shadow-4);
+  padding: 0 var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+}
+.sheet-grab { display: flex; justify-content: center; align-items: center; height: 20px; flex: none; }
+.sheet-grab span { width: 36px; height: 4px; border-radius: 2px; background: var(--color-border); }
+.sheet-top { display: flex; align-items: flex-start; gap: var(--space-2); }
+.sheet-top .area-name { font-size: var(--font-size-xl); line-height: var(--line-height-xl); }
+.sheet .figure .km { font-size: var(--font-size-2xl); line-height: var(--line-height-2xl); }
+.sheet .icon-btn { width: 44px; height: 44px; }
+.sheet .row { display: flex; gap: var(--space-2); margin-top: auto; }
+.sheet .row .btn { height: var(--size-control-lg); flex: 1; }
+/* naming sheet: Name, one-line area, sticky actions; Description behind "Add description" */
+.sheet.naming { height: auto; padding-bottom: var(--space-3); bottom: var(--kb-h, 0px); gap: var(--space-3); }
+.sheet.naming .sheet-top { align-items: center; }
+.sheet.naming h2 { margin: 0; flex: 1; font-size: var(--font-size-lg); line-height: var(--line-height-lg); font-weight: var(--font-weight-semibold); }
+.sheet.naming h2 .num { font-weight: var(--font-weight-regular); color: var(--color-text-secondary); }
+.naming-actions { display: flex; gap: var(--space-2); }
+.naming-actions .btn { flex: 1; height: var(--size-control-lg); }
+.area-line { display: flex; align-items: baseline; gap: 8px; font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+.area-line b { font-size: var(--font-size-lg); line-height: var(--line-height-lg); color: var(--color-text); font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; }
+.area-line .grow { flex: 1; }
+.sticky-actions { display: flex; align-items: center; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--color-border-subtle); }
+.sticky-actions .btn { height: var(--size-control-lg); }
+.sticky-actions .grow { flex: 1; }
+/* preview sheet: 50 dvh, Restore / Exit pinned at the top */
+.sheet.preview { height: max(176px, var(--size-sheet-peek)); padding: 0; }
+.sheet.preview .pinned { padding: 0 var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-border-subtle); }
+.sheet.preview .pinned .banner { margin-top: 0; }
+.sheet.preview .scroller { flex: 1; overflow: hidden; padding: var(--space-2) var(--space-2) 0; }
+.sheet.preview .mini-head { display: flex; align-items: baseline; gap: 8px; padding: var(--space-1) var(--space-2) var(--space-2); }
+.sheet.preview .mini-head b { font-size: var(--font-size-lg); line-height: var(--line-height-lg); font-weight: var(--font-weight-semibold); flex: 1; }
+.sheet.preview .mini-head span { color: var(--color-text-secondary); font-size: var(--font-size-sm); }
+/* simulated on-screen keyboard (mockup only) */
+.kb { position: absolute; left: 0; right: 0; bottom: 0; height: var(--kb-h, 300px); z-index: 999; background: #d3d6dc; padding: 10px 4px 0; flex-direction: column; gap: 10px; }
+.kb .krow { display: flex; gap: 6px; justify-content: center; }
+.kb .krow span { flex: 0 1 32px; height: 42px; border-radius: 5px; background: #fff; box-shadow: 0 1px 0 #898a8d; }
+.kb .krow span.w { flex-basis: 180px; }
+.kb .klabel { position: absolute; right: 8px; bottom: 6px; font: 600 11px/14px var(--font-sans); color: #4f596a; }
+
+/* scenario switches */
+html[data-scenario="sheet"] .sheet.area, html[data-scenario="naming"] .sheet.naming, html[data-scenario="preview"] .sheet.preview { display: flex; }
+html[data-scenario="sheet"] .app, html[data-scenario="preview"] .app { --map-inset-bottom: var(--sheet-h); }
+html[data-scenario="sheet"] .bottombar, html[data-scenario="sheet"] .hud, html[data-scenario="naming"] .bottombar, html[data-scenario="naming"] .hud,
+html[data-scenario="preview"] .bottombar, html[data-scenario="preview"] .hud:not(.preview) { display: none; }
+html[data-scenario="naming"] .app { --map-inset-bottom: calc(var(--kb-h, 0px) + var(--sheet-h, 0px)); }
+html[data-scenario="naming"][data-kb="1"] .kb { display: flex; }
+html[data-scenario="naming"][data-kb="1"] .map-bl, html[data-scenario="naming"][data-kb="1"] .leaflet-control-zoom { display: none !important; } /* keyboard open: control row hidden, attribution stays */
+.hud.preview { display: none; }
+html[data-scenario="preview"] .hud.preview { display: flex; }
+html[data-scenario="aerial"] .hud, html[data-scenario="aerial"] .panel, html[data-scenario="limited"] .hud, html[data-scenario="desk1024"] .hud { display: none !important; }
+html:not([data-scenario="aerial"]) .app .presence-pop, html:not([data-scenario="aerial"]) .app .notice { display: none; }
+html[data-scenario="aerial"] .app, html[data-scenario="limited"] .app { --map-inset-right: 0px; }
+html[data-view="components"] .app { display: none; }
+html:not([data-view="components"]) .components { display: none; }
+
+/* ================================================================== component sheet (?view=components) */
+html[data-view="components"], html[data-view="components"] body { height: auto; }
+.components { max-width: 1440px; margin: 0 auto; padding: 28px 32px 40px; }
+.cs-head { display: flex; align-items: baseline; gap: 16px; margin-bottom: 20px; }
+.cs-head h1 { margin: 0; font-size: var(--font-size-2xl); line-height: var(--line-height-2xl); letter-spacing: var(--letter-spacing-tight); }
+.cs-head p { margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-sm); }
+.cs-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.cs-col { display: grid; gap: 16px; }
+.card { background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-1); padding: 16px 18px 18px; }
+.card > h3 { margin: 0 0 12px; font-size: var(--font-size-sm); line-height: var(--line-height-sm); font-weight: var(--font-weight-semibold); color: var(--color-text-secondary); display: flex; justify-content: space-between; gap: 12px; }
+.card > h3 small { font-weight: var(--font-weight-regular); color: var(--color-text-tertiary); text-align: right; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stack { display: grid; gap: 10px; }
+.cap { font-size: var(--font-size-xs); color: var(--color-text-tertiary); }
+.sub-h { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); color: var(--color-text-tertiary); margin: 14px 0 8px; }
+.wide { grid-column: 1 / -1; }
+.demo-hud { position: static; transform: none; min-width: 0; max-width: 560px; box-shadow: var(--shadow-1); }
+.demo-toast { min-width: 0; max-width: none; }
+.demo-notice { position: static; transform: none; white-space: normal; box-shadow: var(--shadow-1); max-width: none; }
+.btn.is-loading { pointer-events: none; }
+.rate-chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: var(--radius-full); background: var(--color-warning-bg); color: var(--color-warning-text); border: 1px solid var(--color-warning-border); font-size: var(--font-size-xs); font-weight: var(--font-weight-medium); }
+.rate-chip .ic { width: 14px; height: 14px; stroke-width: 2; color: var(--color-warning-icon); }
+.hitbox { position: relative; }
+.hitbox::after { content: ""; position: absolute; inset: 0; border: 1.5px dashed var(--red-500); border-radius: 4px; pointer-events: none; }
+.hitlab { font-size: 11px; line-height: 14px; color: var(--color-text-tertiary); text-align: center; }
+
+/* forms */
+.field { display: grid; gap: 6px; }
+.label { font-size: var(--font-size-sm); line-height: var(--line-height-sm); font-weight: var(--font-weight-medium); }
+.label .opt { color: var(--color-text-tertiary); font-weight: var(--font-weight-regular); }
+.input {
+  width: 100%; height: var(--size-input); padding: 0 12px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
+  background: var(--color-surface); color: var(--color-text); font: inherit; font-size: var(--font-size-input);
+}
+textarea.input { height: 76px; padding: 8px 12px; resize: vertical; }
+.input::placeholder { color: var(--color-text-tertiary); }
+.input:hover { border-color: var(--color-text-secondary); }
+.input:focus, .input.is-focus { outline: none; border-color: var(--color-focus-ring); box-shadow: 0 0 0 1px var(--color-focus-ring), 0 0 0 4px color-mix(in srgb, var(--color-focus-ring) 22%, transparent); }
+.input[aria-invalid="true"] { border-color: var(--color-danger-text); box-shadow: 0 0 0 1px var(--color-danger-text); }
+.input[readonly] { background: var(--color-surface-subtle); border-color: var(--color-border); color: var(--color-text-secondary); }
+.field-error { display: flex; align-items: center; gap: 6px; color: var(--color-danger-text); font-size: var(--font-size-sm); line-height: var(--line-height-sm); }
+.field-error .ic { width: 16px; height: 16px; stroke-width: 2; }
+.hint { font-size: var(--font-size-sm); line-height: var(--line-height-sm); color: var(--color-text-tertiary); }
+.counter { font-size: var(--font-size-xs); color: var(--color-text-tertiary); text-align: right; }
+.pw { position: relative; }
+.pw .input { padding-right: 64px; }
+.pw .btn { position: absolute; right: 0; top: 0; height: var(--size-input); min-width: 44px; padding: 0 12px; border-radius: 0 var(--radius-md) var(--radius-md) 0; font-size: var(--font-size-sm); color: var(--color-text-link); }
+.readonly-area { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-surface-subtle); border: 1px solid var(--color-border-subtle); }
+.readonly-area .km { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; }
+.readonly-area .ha { color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.form-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.form-actions .push { margin-left: auto; }
+
+/* banners */
+.banner { display: flex; gap: 10px; padding: 10px 12px; border-radius: var(--radius-md); border: 1px solid; font-size: var(--font-size-sm); line-height: var(--line-height-sm); }
+.banner > .ic, .banner > .avatar { margin-top: 1px; }
+.banner > .ic { width: 18px; height: 18px; }
+.banner b { font-weight: var(--font-weight-semibold); color: var(--color-text); display: block; }
+.banner p { margin: 2px 0 0; color: var(--color-text-secondary); }
+.banner .acts { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.banner.lock { --c: var(--collab-8); background: color-mix(in srgb, var(--c) 7%, var(--color-surface)); border-color: color-mix(in srgb, var(--c) 30%, var(--color-surface)); }
+.banner.warn { background: var(--color-warning-bg); border-color: var(--color-warning-border); }
+.banner.warn > .ic { color: var(--color-warning-icon); }
+.banner.danger { background: var(--color-danger-bg); border-color: var(--color-danger-border); color: var(--color-danger-text); }
+.banner.danger > .ic { color: var(--color-danger-icon); }
+.banner.accent { background: var(--color-accent-subtle); border-color: var(--color-accent-border); }
+.banner.accent > .ic { color: var(--color-accent-text); }
+.banner.neutral { background: var(--color-surface-subtle); border-color: var(--color-border-subtle); }
+.banner.neutral > .ic { color: var(--color-icon); }
+
+/* conflict */
+.cf-title { display: flex; gap: 10px; align-items: flex-start; }
+.cf-title .ic { width: 20px; height: 20px; color: var(--color-warning-icon); margin-top: 2px; }
+.cf-title h4 { margin: 0; font-size: var(--font-size-lg); line-height: var(--line-height-lg); font-weight: var(--font-weight-semibold); }
+.cf-body { margin: 6px 0 12px 30px; color: var(--color-text-secondary); font-size: var(--font-size-sm); line-height: var(--line-height-sm); }
+.legend { display: grid; gap: 2px; margin-bottom: 14px; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); padding: 4px; }
+.lg-row { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 4px 0 10px; font-size: var(--font-size-sm); }
+.lg-row svg.line { width: 28px; height: 10px; flex: none; }
+.lg-row .grow { flex: 1; }
+.lg-row .km { color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.cf-actions { display: grid; gap: 10px; }
+.cf-act .btn { width: 100%; }
+.cf-act .help { margin-top: 4px; font-size: var(--font-size-xs); line-height: 16px; color: var(--color-text-tertiary); padding: 0 2px; }
+table.diff { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); line-height: var(--line-height-sm); }
+table.diff th { text-align: left; font-weight: var(--font-weight-medium); color: var(--color-text-tertiary); font-size: var(--font-size-xs); padding: 6px 8px; border-bottom: 1px solid var(--color-border-subtle); background: var(--color-surface-subtle); }
+table.diff td { padding: 8px; border-bottom: 1px solid var(--color-border-subtle); vertical-align: top; }
+table.diff th[scope="row"] { background: none; color: var(--color-text); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); border-bottom: 1px solid var(--color-border-subtle); }
+.radio { display: inline-flex; gap: 8px; align-items: flex-start; }
+.radio > span { white-space: nowrap; }
+.radio i { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--color-border-strong); flex: none; margin-top: 1px; background: var(--color-surface); }
+.radio.on i { border: 5px solid var(--color-accent); }
+.merged { color: var(--color-text-tertiary); font-size: var(--font-size-xs); display: flex; gap: 6px; align-items: center; }
+.merged .ic { width: 14px; height: 14px; color: var(--color-success-icon); }
+
+/* list */
+.list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.list-head h4 { margin: 0; font-size: var(--font-size-lg); line-height: var(--line-height-lg); font-weight: var(--font-weight-semibold); }
+.select { display: inline-flex; align-items: center; gap: 6px; height: var(--size-control-sm); padding: 0 8px 0 10px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--font-size-sm); background: var(--color-surface); }
+.select .ic { width: 14px; height: 14px; stroke-width: 2; color: var(--color-icon); }
+.li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 10px 12px; border-radius: var(--radius-md); }
+.li:hover, .li.is-hover { background: var(--color-surface-hover); }
+.li[aria-current="true"] { background: var(--color-accent-subtle); }
+.li .n { font-weight: var(--font-weight-medium); }
+.li .k { font-variant-numeric: tabular-nums; color: var(--color-text-secondary); font-size: var(--font-size-sm); }
+.li .m { grid-column: 1 / -1; font-size: var(--font-size-xs); line-height: 16px; color: var(--color-text-tertiary); display: flex; gap: 6px; align-items: center; }
+.li .m .lock { color: var(--color-text-secondary); display: inline-flex; gap: 4px; align-items: center; }
+.li .m .ic { width: 12px; height: 12px; stroke-width: 2.25; }
+.skel { display: block; height: 12px; border-radius: 4px; background: linear-gradient(90deg, var(--color-surface-sunken) 25%, var(--color-skeleton-highlight) 50%, var(--color-surface-sunken) 75%); background-size: 300% 100%; animation: shimmer var(--duration-skeleton) var(--ease-linear) infinite; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; background: var(--color-surface-sunken); } .progress::after { animation: none; left: 0; width: 100%; opacity: 0.35; } }
+.skel-row { display: grid; grid-template-columns: 20px 1fr; gap: 8px; padding: 10px 8px; }
+
+/* dialog + auth */
+.scrim-demo { position: relative; border-radius: var(--radius-lg); overflow: hidden; padding: 28px 20px; display: grid; place-items: center;
+  background: linear-gradient(var(--color-scrim), var(--color-scrim)), url("https://tile.openstreetmap.org/16/39099/26596.png") center / 256px repeat; }
+.dialog { width: 100%; max-width: var(--size-dialog-width); background: var(--color-surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-4); padding: 24px; }
+.dialog.wide { max-width: 560px; }
+.dialog h4 { margin: 0 0 6px; font-size: var(--font-size-xl); line-height: var(--line-height-xl); font-weight: var(--font-weight-semibold); }
+.dialog p { margin: 0 0 16px; color: var(--color-text-secondary); }
+.dialog .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.dialog .links { display: flex; justify-content: space-between; margin-top: 14px; font-size: var(--font-size-sm); }
+.sc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; font-size: var(--font-size-sm); line-height: var(--line-height-sm); }
+.sc-grid h5 { grid-column: 1 / -1; margin: 10px 0 2px; font-size: var(--font-size-xs); color: var(--color-text-tertiary); font-weight: var(--font-weight-semibold); }
+.sc-grid div { display: flex; justify-content: space-between; gap: 8px; color: var(--color-text-secondary); }
+a.link { color: var(--color-text-link); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+.auth-bg { border-radius: var(--radius-lg); padding: 28px 20px; display: grid; place-items: center; background-color: var(--color-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' fill='none' stroke='%23c2c9d3' stroke-opacity='.55'%3E%3Cpath d='M-20 60c40-30 80 20 120-5s70-40 160 5'/%3E%3Cpath d='M-20 100c50-25 90 25 130 0s70-35 150 10'/%3E%3Cpath d='M-20 150c30-20 70 15 120-5s90-30 160 15'/%3E%3Cpath d='M-20 200c45-20 85 20 125-2s75-28 155 12'/%3E%3C/svg%3E"); }
+.auth-card { width: 100%; max-width: var(--size-auth-card-width); background: var(--color-surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-3); padding: 28px 28px 24px; }
+.auth-card .logo svg { width: 40px; height: 40px; }
+.auth-card h4 { margin: 16px 0 4px; font-size: var(--font-size-3xl); line-height: var(--line-height-3xl); font-weight: var(--font-weight-semibold); letter-spacing: var(--letter-spacing-tight); }
+.auth-card .tag { margin: 0 0 20px; color: var(--color-text-secondary); }
+.auth-card .input, .auth-card .btn-lg { height: var(--size-control-lg); }
+.auth-card .pw .btn { height: var(--size-control-lg); }
+.auth-card .foot { margin-top: 16px; text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary); }
+.boot { height: 150px; border-radius: var(--radius-lg); background: var(--color-bg); display: grid; place-items: center; align-content: center; gap: 16px; }
+.boot svg { width: 40px; height: 40px; }
+.boot .spinner { width: 20px; height: 20px; color: var(--color-icon); justify-self: center; }
+
+/* overlay legend */
+.ov-legend { display: grid; grid-template-columns: 88px repeat(9, minmax(0, 1fr)); gap: 10px 10px; align-items: start; }
+.ov-legend .rowlabel { font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); color: var(--color-text-secondary); padding-top: 40px; }
+.ov-legend .setlabel { grid-column: 1 / -1; font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); color: var(--color-text-tertiary); margin-top: 6px; border-top: 1px solid var(--color-border-subtle); padding-top: 10px; }
+.lg-item { display: grid; gap: 6px; }
+.lg-sw { position: relative; aspect-ratio: 128 / 100; border-radius: var(--radius-md); overflow: hidden; background-size: 512px; box-shadow: inset 0 0 0 1px rgb(15 19 26 / 0.08); }
+.lg-sw[data-base-layer="map"] { background-image: url("https://tile.openstreetmap.org/16/39099/26596.png"); background-color: #f2efe9; }
+.lg-sw[data-base-layer="aerial"] { background-image: url("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/16/26596/39099"); background-color: #3a3f36; }
+.lg-sw > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.lg-sw .chip { font-size: 11px; height: 20px; padding: 0 7px 0 5px; }
+.lg-sw .chip.disc { width: 18px; height: 18px; padding: 0; font-size: 9.5px; }
+.lg-sw .tip { position: absolute; background: var(--color-inverse-surface); color: var(--color-inverse-text); font-size: var(--font-size-xs); line-height: 16px; padding: 3px 7px; border-radius: var(--radius-sm); box-shadow: var(--shadow-3); white-space: nowrap; }
+.lg-sw .mk-tick { width: 12px; height: 12px; }
+.lg-sw .mk-tick .ic { width: 8px; height: 8px; }
+.lg-cap { font-size: var(--font-size-xs); line-height: 16px; color: var(--color-text-secondary); }
+.lg-cap b { color: var(--color-text); font-weight: var(--font-weight-semibold); display: block; }
+</style>
+</head>
+<body>
+<!-- icons referenced only from script: #i-circle-alert #i-x #i-pencil #i-check #i-plus #i-clock #i-eye #i-map #i-satellite #i-cloud-off #i-wifi-off #i-lock #i-refresh-cw #i-chevron-down #i-bell-off #i-undo-2 #i-pen-tool #i-list #i-pencil-line #i-rotate-ccw -->
+<!-- ICON SPRITE: Lucide 1.48.0 (ISC), generated -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+<symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742" /><path d="m2 2 20 20" /><path d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05" /></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+<symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></symbol>
+<symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6" /></symbol>
+<symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></symbol>
+<symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></symbol>
+<symbol id="i-cloud-off" viewBox="0 0 24 24"><path d="M10.94 5.274A7 7 0 0 1 15.71 10h1.79a4.5 4.5 0 0 1 4.222 6.057" /><path d="M18.796 18.81A4.5 4.5 0 0 1 17.5 19H9A7 7 0 0 1 5.79 5.78" /><path d="m2 2 20 20" /></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" /></symbol>
+<symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" /><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" /><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" /><path d="m2 2 20 20" /></symbol>
+<symbol id="i-git-merge" viewBox="0 0 24 24"><circle cx="18" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><path d="M6 21V9a9 9 0 0 0 9 9" /></symbol>
+<symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" /></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></symbol>
+<symbol id="i-keyboard" viewBox="0 0 24 24"><path d="M10 8h.01" /><path d="M12 12h.01" /><path d="M14 8h.01" /><path d="M16 12h.01" /><path d="M18 8h.01" /><path d="M6 8h.01" /><path d="M7 16h10" /><path d="M8 12h.01" /><rect width="20" height="16" x="2" y="4" rx="2" /></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M3 5h.01" /><path d="M3 12h.01" /><path d="M3 19h.01" /><path d="M8 5h13" /><path d="M8 12h13" /><path d="M8 19h13" /></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></symbol>
+<symbol id="i-log-out" viewBox="0 0 24 24"><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" /><path d="M15 5.764v15" /><path d="M9 3.236v15" /></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" /></symbol>
+<symbol id="i-mouse-pointer-2" viewBox="0 0 24 24"><path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z" /></symbol>
+<symbol id="i-move" viewBox="0 0 24 24"><path d="M12 2v20" /><path d="m15 19-3 3-3-3" /><path d="m19 9 3 3-3 3" /><path d="M2 12h20" /><path d="m5 9-3 3 3 3" /><path d="m9 5 3-3 3 3" /></symbol>
+<symbol id="i-pen-tool" viewBox="0 0 24 24"><path d="M15.707 21.293a1 1 0 0 1-1.414 0l-1.586-1.586a1 1 0 0 1 0-1.414l5.586-5.586a1 1 0 0 1 1.414 0l1.586 1.586a1 1 0 0 1 0 1.414z" /><path d="m18 13-1.375-6.874a1 1 0 0 0-.746-.776L3.235 2.028a1 1 0 0 0-1.207 1.207L5.35 15.879a1 1 0 0 0 .776.746L13 18" /><path d="m2.3 2.3 7.286 7.286" /><circle cx="11" cy="11" r="2" /></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" /></symbol>
+<symbol id="i-pencil-line" viewBox="0 0 24 24"><path d="M13 21h8" /><path d="m15 5 4 4" /><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="M12 5v14" /></symbol>
+<symbol id="i-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" /></symbol>
+<symbol id="i-rotate-ccw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></symbol>
+<symbol id="i-satellite" viewBox="0 0 24 24"><path d="m13.5 6.5-3.148-3.148a1.205 1.205 0 0 0-1.704 0L6.352 5.648a1.205 1.205 0 0 0 0 1.704L9.5 10.5" /><path d="M16.5 7.5 19 5" /><path d="m17.5 10.5 3.148 3.148a1.205 1.205 0 0 1 0 1.704l-2.296 2.296a1.205 1.205 0 0 1-1.704 0L13.5 14.5" /><path d="M9 21a6 6 0 0 0-6-6" /><path d="M9.352 10.648a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l4.296-4.296a1.205 1.205 0 0 0 0-1.704l-2.296-2.296a1.205 1.205 0 0 0-1.704 0z" /></symbol>
+<symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /></symbol>
+<symbol id="i-trash-2" viewBox="0 0 24 24"><path d="M10 11v6" /><path d="M14 11v6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></symbol>
+<symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></symbol>
+<symbol id="i-undo-2" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" /></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><path d="M16 3.128a4 4 0 0 1 0 7.744" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><circle cx="9" cy="7" r="4" /></symbol>
+<symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01" /><path d="M8.5 16.429a5 5 0 0 1 7 0" /><path d="M5 12.859a10 10 0 0 1 5.17-2.69" /><path d="M19 12.859a10 10 0 0 0-2.007-1.523" /><path d="M2 8.82a15 15 0 0 1 4.177-2.643" /><path d="M22 8.82a15 15 0 0 0-11.288-3.764" /><path d="m2 2 20 20" /></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></symbol>
+<symbol id="i-zoom-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><line x1="21" x2="16.65" y1="21" y2="16.65" /><line x1="11" x2="11" y1="8" y2="14" /><line x1="8" x2="14" y1="11" y2="11" /></symbol>
+</svg>
+<!-- /ICON SPRITE -->
+<a class="skip-link" href="#map">Skip to map</a>
+
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="var(--color-accent)"/><path d="M7 19 9.5 8.5 20 9.5 19.5 20z" fill="rgb(255 255 255 / 0.22)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><circle cx="7" cy="19" r="2.2" fill="#fff"/><circle cx="9.5" cy="8.5" r="2.2" fill="#fff"/><circle cx="20" cy="9.5" r="2.2" fill="#fff"/><circle cx="19.5" cy="20" r="2.2" fill="#fff"/></svg>
+      <span class="wordmark">Snapland</span>
+    </div>
+    <div class="divider divider-brand" aria-hidden="true"></div>
+    <button class="hit pill-hit" data-testid="connection-status" data-state="live" aria-label="Connection: Live" id="pill"><span class="pill"><span class="dot"></span><span class="full">Live</span><span class="short">Live</span></span></button>
+    <button class="hit quiet-hit" data-testid="quiet-chip" aria-label="Quiet mode on"><span class="chip-quiet"><svg class="ic ic-xs"><use href="#i-bell-off"/></svg><span class="lbl">Quiet mode</span></span></button>
+    <div class="spacer"></div>
+    <button class="presence-btn" data-testid="presence-button" aria-label="6 people on the map. Show list">
+      <span class="avatar" style="--c:var(--collab-7)" title="You — Drawing a new area">Mo<span class="badge"><svg class="ic"><use href="#i-plus"/></svg></span></span>
+      <span class="avatar" style="--c:var(--collab-1)" title="Dana — Drawing a new area">Da<span class="badge"><svg class="ic"><use href="#i-plus"/></svg></span></span>
+      <span class="avatar" style="--c:var(--collab-8)" title="Omer — Editing “Sportek Courts”">Om<span class="badge"><svg class="ic"><use href="#i-pencil"/></svg></span></span>
+      <span class="avatar" style="--c:var(--collab-11)" title="Avi — Viewing">Av</span>
+      <span class="avatar more num">+2</span>
+    </button>
+    <button class="hit presence-hit" data-testid="presence-button" aria-label="6 on the map"><span class="presence-count"><svg class="ic"><use href="#i-users"/></svg><span class="num">6</span></span></button>
+    <div class="divider desk-only" aria-hidden="true"></div>
+    <button class="icon-btn help" aria-label="Keyboard shortcuts"><svg class="ic"><use href="#i-keyboard"/></svg></button>
+    <button class="btn btn-ghost user-btn" aria-haspopup="menu" data-testid="user-menu-button">moshe<svg class="ic ic-sm"><use href="#i-chevron-down"/></svg></button>
+    <button class="icon-btn menu-btn" aria-haspopup="menu" aria-label="Menu" data-testid="user-menu-button" id="menu-btn" style="display:none"><svg class="ic"><use href="#i-menu"/></svg><span class="menu-badge" data-testid="quiet-chip" aria-hidden="true"><svg class="ic"><use href="#i-bell-off"/></svg></span></button>
+  </header>
+
+  <div class="map" id="map" data-testid="map" data-mode="drawing" data-base-layer="map" tabindex="0" aria-label="Map. Arrow keys pan, plus and minus zoom."></div>
+
+  <nav class="rail" aria-label="Tools">
+    <button class="rail-btn" aria-pressed="true" data-testid="draw-button" aria-label="Draw area"><svg class="ic"><use href="#i-pen-tool"/></svg>Draw</button>
+    <button class="rail-btn" aria-pressed="false" data-testid="areas-button" aria-label="Areas in view"><svg class="ic"><use href="#i-list"/></svg>Areas</button>
+  </nav>
+
+  <div class="composite-label" aria-hidden="true"><b>Composite reference image</b>Drawing HUD and an open area panel never co-exist in the app: modes are exclusive (UX §3.4).</div>
+
+  <section class="hud" id="hud" data-testid="draw-hud" data-state="valid" aria-label="Drawing">
+    <div class="hud-kicker" id="hud-kicker" hidden></div>
+    <div class="readout" tabindex="0" data-testid="area-readout" title="">
+      <span class="lbl">Area</span><span class="val" id="readout">—</span><span class="pts" id="points">· 5 points</span>
+    </div>
+    <div class="hud-actions" id="hud-actions">
+      <button class="btn btn-sm btn-ghost" aria-label="Undo last point"><svg class="ic"><use href="#i-undo-2"/></svg>Undo point</button>
+      <button class="btn btn-sm btn-secondary">Cancel</button>
+      <button class="btn btn-sm btn-primary"><svg class="ic"><use href="#i-check"/></svg>Finish</button>
+    </div>
+    <div class="hud-msg" id="hudmsg" data-testid="hud-message"><svg class="ic"><use href="#i-info"/></svg><span>Double-click, click the first point, or press <kbd>Enter</kbd> to finish.</span></div>
+  </section>
+
+  <section class="hud preview" data-testid="history-preview-banner" aria-label="History preview">
+    <svg class="ic ic-sm"><use href="#i-history"/></svg>
+    <div class="pv-legend">
+      <span><svg viewBox="0 0 22 8"><path d="M2 4h18" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M2 4h18" stroke="#191f2a" stroke-width="3" stroke-dasharray="0.5 5" stroke-linecap="round"/></svg><b class="num">v3</b>&nbsp;· 20 Sep</span>
+      <span><svg viewBox="0 0 22 8"><path d="M2 4h18" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M2 4h18" stroke="var(--ov-own-stroke)" stroke-width="3" stroke-linecap="round"/></svg>Current <span class="num">v5</span></span>
+    </div>
+  </section>
+
+  <div class="notice warning" data-testid="truncation-notice" role="status">
+    <svg class="ic"><use href="#i-zoom-in"/></svg>
+    <span>Showing the first <span class="num">20,000</span> areas. Zoom in to see all.</span>
+    <button class="btn btn-sm btn-secondary">Zoom in</button>
+    <button class="icon-btn" aria-label="Dismiss"><svg class="ic ic-sm"><use href="#i-x"/></svg></button>
+  </div>
+
+  <aside class="panel" data-testid="area-panel" aria-labelledby="panel-title">
+    <div class="panel-head">
+      <div class="panel-kicker">
+        <span class="kicker-text"><span class="swatch"></span>Selected area</span>
+        <button class="icon-btn" aria-label="Close area details"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="title-row">
+        <h2 class="area-name" id="panel-title" tabindex="-1" data-testid="area-panel-name"><bdi>Yarkon North Field</bdi></h2>
+        <button class="icon-btn" aria-label="Rename Yarkon North Field" data-testid="rename-button"><svg class="ic"><use href="#i-pencil"/></svg></button>
+      </div>
+      <div class="figure"><span class="km" data-testid="area-panel-km2" id="sel-km">—</span><span class="ha" data-testid="area-panel-ha" id="sel-ha">—</span></div>
+      <ul class="meta">
+        <li><svg class="ic"><use href="#i-scan"/></svg><span>Perimeter <span class="num" data-testid="area-panel-perimeter" id="sel-per">—</span> · <span class="num" data-testid="area-panel-vertices">6 points</span></span></li>
+        <li><svg class="ic"><use href="#i-clock"/></svg><span>Last edited by <span class="who" style="--c:var(--collab-1)">Dana</span> · <span title="27 Sep 2026, 15:21:04">2 h ago</span> · <span class="num" data-testid="area-panel-version" id="sel-ver">Version 5</span></span></li>
+        <li><svg class="ic"><use href="#i-user"/></svg><span>Created by <span class="who" style="--c:var(--collab-4)">Yael</span> · 12 Sep 2026</span></li>
+      </ul>
+      <div class="panel-actions">
+        <button class="btn btn-sm btn-primary" data-testid="edit-shape-button"><svg class="ic"><use href="#i-pencil-line"/></svg>Edit shape</button>
+        <button class="btn btn-sm btn-secondary" data-testid="zoom-to-area-button"><svg class="ic"><use href="#i-scan"/></svg>Zoom to area</button>
+      </div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="false">Details</button>
+      <button class="tab" role="tab" aria-selected="true" data-testid="history-tab"><svg class="ic ic-sm"><use href="#i-history"/></svg>History <span class="count" id="hist-count">5</span></button>
+    </div>
+    <div class="panel-body">
+      <ol class="timeline" aria-label="Versions, newest first" id="timeline">
+        <li class="tl-item current" data-testid="history-item" data-version="5">
+          <span class="tl-node"></span>
+          <div><div class="tl-head"><span class="ver">v5</span><span class="tag-current">Current</span></div>
+            <div class="tl-change">Reshaped · <span class="num">0.598 km²</span> <span class="arrow">→</span> <span class="num" id="sel-km-hist">—</span></div>
+            <div class="tl-meta"><span class="who" style="--c:var(--collab-1)">Dana</span>·<span title="27 Sep 2026, 15:21:04">2 h ago</span></div></div>
+        </li>
+        <li class="tl-item is-hover" data-testid="history-item" data-version="4">
+          <span class="tl-node"></span>
+          <div><div class="tl-head"><span class="ver">v4</span></div>
+            <div class="tl-change">Renamed from “<bdi>North Field</bdi>”</div>
+            <div class="tl-meta"><span class="who" style="--c:var(--collab-7)">You</span>· <span title="26 Sep 2026, 14:05:11">yesterday at 14:05</span></div></div>
+        </li>
+        <li class="tl-item" data-testid="history-item" data-version="3">
+          <span class="tl-node"></span>
+          <div><div class="tl-head"><span class="ver">v3</span></div>
+            <div class="tl-change">Description edited</div>
+            <div class="tl-meta"><span class="who" style="--c:var(--collab-4)">Yael</span>· 20 Sep 2026, 09:12</div></div>
+        </li>
+        <li class="tl-item" data-testid="history-item" data-version="2">
+          <span class="tl-node"></span>
+          <div><div class="tl-head"><span class="ver">v2</span></div>
+            <div class="tl-change">Reshaped · <span class="num">0.571 km²</span> <span class="arrow">→</span> <span class="num">0.598 km²</span></div>
+            <div class="tl-meta"><span class="who" style="--c:var(--collab-8)">Omer</span>· 18 Sep 2026, 16:40</div></div>
+        </li>
+        <li class="tl-item" data-testid="history-item" data-version="1">
+          <span class="tl-node"></span>
+          <div><div class="tl-head"><span class="ver">v1</span></div>
+            <div class="tl-change">Created · <span class="num">0.571 km²</span></div>
+            <div class="tl-meta"><span class="who" style="--c:var(--collab-4)">Yael</span>· 12 Sep 2026, 11:03</div></div>
+        </li>
+      </ol>
+    </div>
+  </aside>
+
+  <div class="summary" data-testid="analysis-summary" id="summary" title="Overlapping areas are each counted; small areas hidden at this zoom are not included.">24 areas · 31.7 km² in view</div>
+  <div class="map-bl" id="map-bl">
+    <div class="segmented" role="radiogroup" aria-label="Base map">
+      <button class="segment" role="radio" aria-checked="true" data-testid="layer-switch-map" id="seg-map"><svg class="ic"><use href="#i-map"/></svg>Map</button>
+      <button class="segment" role="radio" aria-checked="false" data-testid="layer-switch-aerial" id="seg-aerial" title="Aerial photo from GovMap — covers Israel only"><svg class="ic"><use href="#i-satellite"/></svg>Aerial</button>
+      <button class="segment" role="radio" aria-checked="false" data-testid="layer-switch-itm" id="seg-itm" hidden aria-label="Aerial 2022 (ITM, experimental)">Aerial 2022 <span class="ver">Beta</span></button>
+    </div>
+    <button class="layer-toggle btn" data-testid="layer-toggle" id="layer-toggle" aria-label="Switch base map to Aerial"><svg class="ic"><use href="#i-satellite"/></svg><span>Aerial</span></button>
+    <button class="layer-menu-btn btn" data-testid="layer-menu-button" aria-haspopup="menu" aria-label="Base map: Map" id="layer-menu"><svg class="ic"><use href="#i-map"/></svg><span>Map</span><svg class="ic chev"><use href="#i-chevron-down"/></svg></button>
+  </div>
+
+  <div class="toasts" role="region" aria-label="Notifications" id="toasts">
+    <div class="lane" data-lane="collab">
+      <div class="toast" data-testid="toast" data-kind="collab" id="toast-collab" style="display:none">
+        <span class="avatar" style="--c:var(--collab-6)">No</span>
+        <div class="msg">Noa reshaped “<bdi>Rowing Club Lawn</bdi>” <span class="sub">· <span class="num" id="collab-km">0.118 km²</span></span></div>
+        <button class="t-close" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button>
+      </div>
+    </div>
+    <div class="lane" data-lane="own">
+      <div class="toast" data-testid="toast" data-kind="undo" id="toast-undo">
+        <svg class="ic" id="toast-undo-icon"><use href="#i-trash-2"/></svg>
+        <div class="msg" id="toast-undo-msg">Deleted “<bdi>Old Nursery</bdi>”</div>
+        <button class="t-action" data-testid="toast-undo" id="toast-undo-btn">Undo</button>
+        <button class="t-close" aria-label="Dismiss" data-testid="toast-dismiss"><svg class="ic"><use href="#i-x"/></svg></button>
+        <span class="timer" aria-hidden="true"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="popover presence-pop" data-testid="presence-list" role="dialog" aria-label="On the map now">
+    <div class="pop-head">On the map now <span class="num">6</span></div>
+    <div class="p-row" data-testid="presence-item"><span class="avatar md" style="--c:var(--collab-7)">Mo</span><div class="txt"><div class="p-name">moshe <span class="you">You</span></div><div class="p-status"><svg class="ic"><use href="#i-eye"/></svg><span>Viewing</span></div></div></div>
+    <div class="p-sep"></div>
+    <div class="p-row is-hover" data-testid="presence-item"><span class="avatar md" style="--c:var(--collab-1)">Da<span class="badge"><svg class="ic"><use href="#i-plus"/></svg></span></span><div class="txt"><div class="p-name">Dana</div><div class="p-status active"><svg class="ic"><use href="#i-plus"/></svg><span>Drawing a new area</span></div></div><span class="in-view">In view</span></div>
+    <div class="p-row" data-testid="presence-item"><span class="avatar md" style="--c:var(--collab-8)">Om<span class="badge"><svg class="ic"><use href="#i-pencil"/></svg></span></span><div class="txt"><div class="p-name">Omer</div><div class="p-status active"><svg class="ic"><use href="#i-pencil"/></svg><span>Editing “<bdi>Sportek Courts</bdi>”</span></div></div><span class="in-view">In view</span></div>
+    <div class="p-row" data-testid="presence-item"><span class="avatar md" style="--c:var(--collab-11)">Av</span><div class="txt"><div class="p-name">Avi</div><div class="p-status"><svg class="ic"><use href="#i-eye"/></svg><span>Viewing</span></div></div></div>
+    <div class="p-row" data-testid="presence-item"><span class="avatar md" style="--c:var(--collab-6)">No</span><div class="txt"><div class="p-name">Noa</div><div class="p-status"><svg class="ic"><use href="#i-eye"/></svg><span>Viewing</span></div></div><span class="in-view">In view</span></div>
+    <div class="p-row" data-testid="presence-item"><span class="avatar md" style="--c:var(--collab-4)">Ya</span><div class="txt"><div class="p-name">Yael</div><div class="p-status"><svg class="ic"><use href="#i-eye"/></svg><span>Viewing</span></div></div></div>
+  </div>
+
+  <div class="bottombar" id="bottombar" aria-label="Drawing actions">
+    <div class="bb-row" id="bb-main">
+      <button class="btn btn-secondary" data-testid="cancel-draw-button">Cancel</button>
+      <span class="grow"></span>
+      <button class="btn btn-ghost" aria-label="Undo last point" data-testid="undo-point-button"><svg class="ic"><use href="#i-undo-2"/></svg>Undo</button>
+      <button class="btn btn-primary" data-testid="finish-button"><svg class="ic"><use href="#i-check"/></svg>Finish</button>
+    </div>
+  </div>
+
+  <section class="sheet area" data-testid="area-panel" aria-labelledby="sheet-title">
+    <div class="sheet-grab" aria-hidden="true"><span></span></div>
+    <div class="sheet-top">
+      <div style="flex:1;min-width:0">
+        <h2 class="area-name" id="sheet-title"><bdi>Yarkon North Field</bdi></h2>
+        <div class="figure"><span class="km" id="sheet-km">—</span><span class="ha" id="sheet-ha">—</span></div>
+      </div>
+      <button class="icon-btn" aria-label="Expand"><svg class="ic"><use href="#i-chevron-up"/></svg></button>
+      <button class="icon-btn" aria-label="Close area details"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <ul class="meta" style="margin-top:8px"><li><svg class="ic"><use href="#i-clock"/></svg><span>Last edited by <span class="who" style="--c:var(--collab-1)">Dana</span> · 2 h ago · v5</span></li></ul>
+    <div class="row">
+      <button class="btn btn-primary"><svg class="ic"><use href="#i-pencil-line"/></svg>Edit shape</button>
+      <button class="btn btn-secondary"><svg class="ic"><use href="#i-history"/></svg>History</button>
+    </div>
+  </section>
+
+  <section class="sheet naming" data-testid="save-area-form" aria-labelledby="save-title">
+    <div class="sheet-grab" aria-hidden="true"><span></span></div>
+    <div class="sheet-top"><h2 id="save-title">Save area · <span class="num" id="nm-km">—</span></h2><button class="btn btn-ghost" data-testid="discard-draft" style="margin-right:-12px;color:var(--color-danger-text)">Discard</button></div>
+    <div class="field"><label class="label" for="nm">Name</label><input class="input is-focus" id="nm" data-testid="area-name-input" dir="auto" value="Yarkon North Fi"></div>
+    <div><button class="btn btn-ghost" data-testid="add-description-button" style="margin-left:-12px"><svg class="ic"><use href="#i-plus"/></svg>Add description</button></div>
+    <div class="naming-actions">
+      <button class="btn btn-secondary" data-testid="back-to-drawing">Back to drawing</button>
+      <button class="btn btn-primary" data-testid="save-area-submit">Save area</button>
+    </div>
+  </section>
+
+  <section class="sheet preview" data-testid="area-panel" aria-labelledby="pv-title">
+    <div class="sheet-grab" aria-hidden="true"><span></span></div>
+    <div class="pinned">
+      <div class="banner accent" data-testid="history-preview-banner"><svg class="ic"><use href="#i-history"/></svg><div style="flex:1"><b>Previewing v3 from 20 Sep 2026.</b><div class="acts"><button class="btn btn-primary" data-testid="restore-version-button"><svg class="ic"><use href="#i-rotate-ccw"/></svg>Restore this version</button><button class="btn btn-secondary" data-testid="exit-preview-button">Exit preview</button></div></div></div>
+    </div>
+    <div class="scroller">
+      <div class="mini-head"><b id="pv-title"><bdi>Yarkon North Field</bdi></b><span class="num" id="pv-km">—</span></div>
+      <ol class="timeline">
+        <li class="tl-item current"><span class="tl-node"></span><div><div class="tl-head"><span class="ver">v5</span><span class="tag-current">Current</span></div><div class="tl-change">Reshaped · <span class="num">0.598 km²</span> <span class="arrow">→</span> <span class="num" id="pv-km2">—</span></div><div class="tl-meta"><span class="who" style="--c:var(--collab-1)">Dana</span>· 2 h ago</div></div></li>
+        <li class="tl-item"><span class="tl-node"></span><div><div class="tl-head"><span class="ver">v4</span></div><div class="tl-change">Renamed from “<bdi>North Field</bdi>”</div><div class="tl-meta"><span class="who" style="--c:var(--collab-7)">You</span>· yesterday at 14:05</div></div></li>
+        <li class="tl-item" aria-current="true"><span class="tl-node"></span><div><div class="tl-head"><span class="ver">v3</span></div><div class="tl-change">Description edited</div><div class="tl-meta"><span class="who" style="--c:var(--collab-4)">Yael</span>· 20 Sep 2026, 09:12</div></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <div class="kb" aria-hidden="true"><div class="krow"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="krow"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="krow"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="krow"><span></span><span class="w"></span><span></span></div><span class="klabel">Simulated on-screen keyboard · 300 px</span></div>
+</div>
+
+<section class="components" id="components">
+  <div class="cs-head"><h1>Snapland — component sheet (UI v1.1)</h1><p>Visual reference for docs/design/UI.md. Every state below is specified there with exact values. Add <code>&amp;theme=dark</code> for the dark theme.</p></div>
+
+  <div class="card wide" style="margin-bottom:16px">
+    <h3>Map overlays <small>each set: top row Map (OpenStreetMap) · bottom row Aerial (imagery; the casing gains a dark outline)</small></h3>
+    <div class="ov-legend" id="ov-legend"></div>
+  </div>
+
+  <div class="cs-grid">
+    <div class="cs-col">
+      <div class="card">
+        <h3>Buttons <small>sm 32 · md 36 · lg 44 (all 44 on touch)</small></h3>
+        <div class="stack">
+          <div class="row"><button class="btn btn-primary">Save area</button><button class="btn btn-primary is-hover">Hover</button><button class="btn btn-primary is-focus">Focus</button><button class="btn btn-primary is-loading"><span class="spinner"></span>Saving…</button><button class="btn btn-primary" aria-disabled="true">Finish</button></div>
+          <div class="row"><button class="btn btn-secondary">Cancel</button><button class="btn btn-secondary is-hover">Hover</button><button class="btn btn-secondary is-focus">Focus</button><button class="btn btn-secondary" aria-disabled="true">Disabled</button></div>
+          <div class="row"><button class="btn btn-ghost"><svg class="ic"><use href="#i-undo-2"/></svg>Undo point</button><button class="btn btn-ghost is-hover">Hover</button><button class="btn btn-ghost" aria-disabled="true"><svg class="ic"><use href="#i-undo-2"/></svg>Undo point</button></div>
+          <div class="row"><button class="btn btn-danger-ghost"><svg class="ic"><use href="#i-trash-2"/></svg>Delete</button><button class="btn btn-danger-ghost is-hover"><svg class="ic"><use href="#i-trash-2"/></svg>Hover</button><button class="btn btn-danger">Discard and sign out</button></div>
+          <div class="row"><button class="btn btn-sm btn-primary">Small</button><button class="btn btn-primary">Medium</button><button class="btn btn-lg btn-primary">Large</button><button class="icon-btn" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button><button class="icon-btn is-hover" aria-label="Rename"><svg class="ic"><use href="#i-pencil"/></svg></button><button class="icon-btn is-focus" aria-label="Rename"><svg class="ic"><use href="#i-pencil"/></svg></button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Touch hit boxes <small>dashed = 44 × 44 hit box on any coarse pointer</small></h3>
+        <div class="row" style="gap:14px;align-items:flex-start">
+          <div class="stack" style="gap:4px;justify-items:center"><span class="hitbox" style="display:inline-grid;place-items:center;min-width:44px;height:44px"><span class="pill"><span class="dot"></span>Live</span></span><span class="hitlab">pill 28 → 44</span></div>
+          <div class="stack" style="gap:4px;justify-items:center"><span class="hitbox" style="display:inline-grid;place-items:center;min-width:44px;height:44px"><span class="presence-count"><svg class="ic"><use href="#i-users"/></svg><span class="num">6</span></span></span><span class="hitlab">count 32 → 44</span></div>
+          <div class="stack" style="gap:4px;justify-items:center"><span class="hitbox" style="display:inline-grid;place-items:center;min-width:44px;height:44px;padding:0 2px"><span class="chip-quiet"><svg class="ic ic-xs"><use href="#i-bell-off"/></svg>Quiet mode</span></span><span class="hitlab">quiet chip 24 → 44</span></div>
+          <div class="stack" style="gap:4px;justify-items:center"><span class="toast demo-toast" style="padding:0 6px"><button class="t-action hitbox" style="height:44px">Undo</button><button class="t-close hitbox" style="width:44px;height:44px" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></span><span class="hitlab">toast actions 32 → 44</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Connection status pill <small>text always present · phone &lt; 600 uses short labels</small></h3>
+        <div class="row">
+          <span class="pill neutral"><span class="spinner"></span>Connecting…</span>
+          <span class="pill"><span class="dot"></span>Live</span>
+          <span class="pill warning"><span class="spinner"></span>Reconnecting…</span>
+          <span class="pill warning"><svg class="ic"><use href="#i-cloud-off"/></svg>Limited connection</span>
+          <span class="pill danger"><svg class="ic"><use href="#i-wifi-off"/></svg>Offline</span>
+          <span class="pill neutral"><svg class="ic"><use href="#i-lock"/></svg>Signed out</span>
+          <span class="chip-quiet"><svg class="ic ic-xs"><use href="#i-bell-off"/></svg>Quiet mode</span>
+        </div>
+        <div class="sub-h">Phone (&lt; 600 px): short labels (≤ 11 characters); full label in the popover and aria-label; Quiet = badge on the menu button</div>
+        <div class="row"><span class="pill neutral"><span class="spinner"></span>Connecting…</span><span class="pill warning"><span class="spinner"></span>Retrying…</span><span class="pill warning"><svg class="ic"><use href="#i-cloud-off"/></svg>Limited</span><span class="icon-btn" style="position:relative;width:44px;height:44px;display:inline-grid"><svg class="ic"><use href="#i-menu"/></svg><span class="menu-badge" style="display:grid"><svg class="ic"><use href="#i-bell-off"/></svg></span></span></div>
+        <div class="sub-h">Popover (Limited)</div>
+        <div class="popover" style="width:100%;max-width:320px;padding:14px 16px">
+          <div style="display:flex;gap:8px;align-items:center;font-weight:600"><svg class="ic" style="color:var(--color-warning-icon)"><use href="#i-cloud-off"/></svg>Limited connection</div>
+          <p style="margin:6px 0 12px;color:var(--color-text-secondary);font-size:13px;line-height:18px">Live updates are paused. We check for changes every 15 seconds and saving still works.</p>
+          <button class="btn btn-sm btn-secondary"><svg class="ic"><use href="#i-refresh-cw"/></svg>Reconnect now</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Presence <small>avatars 32 · badge 16 · list rows 48</small></h3>
+        <div class="row" style="gap:20px">
+          <div class="presence-btn"><span class="avatar" style="--c:var(--collab-7)">Mo</span><span class="avatar" style="--c:var(--collab-1)">Da<span class="badge"><svg class="ic"><use href="#i-plus"/></svg></span></span><span class="avatar" style="--c:var(--collab-8)">Om<span class="badge"><svg class="ic"><use href="#i-pencil"/></svg></span></span><span class="avatar" style="--c:var(--collab-4)">Ya<span class="badge"><svg class="ic"><use href="#i-clock"/></svg></span></span><span class="avatar more num">+2</span></div>
+          <span class="presence-count"><svg class="ic ic-sm"><use href="#i-users"/></svg>6</span>
+        </div>
+        <div class="sub-h">Busy-area counter (burst rule, toasts paused)</div>
+        <div class="presence-btn" style="display:inline-flex"><span class="avatar" style="--c:var(--collab-7)">Mo</span><span class="avatar" style="--c:var(--collab-1)">Da<span class="badge"><svg class="ic"><use href="#i-plus"/></svg></span></span><span class="avatar more num">+4</span><span class="changes-count">12 changes nearby</span></div>
+        <div class="cap" style="margin-top:6px">Badge: <b>plus</b> = drawing a new area · <b>pencil</b> = editing · <b>clock</b> = idle [N] · none = viewing</div>
+        <div class="sub-h">Palette (server-assigned, 12) with the drawing badge</div>
+        <div class="row" id="palette-row" style="gap:10px"></div>
+        <div class="sub-h">Only you</div>
+        <div class="popover" style="width:100%;max-width:288px">
+          <div class="pop-head">On the map now <span class="num">1</span></div>
+          <div class="p-row"><span class="avatar md" style="--c:var(--collab-7)">Mo</span><div class="txt"><div class="p-name">moshe <span class="you">You</span></div><div class="p-status"><svg class="ic"><use href="#i-eye"/></svg><span>Viewing</span></div></div></div>
+          <div class="p-empty">Only you are here right now.</div>
+        </div>
+        <div class="sub-h">Limited (polled every 15 s): names only, no status, no badges</div>
+        <div class="popover" style="width:100%;max-width:288px">
+          <div class="pop-head">On the map now <span class="num">3</span></div>
+          <div class="p-empty" style="padding-top:0">Updated every 15 seconds while the live connection is down.</div>
+          <div class="p-row"><span class="avatar md" style="--c:var(--collab-7)">Mo</span><div class="txt"><div class="p-name">moshe <span class="you">You</span></div></div></div>
+          <div class="p-row"><span class="avatar md" style="--c:var(--collab-1)">Da</span><div class="txt"><div class="p-name">Dana</div></div></div>
+        </div>
+        <div class="sub-h">Offline</div>
+        <div class="row"><div class="presence-btn" style="filter:grayscale(1);opacity:.55"><span class="avatar" style="--c:var(--collab-7)">Mo</span><span class="avatar" style="--c:var(--collab-1)">Da</span><span class="avatar" style="--c:var(--collab-8)">Om</span></div><span class="cap">Who’s here is unavailable while reconnecting.</span></div>
+      </div>
+
+      <div class="card">
+        <h3>Base-map switcher <small>ITM layer on (SPEC default)</small></h3>
+        <div class="segmented"><button class="segment" aria-checked="true"><svg class="ic"><use href="#i-map"/></svg>Map</button><button class="segment" aria-checked="false"><svg class="ic"><use href="#i-satellite"/></svg>Aerial</button><button class="segment" aria-checked="false">Aerial 2022 <span class="ver">Beta</span></button></div>
+        <div class="sub-h">Phone, three layers: menu button shows the CURRENT layer</div>
+        <div class="row" style="align-items:flex-start;gap:12px">
+          <button class="btn btn-lg" style="background:var(--color-surface);box-shadow:var(--shadow-1);border-radius:12px;padding:0 12px"><svg class="ic"><use href="#i-satellite"/></svg>Aerial<svg class="ic" style="width:16px;height:16px;color:var(--color-icon)"><use href="#i-chevron-down"/></svg></button>
+          <div class="popover menu" role="menu" aria-label="Base map">
+            <button class="menu-item" role="menuitemradio" aria-checked="false"><svg class="ic"><use href="#i-map"/></svg><span class="grow">Map</span><svg class="ic check"><use href="#i-check"/></svg></button>
+            <button class="menu-item is-hover" role="menuitemradio" aria-checked="true"><svg class="ic"><use href="#i-satellite"/></svg><span class="grow">Aerial</span><svg class="ic check"><use href="#i-check"/></svg></button>
+            <button class="menu-item" role="menuitemradio" aria-checked="false"><svg class="ic"><use href="#i-satellite"/></svg><span class="grow">Aerial 2022 <span class="ver">Beta</span></span><svg class="ic check"><use href="#i-check"/></svg></button>
+          </div>
+        </div>
+        <div class="sub-h">Two layers (flag off): one-tap toggle shows the layer you switch TO</div>
+        <button class="btn btn-lg" style="background:var(--color-surface);box-shadow:var(--shadow-1);border-radius:12px"><svg class="ic"><use href="#i-satellite"/></svg>Aerial</button>
+      </div>
+    </div>
+
+    <div class="cs-col">
+      <div class="card">
+        <h3>Drawing / editing HUD <small>top-centre, 360–560 px</small></h3>
+        <div class="stack">
+          <section class="hud demo-hud"><div class="readout"><span class="lbl">Area</span><span class="val">—</span><span class="pts">· 0 points</span></div><div class="hud-actions"><button class="btn btn-sm btn-ghost" aria-disabled="true"><svg class="ic"><use href="#i-undo-2"/></svg>Undo point</button><button class="btn btn-sm btn-secondary">Cancel</button><button class="btn btn-sm btn-primary" aria-disabled="true">Finish</button></div>
+            <div class="hud-msg"><svg class="ic"><use href="#i-info"/></svg><span>Click the map to place the first point.</span></div></section>
+          <section class="hud demo-hud"><div class="readout"><span class="lbl">Area</span><span class="val">1.47 km²</span><span class="pts">· 7 points</span></div><div class="hud-actions"><button class="btn btn-sm btn-ghost"><svg class="ic"><use href="#i-undo-2"/></svg>Undo point</button><button class="btn btn-sm btn-secondary">Cancel</button><button class="btn btn-sm btn-primary" aria-disabled="true">Finish</button></div>
+            <div class="hud-msg error"><svg class="ic"><use href="#i-circle-alert"/></svg><span>Can’t finish yet: the closing edge would cross another edge.</span></div></section>
+          <div class="sub-h" style="margin:4px 0 -2px">Naming (compact: readout + point count, 48 high, no buttons, no strip)</div>
+          <section class="hud demo-hud compact"><div class="readout"><span class="lbl">Area</span><span class="val">0.274 km²</span><span class="pts">· 6 points</span></div></section>
+          <section class="hud demo-hud"><div class="readout"><span class="lbl">Area</span><span class="val">0.874 km²</span><span class="pts">· 12 points</span></div><div class="hud-actions"><button class="btn btn-sm btn-ghost"><svg class="ic"><use href="#i-undo-2"/></svg>Undo point</button><button class="btn btn-sm btn-secondary">Cancel</button><button class="btn btn-sm btn-primary"><svg class="ic"><use href="#i-check"/></svg>Finish</button></div>
+            <div class="hud-msg"><span class="rate-chip"><svg class="ic"><use href="#i-clock"/></svg><span class="num">Live sharing paused · 23 s</span></span><span>Keep drawing — nothing is lost.</span></div></section>
+          <section class="hud demo-hud"><div class="hud-kicker">Editing “<bdi>North Field</bdi>”</div><div class="readout"><span class="lbl">Area</span><span class="val">0.642 km²</span><span class="delta num">(was 0.598 km²)</span></div><div class="hud-actions"><button class="btn btn-sm btn-ghost"><svg class="ic"><use href="#i-undo-2"/></svg>Undo</button><button class="btn btn-sm btn-secondary">Cancel</button><button class="btn btn-sm btn-primary">Save changes</button></div>
+            <div class="hud-msg" style="justify-content:space-between;align-items:center"><span style="display:flex;gap:6px;align-items:center"><svg class="ic"><use href="#i-pencil-line"/></svg>Point 3 of 8 selected</span><span style="display:flex;gap:6px"><button class="btn btn-sm btn-secondary"><svg class="ic"><use href="#i-move"/></svg>Move point</button><button class="btn btn-sm btn-danger-ghost"><svg class="ic"><use href="#i-trash-2"/></svg>Delete point</button></span></div></section>
+          <section class="hud demo-hud"><div class="hud-kicker">Editing “<bdi>North Field</bdi>”</div><div class="readout"><span class="lbl">Area</span><span class="val">0.642 km²</span><span class="delta num">(was 0.598 km²)</span></div><div class="hud-actions"><button class="btn btn-sm btn-ghost"><svg class="ic"><use href="#i-undo-2"/></svg>Undo</button><button class="btn btn-sm btn-secondary">Cancel</button><button class="btn btn-sm btn-primary">Save changes</button></div>
+            <div class="hud-msg armed" style="justify-content:space-between;align-items:center"><span style="display:flex;gap:6px;align-items:center"><svg class="ic"><use href="#i-move"/></svg>Click where the point should go. <kbd>Esc</kbd> to stop.</span><span style="display:flex;gap:6px"><button class="btn btn-sm btn-secondary" data-testid="stop-move-button">Stop</button></span></div></section>
+          <section class="hud demo-hud"><div class="hud-kicker">Editing “<bdi>North Field</bdi>”</div><div class="readout"><span class="lbl">Area</span><span class="val">0.598 km²</span></div><div class="hud-actions"><button class="btn btn-sm btn-ghost" aria-disabled="true"><svg class="ic"><use href="#i-undo-2"/></svg>Undo</button><button class="btn btn-sm btn-secondary">Cancel</button><button class="btn btn-sm btn-primary" aria-disabled="true">Save changes</button></div>
+            <div class="hud-msg warning"><svg class="ic"><use href="#i-triangle-alert"/></svg><span>Omer is editing this area too.</span></div></section>
+          <section class="hud demo-hud"><div class="readout"><span class="lbl">Area</span><span class="val" style="color:var(--color-warning-text)">131,208 km²</span><span class="pts">· 9 points</span></div><div class="hud-actions"><button class="btn btn-sm btn-ghost"><svg class="ic"><use href="#i-undo-2"/></svg>Undo point</button><button class="btn btn-sm btn-secondary">Cancel</button><button class="btn btn-sm btn-primary" aria-disabled="true">Finish</button></div>
+            <div class="hud-msg warning"><svg class="ic"><use href="#i-triangle-alert"/></svg><span>Too large. Areas can be up to 100,000 km².</span></div></section>
+          <div class="sub-h" style="margin:4px 0 -2px">History preview: map legend in the HUD position (actions stay in the panel banner)</div>
+          <section class="hud demo-hud preview" style="display:flex"><svg class="ic ic-sm"><use href="#i-history"/></svg><div class="pv-legend"><span><svg viewBox="0 0 22 8"><path d="M2 4h18" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M2 4h18" stroke="#191f2a" stroke-width="3" stroke-dasharray="0.5 5" stroke-linecap="round"/></svg>v3</span><span><svg viewBox="0 0 22 8"><path d="M2 4h18" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M2 4h18" stroke="var(--ov-own-stroke)" stroke-width="3" stroke-linecap="round"/></svg>Current <span class="num">v5</span></span></div></section>
+          <div class="sub-h" style="margin:4px 0 -2px">Phone strip: one line, .short copy, point actions inside the HUD (44 on touch)</div>
+          <section class="hud demo-hud" style="max-width:390px"><div class="hud-kicker">Editing “<bdi>North Field</bdi>”</div><div class="readout"><span class="lbl">Area</span><span class="val">0.642 km²</span><span class="delta num">(was 0.598 km²)</span></div>
+            <div class="hud-msg with-actions"><span class="msg-text"><svg class="ic"><use href="#i-pencil-line"/></svg><span>Point 3 of 8</span></span><span class="msg-acts"><button class="btn btn-sm btn-secondary"><svg class="ic"><use href="#i-move"/></svg>Move point</button><button class="btn btn-sm btn-danger-ghost"><svg class="ic"><use href="#i-trash-2"/></svg>Delete</button></span></div></section>
+          <section class="hud demo-hud" style="max-width:390px"><div class="hud-kicker">Editing “<bdi>North Field</bdi>”</div><div class="readout"><span class="lbl">Area</span><span class="val">0.642 km²</span><span class="delta num">(was 0.598 km²)</span></div>
+            <div class="hud-msg with-actions armed"><span class="msg-text"><svg class="ic"><use href="#i-move"/></svg><span>Tap where the point should go.</span></span><span class="msg-acts"><button class="btn btn-sm btn-secondary">Stop</button></span></div></section>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Toasts <small>inverse surface · collaboration lane above the own lane</small></h3>
+        <div class="stack">
+          <div class="toast demo-toast"><span class="avatar" style="--c:var(--collab-6)">No</span><div class="msg">Noa reshaped “<bdi>שדה צפוני</bdi>” <span class="sub">· <span class="num">2.31 km²</span></span></div><button class="t-close" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
+          <div class="toast demo-toast"><svg class="ic" style="color:var(--green-400)"><use href="#i-circle-check"/></svg><div class="msg">Saved “<bdi>North Field</bdi>” · <span class="num">0.642 km²</span></div><button class="t-close" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
+          <div class="toast demo-toast"><svg class="ic"><use href="#i-trash-2"/></svg><div class="msg">Deleted “<bdi>Old Nursery</bdi>”</div><button class="t-action is-focus">Undo</button><button class="t-close" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button><span class="timer"></span></div>
+          <div class="toast demo-toast"><svg class="ic" style="color:var(--red-400)"><use href="#i-circle-alert"/></svg><div class="msg">Couldn’t save “<bdi>North Field</bdi>”. Check your connection — your work is kept.</div><button class="t-action">Retry</button><button class="t-close is-focus" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
+          <div class="toast demo-toast"><svg class="ic" style="color:var(--blue-300)"><use href="#i-git-merge"/></svg><div class="msg">Dana also edited “<bdi>North Field</bdi>”. Their name change and your shape change were both saved (v6).</div><button class="t-close" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
+          <div class="cap">Focus on inverse surfaces: 2 px <code>--color-focus-ring-inverse</code> (7.71:1 light, 6.38:1 dark), offset 2.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Notices <small>top-centre slot, one at a time · sm buttons (44 on touch)</small></h3>
+        <div class="stack">
+          <div class="notice demo-notice warning"><svg class="ic"><use href="#i-zoom-in"/></svg><span style="flex:1">Showing the first <span class="num">20,000</span> areas. Zoom in to see all.</span><button class="btn btn-sm btn-secondary">Zoom in</button><button class="icon-btn" aria-label="Dismiss"><svg class="ic ic-sm"><use href="#i-x"/></svg></button></div>
+          <div class="notice demo-notice error"><svg class="ic"><use href="#i-circle-alert"/></svg><span style="flex:1">Couldn’t load areas for this view.</span><button class="btn btn-sm btn-secondary"><svg class="ic"><use href="#i-refresh-cw"/></svg>Retry</button></div>
+          <div class="notice demo-notice warning"><svg class="ic"><use href="#i-zoom-in"/></svg><span style="flex:1"><span class="num">2,300</span> small areas are hidden at this zoom. Zoom in to see them.</span><button class="btn btn-sm btn-secondary">Zoom in</button><button class="icon-btn" aria-label="Dismiss"><svg class="ic ic-sm"><use href="#i-x"/></svg></button></div>
+          <div class="notice demo-notice"><svg class="ic"><use href="#i-info"/></svg><span style="flex:1">GovMap photos aren’t loading, so Aerial shows Esri imagery.</span><button class="btn btn-sm btn-secondary"><svg class="ic"><use href="#i-refresh-cw"/></svg>Retry</button></div>
+          <div class="notice demo-notice"><svg class="ic"><use href="#i-info"/></svg><span style="flex:1">Outside Israel, Aerial shows Esri World Imagery.</span><button class="icon-btn" aria-label="Dismiss"><svg class="ic ic-sm"><use href="#i-x"/></svg></button></div>
+          <div class="sub-h" style="margin:2px 0 -4px">Phone: one line, ellipsized; tap the text to expand; hidden while the HUD shows an error</div>
+          <div class="notice demo-notice warning" style="max-width:358px;white-space:nowrap"><svg class="ic"><use href="#i-zoom-in"/></svg><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">Showing the first 20,000 areas. Zoom in to see all.</span><button class="btn btn-sm btn-secondary">Zoom in</button></div>
+          <div class="banner accent" style="align-items:center;box-shadow:var(--shadow-1)"><svg class="ic"><use href="#i-rotate-ccw"/></svg><span style="flex:1;color:var(--color-text)">You have an unsaved drawing from 10 min ago.</span><button class="btn btn-sm btn-ghost">Discard</button><button class="btn btn-sm btn-primary">Restore</button></div>
+          <div class="notice demo-notice"><svg class="ic"><use href="#i-pen-tool"/></svg><span style="flex:1">No areas here yet. Draw one with Draw area (<kbd>D</kbd>).</span><button class="btn btn-sm btn-primary">Draw area</button><button class="icon-btn" aria-label="Dismiss"><svg class="ic ic-sm"><use href="#i-x"/></svg></button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cs-col">
+      <div class="card">
+        <h3>Save form (Naming) <small>side panel · phone: see mockup-mobile-naming.png</small></h3>
+        <div class="stack" style="gap:14px">
+          <div class="list-head"><h4>Save area</h4><button class="icon-btn" aria-label="Back to drawing"><svg class="ic"><use href="#i-x"/></svg></button></div>
+          <div class="field"><label class="label">Name</label><input class="input is-focus" dir="auto" value="Yarkon North Field"></div>
+          <div class="field"><label class="label">Description <span class="opt">(optional)</span></label><textarea class="input" dir="auto" placeholder="Add a note for your team"></textarea></div>
+          <div class="field"><span class="label">Area</span><div class="readonly-area"><span class="km">0.274 km²</span><span class="ha">27.4 ha</span></div></div>
+          <div class="form-actions"><button class="btn btn-primary">Save area</button><button class="btn btn-secondary">Back to drawing</button><button class="btn btn-danger-ghost push">Discard</button></div>
+          <div class="sub-h" style="margin:0">Counter appears from 80 % of 120</div>
+          <div class="field"><label class="label">Name</label><input class="input" dir="auto" value="Yarkon North Field — northern drainage strip between the rowing club and the Sportek courts"><div class="counter num">97 of 120 characters</div></div>
+          <div class="field"><label class="label">Name</label><input class="input" aria-invalid="true" value=""><div class="field-error"><svg class="ic"><use href="#i-circle-alert"/></svg>Give the area a name.</div></div>
+          <div class="sub-h" style="margin:0">Saving (fields read-only, shape in the Saving style)</div>
+          <div class="form-actions"><button class="btn btn-primary is-loading"><span class="spinner"></span>Saving…</button><button class="btn btn-secondary" aria-disabled="true">Back to drawing</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Area details: Details tab, rename, loading</h3>
+        <div class="title-row" style="padding:0"><h2 class="area-name" style="font-size:20px"><bdi>Yarkon North</bdi><span class="pending-name"><span class="spinner xs"></span>Saving…</span></h2></div>
+        <div class="cap" style="margin:2px 0 10px">Rename pending: new name shown at once, 12 px spinner + “Saving…”; Rename button hidden until done.</div>
+        <div class="panel-actions" style="margin:0 0 12px"><button class="btn btn-sm btn-primary is-loading" aria-disabled="true"><span class="spinner"></span>Edit shape</button><button class="btn btn-sm btn-secondary"><svg class="ic"><use href="#i-scan"/></svg>Zoom to area</button><button class="btn btn-sm btn-danger-ghost push"><svg class="ic"><use href="#i-trash-2"/></svg>Delete</button></div>
+        <div class="cap" style="margin:-6px 0 10px">Delete is rendered only for the creator or an admin, after the full detail has loaded.</div>
+        <div class="status-line" style="margin-top:-6px"><span class="spinner xs"></span>Loading full detail…</div>
+        <div class="tabs" role="tablist" style="padding:0"><button class="tab" role="tab" aria-selected="true">Details</button><button class="tab is-focus" role="tab" aria-selected="false"><svg class="ic ic-sm"><use href="#i-history"/></svg>History <span class="count">5</span></button></div>
+        <div class="details">
+          <div class="d-label">Description<button class="btn btn-sm btn-ghost"><svg class="ic"><use href="#i-pencil"/></svg>Edit</button></div>
+          <p class="d-text" dir="auto">Irrigated strip north of the rowing club. Check the drainage ditch before the October survey.</p>
+          <div class="d-label" style="margin-top:6px">Description</div>
+          <p class="d-empty">No description.</p>
+          <div><button class="btn btn-sm btn-secondary"><svg class="ic"><use href="#i-plus"/></svg>Add description</button></div>
+          <div class="d-label" style="margin-top:6px">Description</div>
+          <textarea class="input is-focus" dir="auto">Irrigated strip north of the rowing club.</textarea>
+          <div class="form-actions" style="margin:0"><button class="btn btn-sm btn-primary">Save</button><button class="btn btn-sm btn-secondary">Cancel</button><span class="cap push"><kbd>Ctrl</kbd> <kbd>Enter</kbd> saves</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Panel banners</h3>
+        <div class="stack">
+          <div class="banner lock"><span class="avatar sm" style="--c:var(--collab-8)">Om</span><div><b>Omer is editing this area.</b><p>You can still edit. If you both save, the second save may need a quick review.</p><div class="acts"><button class="btn btn-sm btn-secondary"><svg class="ic"><use href="#i-pencil-line"/></svg>Edit anyway</button></div></div></div>
+          <div class="banner warn"><svg class="ic"><use href="#i-triangle-alert"/></svg><div><b>Dana saved a newer version (v6)</b><p>When you save, we’ll combine your changes or ask you to choose.</p><div class="acts"><button class="btn btn-sm btn-secondary">Review</button></div></div></div>
+          <div class="banner accent"><svg class="ic"><use href="#i-history"/></svg><div><b>Previewing v3 from 20 Sep 2026.</b><div class="acts"><button class="btn btn-sm btn-primary"><svg class="ic"><use href="#i-rotate-ccw"/></svg>Restore this version</button><button class="btn btn-sm btn-secondary">Exit preview</button></div></div></div>
+          <div class="banner neutral"><svg class="ic"><use href="#i-trash-2"/></svg><div><b>Dana deleted this area 1 min ago.</b><div class="acts"><button class="btn btn-sm btn-primary"><svg class="ic"><use href="#i-rotate-ccw"/></svg>Restore area</button><button class="btn btn-sm btn-ghost">Close</button></div><p class="cap" style="margin-top:6px">creator / admin</p></div></div>
+          <div class="banner neutral"><svg class="ic"><use href="#i-trash-2"/></svg><div><b>Dana deleted this area 1 min ago.</b><p>Ask Dana or an admin to restore it.</p><div class="acts"><button class="btn btn-sm btn-secondary"><svg class="ic"><use href="#i-plus"/></svg>Save a copy as a new area</button><button class="btn btn-sm btn-ghost">Close</button></div><p class="cap" style="margin-top:6px">anyone else</p></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Conflict panel <small>non-modal, replaces panel content</small></h3>
+        <div class="cf-title"><svg class="ic"><use href="#i-git-merge"/></svg><h4>Dana saved “<bdi>North Field</bdi>” while you were editing</h4></div>
+        <p class="cf-body">Some of your changes overlap with theirs. Choose what to keep — nothing is lost, every version stays in history.</p>
+        <div class="legend">
+          <div class="lg-row"><svg class="line" viewBox="0 0 28 10"><path d="M2 5h24" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M2 5h24" stroke="var(--ov-own-stroke)" stroke-width="3" stroke-linecap="round"/></svg><span class="grow">Your shape</span><span class="km">0.642 km²</span><button class="icon-btn" aria-label="Hide mine" aria-pressed="true"><svg class="ic ic-sm"><use href="#i-eye"/></svg></button></div>
+          <div class="lg-row"><svg class="line" viewBox="0 0 28 10"><path d="M2 5h24" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M2 5h24" stroke="var(--collab-1)" stroke-width="3" stroke-dasharray="8 5"/></svg><span class="grow">Dana’s shape</span><span class="km">0.610 km²</span><button class="icon-btn" aria-label="Show theirs" aria-pressed="false"><svg class="ic ic-sm"><use href="#i-eye-off"/></svg></button></div>
+        </div>
+        <div class="cf-actions">
+          <div class="cf-act"><button class="btn btn-primary">Keep mine</button><div class="help">Save your version. Dana’s changes stay in history.</div></div>
+          <div class="cf-act"><button class="btn btn-secondary">Take theirs</button><div class="help">Discard your changes and use Dana’s version. You can undo this.</div></div>
+          <div class="cf-act"><button class="btn btn-secondary">Review differences</button><div class="help">Choose field by field.</div></div>
+          <button class="btn btn-ghost btn-sm" style="justify-self:start">Decide later</button>
+        </div>
+        <div class="sub-h">Review differences</div>
+        <table class="diff">
+          <thead><tr><th scope="col">Field</th><th scope="col">Yours</th><th scope="col">Theirs (Dana, v6)</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Shape</th><td><span class="radio on"><i></i><span class="num">0.642 km²</span></span></td><td><span class="radio"><i></i><span class="num">0.610 km²</span></span></td></tr>
+            <tr><th scope="row">Name</th><td><span class="radio on"><i></i><span>“<bdi>North Field</bdi>”</span></span></td><td><span class="radio"><i></i><span>“<bdi>Yarkon North</bdi>”</span></span></td></tr>
+            <tr><th scope="row">Description</th><td colspan="2"><span class="merged"><svg class="ic"><use href="#i-check"/></svg>Merged automatically — only one of you changed this.</span></td></tr>
+          </tbody>
+        </table>
+        <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary">Save merged version</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cs-grid" style="margin-top:16px">
+    <div class="cs-col">
+      <div class="card">
+        <h3>Areas in view <small>text alternative to the map</small></h3>
+        <div class="list-head"><h4>Areas in view <span class="num" style="color:var(--color-text-tertiary);font-weight:400">(24)</span></h4><span class="select">Recently edited<svg class="ic"><use href="#i-chevron-down"/></svg></span></div>
+        <div class="li" aria-current="true"><span class="n"><bdi>Yarkon North Field</bdi></span><span class="k">0.274 km²</span><span class="m">edited 2 h ago by Dana</span></div>
+        <div class="li is-hover"><span class="n"><bdi>Sportek Courts</bdi></span><span class="k">0.068 km²</span><span class="m"><span class="lock"><svg class="ic"><use href="#i-lock"/></svg>Omer is editing</span>· edited yesterday at 14:05 by Omer</span></div>
+        <div class="li"><span class="n"><bdi>שדה צפוני</bdi></span><span class="k">2.31 km²</span><span class="m">edited 20 Sep 2026, 09:12 by Yael</span></div>
+        <div class="li"><span class="n"><bdi>Rowing Club Lawn</bdi></span><span class="k">0.118 km²</span><span class="m">edited just now by Noa</span></div>
+        <div class="sub-h">Loading</div>
+        <div class="li"><span class="skel" style="width:60%"></span><span class="skel" style="width:52px"></span><span class="skel" style="width:40%;height:10px;margin-top:6px;grid-column:1/-1"></span></div>
+        <div class="li"><span class="skel" style="width:48%"></span><span class="skel" style="width:44px"></span><span class="skel" style="width:52%;height:10px;margin-top:6px;grid-column:1/-1"></span></div>
+      </div>
+      <div class="card">
+        <h3>History — loading &amp; error</h3>
+        <div class="skel-row"><span class="skel" style="width:12px;height:12px;border-radius:50%"></span><div class="stack" style="gap:6px"><span class="skel" style="width:40%"></span><span class="skel" style="width:70%"></span></div></div>
+        <div class="skel-row"><span class="skel" style="width:12px;height:12px;border-radius:50%"></span><div class="stack" style="gap:6px"><span class="skel" style="width:30%"></span><span class="skel" style="width:62%"></span></div></div>
+        <div class="banner danger" style="margin-top:8px;align-items:center"><svg class="ic"><use href="#i-circle-alert"/></svg><span style="flex:1">Couldn’t load history.</span><button class="btn btn-sm btn-secondary">Retry</button></div>
+      </div>
+      <div class="card">
+        <h3>User menu <small>popover 240 · items 36 (44 touch)</small></h3>
+        <div class="popover menu" role="menu" aria-label="moshe">
+          <button class="menu-item" role="menuitem"><svg class="ic"><use href="#i-keyboard"/></svg><span class="grow">Keyboard shortcuts</span><kbd>?</kbd></button>
+          <div class="menu-sep"></div>
+          <button class="menu-item is-hover" role="menuitemcheckbox" aria-checked="true"><svg class="ic"><use href="#i-bell-off"/></svg><span class="grow">Quiet mode</span><span class="switch on"></span></button>
+          <div class="menu-help">Hide collaborator notifications. You’ll still see their changes on the map.</div>
+          <button class="menu-item" role="menuitemcheckbox" aria-checked="false"><svg class="ic"><use href="#i-mouse-pointer-2"/></svg><span class="grow">Show collaborators’ cursors <span class="cap">[N]</span></span><span class="switch"></span></button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" role="menuitem"><svg class="ic"><use href="#i-log-out"/></svg><span class="grow">Sign out</span></button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Skip link · boot</h3>
+        <div class="row" style="gap:16px;align-items:flex-start">
+          <a class="skip-link is-focus" href="#" style="position:static">Skip to map</a>
+          <div class="cap" style="max-width:180px">First focusable element; hidden until focused, then at (8, 8), 44 high, <code>--shadow-3</code>, z 500.</div>
+        </div>
+        <div class="sub-h">Boot (session check; shown only after SPINNER_DELAY_MS)</div>
+        <div class="boot" role="status"><svg viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="var(--color-accent)"/><path d="M7 19 9.5 8.5 20 9.5 19.5 20z" fill="rgb(255 255 255 / 0.22)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><circle cx="7" cy="19" r="2.2" fill="#fff"/><circle cx="9.5" cy="8.5" r="2.2" fill="#fff"/><circle cx="20" cy="9.5" r="2.2" fill="#fff"/><circle cx="19.5" cy="20" r="2.2" fill="#fff"/></svg><span class="spinner"></span><span class="sr-only">Loading Snapland…</span></div>
+      </div>
+    </div>
+
+    <div class="cs-col">
+      <div class="card">
+        <h3>Dialogs <small>modal, 440 px (shortcuts 560), radius 16</small></h3>
+        <div class="scrim-demo">
+          <div class="dialog" role="alertdialog">
+            <h4>Your session has expired</h4>
+            <p>Sign in again to continue. Your work is safe and will be right where you left it.</p>
+            <div class="stack" style="gap:12px">
+              <div class="field"><label class="label">Username</label><input class="input" readonly value="moshe"></div>
+              <div class="field"><label class="label">Password</label><div class="pw"><input class="input is-focus" type="password" value="password1"><button class="btn btn-ghost">Show</button></div></div>
+            </div>
+            <button class="btn btn-lg btn-primary btn-block" style="margin-top:16px">Sign in and continue</button>
+            <div class="links"><a class="link" href="#">Sign in as someone else</a><a class="link" href="#">Sign out instead</a></div>
+          </div>
+        </div>
+        <div class="scrim-demo" style="margin-top:12px">
+          <div class="dialog" role="alertdialog">
+            <h4>Dana deleted “<bdi>North Field</bdi>” while you were editing</h4>
+            <p>Your changes haven’t been saved yet.</p>
+            <div class="stack" style="gap:8px">
+              <button class="btn btn-lg btn-primary btn-block is-focus">Restore it with my changes</button>
+              <button class="btn btn-lg btn-secondary btn-block">Save as a new area</button>
+              <button class="btn btn-lg btn-danger-ghost btn-block">Discard my changes</button>
+            </div>
+            <div class="cap" style="margin-top:10px">Creator / admin. Anyone else: <b>Save as a new area</b> (primary, initial focus) and <b>Discard my changes</b> only.</div>
+          </div>
+        </div>
+        <div class="scrim-demo" style="margin-top:12px">
+          <div class="dialog" role="alertdialog">
+            <h4>Sign out with unsaved work?</h4>
+            <p style="margin:0">You have an unsaved drawing. If you sign out now, it will be discarded.</p>
+            <div class="foot"><button class="btn btn-danger-ghost">Discard and sign out</button><button class="btn btn-primary is-focus">Keep working</button></div>
+          </div>
+        </div>
+        <div class="scrim-demo" style="margin-top:12px">
+          <div class="dialog wide" role="dialog">
+            <h4>Keyboard shortcuts</h4>
+            <div class="menu-item" style="padding:0;height:auto;margin:6px 0 4px"><span class="grow"><b style="font-weight:600">Single-key shortcuts</b><br><span class="cap">Letters and ? work when focus is not in a text field.</span></span><span class="switch on"></span></div>
+            <div class="sc-grid">
+              <h5>Global</h5>
+              <div>Draw area <kbd>D</kbd></div><div>Toggle base map <kbd>L</kbd></div>
+              <div>Areas in view <kbd>A</kbd></div><div>Who’s here <kbd>P</kbd></div>
+              <div>Undo <span><kbd>Ctrl</kbd> <kbd>Z</kbd></span></div><div>This dialog <kbd>?</kbd></div>
+              <h5>Drawing</h5>
+              <div>Add point <kbd>Space</kbd></div><div>Finish <kbd>Enter</kbd></div>
+              <div>Undo point <kbd>Backspace</kbd></div><div>Cancel <kbd>Esc</kbd></div>
+            </div>
+            <div class="foot"><button class="btn btn-secondary is-focus">Close</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cs-col">
+      <div class="card">
+        <h3>Sign in <small>/signin · card 400</small></h3>
+        <div class="auth-bg">
+          <div class="auth-card">
+            <div class="logo"><svg viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="var(--color-accent)"/><path d="M7 19 9.5 8.5 20 9.5 19.5 20z" fill="rgb(255 255 255 / 0.22)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><circle cx="7" cy="19" r="2.2" fill="#fff"/><circle cx="9.5" cy="8.5" r="2.2" fill="#fff"/><circle cx="20" cy="9.5" r="2.2" fill="#fff"/><circle cx="19.5" cy="20" r="2.2" fill="#fff"/></svg></div>
+            <h4>Sign in to Snapland</h4>
+            <p class="tag">Draw and measure areas on the map, together, in real time.</p>
+            <div class="banner danger" role="alert" style="margin-bottom:16px;align-items:center"><svg class="ic"><use href="#i-circle-alert"/></svg><span>Username or password is incorrect.</span></div>
+            <div class="stack" style="gap:14px">
+              <div class="field"><label class="label">Username</label><input class="input" autocomplete="username" value="moshe"></div>
+              <div class="field"><label class="label">Password</label><div class="pw"><input class="input is-focus" type="password" autocomplete="current-password" value=""><button class="btn btn-ghost">Show</button></div></div>
+            </div>
+            <button class="btn btn-lg btn-primary btn-block" style="margin-top:20px">Sign in</button>
+            <div class="foot">New to Snapland? <a class="link" href="#">Create an account</a></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Map chrome focus <small>two-tone over the map · inset on attribution links</small></h3>
+        <div class="lg-sw" data-base-layer="aerial" style="aspect-ratio:auto;height:120px">
+          <div style="position:absolute;left:12px;top:14px;display:flex;gap:10px">
+            <div class="segmented"><button class="segment" aria-checked="true" style="box-shadow:0 0 0 2px var(--color-focus-ring-halo),0 0 0 4px var(--color-focus-ring)"><svg class="ic"><use href="#i-map"/></svg>Map</button><button class="segment" aria-checked="false"><svg class="ic"><use href="#i-satellite"/></svg>Aerial</button></div>
+          </div>
+          <div class="leaflet-control-attribution" style="position:absolute;right:0;bottom:0;font-size:12px;line-height:16px">© <a href="#" class="is-focus">OpenStreetMap</a> contributors</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(() => {
+  const qs = new URLSearchParams(location.search);
+  const root = document.documentElement;
+  const scenario = qs.get('scenario') || 'main';
+  root.dataset.scenario = scenario;
+  if (qs.get('view')) root.dataset.view = qs.get('view');
+  if (qs.get('theme')) root.dataset.theme = qs.get('theme');
+  const icon = (n, c = 'ic') => `<svg class="${c}"><use href="#i-${n}"/></svg>`;
+  if (root.dataset.view === 'components') { buildComponents(); return; }
+
+  /* =================================================================== component sheet */
+  function buildComponents() {
+    const names = ['tangerine', 'ochre', 'moss', 'leaf', 'pine', 'teal', 'ocean', 'grape', 'orchid', 'plum', 'rose', 'cocoa'];
+    document.getElementById('palette-row').innerHTML = names.map((n, i) =>
+      `<span style="display:grid;justify-items:center;gap:6px;width:34px"><span class="avatar md" style="--c:var(--collab-${i + 1})">${n[0].toUpperCase() + n[1]}<span class="badge">${icon('plus')}</span></span><span class="cap num">${i + 1}</span></span>`).join('');
+    const probe = (base) => { const d = document.createElement('div'); d.dataset.baseLayer = base; document.body.appendChild(d); const cs = getComputedStyle(d); const t = (n) => cs.getPropertyValue(n).trim(); return { t, n: (x) => parseFloat(t(x)) || 0 }; };
+    const TK = { map: probe('map'), aerial: probe('aerial') };
+    const tokR = (n) => getComputedStyle(root).getPropertyValue(n).trim();
+    const col = (i) => tokR(`--collab-${i}`);
+    const P = [[18, 22], [104, 14], [112, 78], [26, 86]];
+    const d = (pts, closed) => 'M' + pts.map((p) => p.join(' ')).join('L') + (closed ? 'Z' : '');
+    const lineFn = (K) => (pts, { c, w, dash = '', closed = true, fill = 0, op = 1, casing = true, coreOp = 1 }) => {
+      const cx = K.n('--ov-casing-extra'), ox = K.n('--ov-outline-extra');
+      let s = `<g opacity="${op}" stroke-linejoin="round" stroke-linecap="round">`;
+      if (closed && fill) s += `<path d="${d(pts, 1)}" fill="${c}" fill-opacity="${fill}" stroke="none"/>`;
+      if (casing && ox) s += `<path d="${d(pts, closed)}" fill="none" stroke="${K.t('--ov-outline')}" stroke-width="${w + cx + ox}"/>`;
+      if (casing) s += `<path d="${d(pts, closed)}" fill="none" stroke="#fff" stroke-opacity="${K.t('--ov-casing-opacity')}" stroke-width="${w + cx}"/>`;
+      s += `<path d="${d(pts, closed)}" fill="none" stroke="${c}" stroke-opacity="${coreOp}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''}/></g>`;
+      return s;
+    };
+    // RING: band in a person's colour UNDER a shape's own core + casing (lock = dashed, reduced-motion pulse = solid)
+    const ringFn = (K) => (pts, { c, coreW, dash = '', op = 1 }) => {
+      const cx = K.n('--ov-casing-extra'), ox = K.n('--ov-outline-extra'), rx = K.n('--ov-ring-extra');
+      const inner = coreW + cx, band = inner + rx, outer = band + cx;
+      let s = `<g opacity="${op}" stroke-linejoin="round" fill="none">`;
+      if (ox) s += `<path d="${d(pts, 1)}" stroke="${K.t('--ov-outline')}" stroke-width="${outer + ox}"/>`;
+      s += `<path d="${d(pts, 1)}" stroke="#fff" stroke-opacity="${K.t('--ov-casing-opacity')}" stroke-width="${outer}"/>`;
+      s += `<path d="${d(pts, 1)}" stroke="${c}" stroke-width="${band}" ${dash ? `stroke-dasharray="${dash}"` : ''}/>`;
+      s += `<path d="${d(pts, 1)}" stroke="#fff" stroke-width="${inner}"/></g>`;
+      return s;
+    };
+    const dot = (x, y, r, fill, stroke, sw, halo = true) => `${halo ? `<circle cx="${x}" cy="${y}" r="${r + sw / 2 + 0.6}" fill="rgb(15 19 26 / .3)"/>` : ''}<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/>`;
+    const rdots = (pts, c) => pts.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.2" fill="rgb(15 19 26/.25)"/><circle cx="${x}" cy="${y}" r="3.6" fill="#fff"/><circle cx="${x}" cy="${y}" r="2.6" fill="${c}"/>`).join('');
+    const pos = (x, y) => `left:${(x / 128) * 100}%;top:${y}%`;
+    const acc = tokR('--indigo-600'), n800 = tokR('--neutral-800'), red = tokR('--red-700');
+    const lockDash = tokR('--ov-lock-dash');
+    const tick = (x, y) => `<span class="mk-tick" style="${pos(x, y)}">${icon('x')}</span>`;
+    const area = (L, K, pts = P, extra = {}) => L(pts, { c: n800, w: 1.5, fill: K.n('--ov-area-fill-opacity'), ...extra });
+    const specs = [
+      ['— Saved areas: states and combinations'],
+      ['Saved', 'default', (L, K) => [area(L, K)]],
+      ['Saved', 'hover + tooltip', (L, K) => [L(P, { c: n800, w: 2.5, fill: K.n('--ov-area-fill-opacity-hover') }), `<span class="tip" style="${pos(8, 4)}">Sportek Courts<br><span style="opacity:.75" class="num">0.068 km²</span></span>`]],
+      ['Selected', 'accent 3 px, SVG copy', (L, K) => [L(P, { c: acc, w: 3, fill: K.n('--ov-selected-fill-opacity') })]],
+      ['Locked by other', 'slate core + dashed ring', (L, K, R) => [R(P, { c: col(8), coreW: 1.5, dash: lockDash }) + area(L, K), `<span class="chip centered" style="--c:${col(8)};${pos(64, 50)}">${icon('pencil')}Omer is editing</span>`]],
+      ['Locked, < 24 px', 'badge → initials disc', (L, K, R) => { const s = [[54, 40], [72, 38], [74, 56], [56, 58]]; return [R(s, { c: col(8), coreW: 1.5, dash: lockDash }) + area(L, K, s), `<span class="chip disc centered" style="--c:${col(8)};${pos(64, 48)}">Om</span>`]; }],
+      ['Selected + locked', 'accent core + ring 3 px out', (L, K, R) => [R(P, { c: col(8), coreW: 3, dash: lockDash }) + L(P, { c: acc, w: 3, fill: K.n('--ov-selected-fill-opacity') }), `<span class="chip centered" style="--c:${col(8)};${pos(64, 50)}">${icon('pencil')}Omer is editing</span>`]],
+      ['Changed by other', 'pulse in actor colour', (L, K) => [L(P, { c: col(6), w: 1.5 + K.n('--ov-casing-extra') + K.n('--ov-outline-extra') + 8, casing: true, op: 0.85, closed: true }) + area(L, K)]],
+      ['Changed, reduced motion', 'solid ring + chip, 3 s', (L, K, R) => [R(P, { c: col(6), coreW: 1.5 }) + area(L, K), `<span class="chip centered" style="--c:${col(6)};${pos(64, 50)}">Noa · updated</span>`]],
+      ['History preview', 'ghost of v3, dotted', (L, K) => [L(P, { c: acc, w: 3, fill: K.n('--ov-selected-fill-opacity') }) + L([[10, 30], [92, 10], [118, 64], [40, 92]], { c: '#191f2a', w: 3, dash: '0.5 5', fill: K.n('--ov-ghost-fill-opacity') })]],
+      ['— My shape: drawing → finished → saving → saved, and editing'],
+      ['Drawing', 'points · rubber-band · closing', (L, K) => {
+        const pts = [[20, 30], [70, 14], [106, 44], [84, 80]], cur = [30, 76];
+        return [L([...pts, cur], { c: acc, w: 0.01, fill: K.n('--ov-own-fill-opacity'), casing: false }) + L(pts, { c: acc, w: 2.5, closed: false }) + L([pts[3], cur], { c: acc, w: 2, dash: '6 4', closed: false }) + L([cur, pts[0]], { c: acc, w: 2, dash: '1 5', closed: false, op: 0.7 }) +
+          `<circle cx="20" cy="30" r="7" fill="rgb(15 19 26/.3)"/><circle cx="20" cy="30" r="5.4" fill="#fff" stroke="${acc}" stroke-width="2.5"/><circle cx="20" cy="30" r="2" fill="${acc}"/>` + dot(70, 14, 3, '#fff', acc, 2) + dot(106, 44, 3, '#fff', acc, 2) + dot(84, 80, 4, acc, '#fff', 2) +
+          `<path d="M30 68v5M30 79v5M22 76h5M33 76h5" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><path d="M30 68v5M30 79v5M22 76h5M33 76h5" stroke="#10141b" stroke-width="1.5" stroke-linecap="round"/>`];
+      }],
+      ['Finish here', 'first point, ≥ 3 points', (L, K) => {
+        const pts = [[26, 56], [60, 22], [108, 40], [96, 84]];
+        return [L(pts, { c: acc, w: 0.01, fill: K.n('--ov-own-fill-opacity'), casing: false }) + L(pts, { c: acc, w: 2.5, closed: false }) + L([pts[3], pts[0]], { c: acc, w: 2, dash: '6 4', closed: false }) +
+          `<circle cx="26" cy="56" r="13" fill="${acc}" fill-opacity=".22"/><circle cx="26" cy="56" r="9" fill="#fff" stroke="${acc}" stroke-width="2.5"/><circle cx="26" cy="56" r="2.5" fill="${acc}"/>` + dot(60, 22, 3, '#fff', acc, 2) + dot(108, 40, 3, '#fff', acc, 2) + dot(96, 84, 4, acc, '#fff', 2),
+          `<span class="tip" style="${pos(40, 62)}">Click to finish</span>`];
+      }],
+      ['Finished, unsaved', 'Naming: points stay + chip', (L, K) => [L(P, { c: acc, w: 2.5, fill: K.n('--ov-own-fill-opacity') }) + P.map(([x, y]) => dot(x, y, 3, '#fff', acc, 2)).join(''), `<span class="chip neutral centered" style="${pos(64, 50)}">Unsaved</span>`]],
+      ['Saving', 'core 60 %, no dash', (L, K) => [L(P, { c: acc, w: 2.5, fill: K.n('--ov-own-fill-opacity'), coreOp: 0.6 }) + P.map(([x, y]) => dot(x, y, 3, '#fff', acc, 2)).join(''), `<span class="chip neutral centered" style="${pos(64, 50)}"><span class="spinner"></span>Saving…</span>`]],
+      ['Saved', '= Selected, no points', (L, K) => [L(P, { c: acc, w: 3, fill: K.n('--ov-selected-fill-opacity') })]],
+      ['Edit handles', 'point · selected · midpoint', (L, K) => {
+        const mids = P.map((p, i) => { const q = P[(i + 1) % 4]; return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]; });
+        return [L(P, { c: acc, w: 2.5, fill: K.n('--ov-own-fill-opacity') }) + mids.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4.6" fill="rgb(15 19 26/.2)"/><circle cx="${x}" cy="${y}" r="3.5" fill="#fff" fill-opacity=".9" stroke="${acc}" stroke-opacity=".8" stroke-width="1.5"/>`).join('') +
+          dot(18, 22, 5, '#fff', acc, 2) + dot(104, 14, 5, '#fff', acc, 2) + `<circle cx="112" cy="78" r="8.6" fill="rgb(15 19 26/.3)"/><circle cx="112" cy="78" r="8" fill="${acc}"/><circle cx="112" cy="78" r="5.6" fill="${acc}" stroke="#fff" stroke-width="3"/>` + dot(26, 86, 5, '#fff', acc, 2)];
+      }],
+      ['My edit + their lock', 'Edit anyway: ring + chip', (L, K, R) => [R(P, { c: col(8), coreW: 2.5, dash: lockDash }) + L(P, { c: acc, w: 2.5, fill: K.n('--ov-own-fill-opacity') }) + P.map(([x, y]) => dot(x, y, 5, '#fff', acc, 2)).join(''), `<span class="chip centered" style="--c:${col(8)};${pos(64, 50)}">${icon('pencil')}Omer is editing too</span>`]],
+      ['Invalid edge', 'red dashes + ✕ ticks + marker', (L, K) => {
+        const pts = [[16, 30], [66, 12], [108, 50], [62, 88]];
+        return [L(pts, { c: acc, w: 2.5, closed: false }) + L([pts[1], pts[2]], { c: red, w: 3, dash: '2 3', closed: false }) + L([pts[3], [104, 20]], { c: red, w: 3, dash: '2 3', closed: false }) +
+          pts.map(([x, y], i) => i === 3 ? dot(x, y, 4, acc, '#fff', 2) : dot(x, y, 3, '#fff', acc, 2)).join('') +
+          `<circle cx="89.5" cy="33" r="12" fill="#fff"/><circle cx="89.5" cy="33" r="10" fill="${red}"/><path d="M85.5 29l8 8M93.5 29l-8 8" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`,
+          tick(78, 22.5) + tick(76, 60)];
+      }],
+      ['— Other people, conflicts, chips'],
+      ['Other’s draft', 'dashed + point dots + chip', (L, K) => [L(P, { c: col(1), w: 2.5, dash: '8 5', fill: K.n('--ov-remote-fill-opacity') }) + rdots(P, col(1)), `<span class="chip" style="--c:${col(1)};${pos(26, 76)};transform:translate(-4px,-50%)">Dana · drawing</span>`]],
+      ['Other’s edit', 'dashed preview + “· editing” chip', (L, K) => [area(L, K) + L([[18, 22], [104, 14], [118, 60], [26, 86]], { c: col(3), w: 2.5, dash: '8 5' }) + rdots([[18, 22], [104, 14], [118, 60], [26, 86]], col(3)), `<span class="chip" style="--c:${col(3)};${pos(118, 60)};transform:translate(calc(-100% - 6px),-50%)">${icon('pencil')}Ari · editing</span>`]],
+      ['Streamed rubber-band', '1.5 px dotted, 60 %; casing on Aerial', (L, K) => { const q = [[20, 60], [60, 20], [100, 34]]; const aer = K.n('--ov-outline-extra') > 0; return [L(q, { c: col(1), w: 2.5, dash: '8 5', closed: false }) + L([q[2], [82, 80]], { c: col(1), w: 1.5, dash: '1 4', closed: false, op: 0.6, casing: aer }) + rdots(q, col(1))]; }],
+      ['Other’s draft', 'idle 10 s → 40 %', (L, K) => [L(P, { c: col(1), w: 2.5, dash: '8 5', fill: K.n('--ov-remote-fill-opacity'), op: 0.4 }) + `<g opacity=".4">${rdots(P, col(1))}</g>`, `<span class="chip idle" style="--c:${col(1)};${pos(26, 76)};transform:translate(-4px,-50%)">Dana · paused</span>`]],
+      ['Conflict', 'mine solid · theirs dashed + chip', (L, K) => [L(P, { c: acc, w: 3, fill: 0.12 }) + L([[30, 10], [116, 26], [98, 90], [12, 74]], { c: col(1), w: 3, dash: '8 5' }), `<span class="chip" style="--c:${col(1)};${pos(98, 90)};transform:translate(-100%,-50%)">Dana’s version</span>`]],
+      ['Chip collision', 'older → initials disc', (L, K) => { const a = [[14, 40], [52, 30], [60, 70]], b = [[70, 20], [100, 44], [66, 54]]; return [L(a, { c: col(1), w: 2.5, dash: '8 5', closed: false }) + rdots(a, col(1)) + L(b, { c: col(3), w: 2.5, dash: '8 5', closed: false }) + rdots(b, col(3)), `<span class="chip disc centered" style="--c:${col(1)};${pos(60, 70)}">Da</span><span class="chip" style="--c:${col(3)};${pos(66, 54)};transform:translate(-8px,-50%)">Ari · drawing</span>`]; }],
+      ['Chip under the HUD', 'flips to the other side', (L, K) => { const a = [[20, 70], [60, 30], [100, 14]]; return [`<rect x="0" y="0" width="128" height="18" fill="#fff" opacity=".92"/><text x="64" y="12" font-size="7" text-anchor="middle" fill="#4f596a" font-family="system-ui">HUD</text>` + L(a, { c: col(1), w: 2.5, dash: '8 5', closed: false }) + rdots(a, col(1)), `<span class="chip" style="--c:${col(1)};${pos(100, 14)};transform:translate(-50%,10px)">Dana · drawing</span>`]; }],
+      ['Keyboard reticle', 'map focused, Drawing', (L, K) => [L([[14, 24], [64, 50]], { c: acc, w: 2, dash: '6 4', closed: false }) + dot(14, 24, 4, acc, '#fff', 2) +
+        `<g stroke-linecap="round"><path d="M64 34v10M64 56v10M48 50h10M70 50h10" stroke="#fff" stroke-width="5"/><path d="M64 34v10M64 56v10M48 50h10M70 50h10" stroke="${acc}" stroke-width="2"/></g><circle cx="64" cy="50" r="2.2" fill="${acc}" stroke="#fff" stroke-width="1.2"/>`]],
+      ['Area label [N]', 'centroid chip', (L, K) => [L(P, { c: acc, w: 3, fill: K.n('--ov-selected-fill-opacity') }), `<span class="chip area centered num" style="${pos(64, 50)}">0.274 km²</span>`]],
+      ['Cursor [N]', 'label only without a draft chip', (L, K) => [`<path d="M52 30l7 17 2.5-7.5L69 37z" fill="${col(1)}" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>`, `<span class="chip" style="--c:${col(1)};${pos(64, 50)};transform:none">Dana</span>`]],
+      ['Their view [N]', 'viewport frame', (L, K) => [L([[14, 16], [114, 16], [114, 84], [14, 84]], { c: col(6), w: 1.5, dash: '2 4' }), `<span class="chip" style="--c:${col(6)};${pos(18, 16)};transform:translate(0,-50%)">Noa</span>`]],
+    ];
+    const sets = []; let cur = null;
+    for (const s of specs) { if (s.length === 1 || cur.items.length === 9) { cur = { title: s.length === 1 ? s[0].slice(2) : cur.title + ' (continued)', items: [] }; sets.push(cur); } if (s.length > 1) cur.items.push(s); }
+    let html = '';
+    for (const set of sets) {
+      html += `<div class="setlabel">${set.title}</div>`;
+      for (const base of ['map', 'aerial']) {
+        const K = TK[base], L = lineFn(K), R = ringFn(K);
+        html += `<div class="rowlabel">${base === 'map' ? 'Map' : 'Aerial'}</div>`;
+        for (const [title, sub, fn] of set.items) {
+          const [svg, extra = ''] = fn(L, K, R);
+          html += `<div class="lg-item"><div class="lg-sw" data-base-layer="${base}"><svg viewBox="0 0 128 100">${svg}</svg>${extra}</div>${base === 'aerial' ? `<div class="lg-cap"><b>${title}</b>${sub}</div>` : ''}</div>`;
+        }
+        for (let i = set.items.length; i < 9; i++) html += '<div></div>';
+      }
+    }
+    document.getElementById('ov-legend').innerHTML = html;
+  }
+
+  /* =================================================================== app scenarios */
+  const phone = innerWidth < 900;
+  const aerial = ['aerial', 'sheet', 'desk1024', 'preview'].includes(scenario);
+  const mapEl = document.getElementById('map');
+  const app = document.getElementById('app');
+  mapEl.dataset.baseLayer = aerial ? 'aerial' : 'map';
+  mapEl.dataset.mode = { main: 'drawing', naming: 'naming', editing: 'editing-shape', preview: 'previewing-version', sheet: 'area-selected', desk1024: 'area-selected' }[scenario] || 'browse';
+  root.dataset.kb = qs.get('kb') ?? '1';
+  if (scenario === 'limited') root.dataset.quiet = '1';
+
+  // connection pill
+  const PILL = {
+    connecting: { cls: 'neutral', lead: '<span class="spinner"></span>', full: 'Connecting…', short: 'Connecting…' },
+    live: { cls: '', lead: '<span class="dot"></span>', full: 'Live', short: 'Live' },
+    reconnecting: { cls: 'warning', lead: '<span class="spinner"></span>', full: 'Reconnecting…', short: 'Retrying…' },
+    limited: { cls: 'warning', lead: icon('cloud-off'), full: 'Limited connection', short: 'Limited' },
+    offline: { cls: 'danger', lead: icon('wifi-off'), full: 'Offline', short: 'Offline' },
+    'signed-out': { cls: 'neutral', lead: icon('lock'), full: 'Signed out', short: 'Signed out' },
+  };
+  const pillState = qs.get('pill') || (scenario === 'limited' ? 'limited' : 'live');
+  const p = PILL[pillState];
+  const pillBtn = document.getElementById('pill');
+  pillBtn.dataset.state = pillState; pillBtn.setAttribute('aria-label', `Connection: ${p.full}. Show details`);
+  pillBtn.innerHTML = `<span class="pill ${p.cls}">${p.lead}<span class="full">${p.full}</span><span class="short">${p.short}</span></span>`;
+  root.dataset.conn = pillState;
+  if (qs.get('quiet')) root.dataset.quiet = qs.get('quiet');
+  if (root.dataset.quiet === '1') document.getElementById('menu-btn').setAttribute('aria-label', 'Menu, quiet mode on');
+  root.dataset.itm = qs.get('itm') || '0';   // Aerial 2022 exists only in dev/E2E builds (SPEC SG-24)
+  if (root.dataset.itm === '1') document.getElementById('seg-itm').hidden = false;
+
+  // base map + switcher state (ITM flag on = SPEC default)
+  const layer = aerial ? 'aerial' : 'map';
+  for (const [id, l] of [['seg-map', 'map'], ['seg-aerial', 'aerial'], ['seg-itm', 'itm']]) document.getElementById(id).setAttribute('aria-checked', String(l === layer));
+  const lt = document.getElementById('layer-toggle'), to = layer === 'map' ? 'Aerial' : 'Map';
+  lt.setAttribute('aria-label', `Switch base map to ${to}`); lt.querySelector('span').textContent = to;
+  lt.querySelector('use').setAttribute('href', to === 'Map' ? '#i-map' : '#i-satellite');
+  const lm = document.getElementById('layer-menu');
+  lm.setAttribute('aria-label', `Base map: ${layer === 'map' ? 'Map' : 'Aerial'}`);
+  lm.querySelector('span').textContent = layer === 'map' ? 'Map' : 'Aerial';
+  lm.querySelector('use').setAttribute('href', layer === 'map' ? '#i-map' : '#i-satellite');
+
+  // scenario chrome
+  const $ = (s) => document.querySelector(s);
+  const show = (el, on) => { if (el) el.style.display = on ? '' : 'none'; };
+  if (scenario !== 'main') { $('[data-testid="draw-button"]').setAttribute('aria-pressed', 'false'); $('.avatar[title^="You"] .badge')?.remove(); }
+  if (scenario === 'editing') $('.avatar[title^="You"]').insertAdjacentHTML('beforeend', `<span class="badge">${icon('pencil')}</span>`);
+  if (scenario === 'aerial') { show($('#toast-undo'), false); show($('#toast-collab'), true); }
+  if (scenario === 'main' && phone) { $('#toast-undo .timer').style.width = '35%'; } // own toast; collaboration toasts are held while the HUD shows (UX §6.5)
+  if (['sheet', 'naming', 'editing', 'preview', 'limited'].includes(scenario)) { show($('#toast-undo'), false); }
+  if (scenario === 'desk1024') {
+    $('#toast-undo-icon use').setAttribute('href', '#i-rotate-ccw');
+    $('#toast-undo-msg').innerHTML = 'Restored v3 of “<bdi>Yarkon North Field</bdi>” as v6';
+    $('#toast-undo-btn').classList.add('is-focus');
+    $('#sel-ver').textContent = 'Version 6';
+    $('#hist-count').textContent = '6';
+    $('#timeline').insertAdjacentHTML('afterbegin', `<li class="tl-item current"><span class="tl-node"></span><div><div class="tl-head"><span class="ver">v6</span><span class="tag-current">Current</span></div><div class="tl-change">Restored from v3</div><div class="tl-meta"><span class="who" style="--c:var(--collab-7)">You</span>· just now</div></div></li>`);
+    const v5 = $('#timeline li:nth-child(2)'); v5.classList.remove('current'); v5.querySelector('.tag-current').remove();
+  }
+  if (scenario === 'editing') {
+    const hud = $('#hud'); hud.setAttribute('aria-label', 'Editing'); hud.dataset.state = 'valid';
+    const k = $('#hud-kicker'); k.hidden = false; k.innerHTML = 'Editing “<bdi>Yarkon North Field</bdi>”';
+    $('#points').className = 'delta'; $('#bb-main').innerHTML = `<button class="btn btn-secondary" data-testid="cancel-edit-button">Cancel</button><span class="grow"></span><button class="btn btn-ghost" data-testid="undo-edit-button">${icon('undo-2')}Undo</button><button class="btn btn-primary" data-testid="save-edit-button" aria-label="Save changes">Save</button>`;
+    $('#bottombar').setAttribute('aria-label', 'Editing actions');
+    const hm = $('#hudmsg'); hm.classList.add('with-actions');
+    hm.innerHTML = `<span class="msg-text">${icon('pencil-line')}<span>Point 3 of 8</span></span><span class="msg-acts"><button class="btn btn-sm btn-secondary" data-testid="move-point-button">${icon('move')}Move point</button><button class="btn btn-sm btn-danger-ghost" data-testid="delete-point-button" aria-label="Delete point">${icon('trash-2')}Delete</button></span>`;
+  }
+  if (!phone && scenario === 'naming') {
+    const hud = $('#hud'); hud.classList.add('compact'); $('#hudmsg').remove(); $('#hud-actions').remove(); hud.setAttribute('aria-label', 'Area');
+  }
+  if (scenario === 'limited') {
+    $('#bb-main').innerHTML = `<button class="btn btn-secondary" style="flex:1" data-testid="draw-button">${icon('pen-tool')}Draw area</button><button class="btn btn-secondary" style="flex:1" data-testid="areas-button">${icon('list')}Areas</button>`;
+    $('#bottombar').setAttribute('aria-label', 'Tools');
+  }
+  if (!phone && scenario === 'aerial') {
+    const b = $('.presence-btn').getBoundingClientRect();
+    $('.presence-pop').style.right = (innerWidth - b.right) + 'px';
+  }
+  if (phone) $('.menu-btn').style.display = 'grid';
+
+  // sheet heights (drive --map-inset-bottom so controls + attribution ride above)
+  const kbH = scenario === 'naming' && root.dataset.kb === '1' ? 300 : 0;
+  app.style.setProperty('--kb-h', kbH + 'px');
+  const sheetSel = { sheet: '.sheet.area', naming: '.sheet.naming', preview: '.sheet.preview' }[scenario];
+  if (sheetSel) app.style.setProperty('--sheet-h', $(sheetSel).offsetHeight + 'px');
+  if (phone && ['main', 'editing', 'limited'].includes(scenario)) app.style.setProperty('--map-inset-bottom', $('#bottombar').offsetHeight + 'px');
+
+  const tok = (n, el = mapEl) => getComputedStyle(el).getPropertyValue(n).trim();
+  const px = (v) => parseFloat(v) || 0;
+  const center = { main: phone ? [32.0992, 34.8055] : [32.0978, 34.8080], naming: [32.0992, 34.8055], editing: [32.0992, 34.8055], preview: [32.0992, 34.8055], limited: [32.0992, 34.8055], sheet: [32.0992, 34.8055], desk1024: [32.0978, 34.8080], aerial: [32.0978, 34.8080] }[scenario];
+  const map = L.map(mapEl, { zoomControl: false, attributionControl: false, fadeAnimation: false, zoomAnimation: false, doubleClickZoom: false }).setView(center, 16);
+  L.control.attribution({ position: 'bottomright', prefix: false }).addTo(map); // added first = bottom-most
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+  if (!phone) L.control.scale({ position: 'bottomleft', imperial: false, maxWidth: 110 }).addTo(map);
+  if (aerial) {
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19, attribution: '<bdi dir="rtl">תצלום אוויר © GovMap / המרכז למיפוי ישראל</bdi> · Imagery © Esri, Maxar, Earthstar Geographics' }).addTo(map);
+  } else {
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
+  }
+  const panes = { pulse: 390, locks: 395, selection: 405, history: 410, remote: 420, own: 430, handles: 610, chips: 640 };
+  for (const [n, z] of Object.entries(panes)) map.createPane(n).style.zIndex = z;
+
+  const ll = ([x, y]) => map.containerPointToLatLng([x, y]);
+  const areaKm2 = (pts) => { // spherical excess on the authalic sphere (mockup only)
+    const R = 6371.0072, rad = Math.PI / 180; let s = 0;
+    const q = pts.map(ll);
+    for (let i = 0; i < q.length; i++) { const a = q[i], b = q[(i + 1) % q.length]; s += (b.lng - a.lng) * rad * (2 + Math.sin(a.lat * rad) + Math.sin(b.lat * rad)); }
+    return Math.abs(s * R * R / 2);
+  };
+  const nf = (dd) => new Intl.NumberFormat('en-US', { minimumFractionDigits: dd, maximumFractionDigits: dd });
+  const formatArea = (k) => k < 1e-6 ? '< 1 m²' : k < 0.01 ? nf(0).format(k * 1e6) + ' m²' : k < 1 ? nf(3).format(k) + ' km²' : k < 100 ? nf(2).format(k) + ' km²' : k < 1e4 ? nf(1).format(k) + ' km²' : nf(0).format(k) + ' km²';
+  const formatHa = (k) => { const h = k * 100; return (h < 10 ? nf(2).format(h) : h < 1000 ? nf(1).format(h) : nf(0).format(h)) + ' ha'; };
+
+  function stroke(pts, { cls, color, width, dash, fill = 0, closed = true, pane = 'overlayPane', opacity = 1, casing = true, coreOpacity }) {
+    const latlngs = pts.map(ll);
+    const Ctor = closed ? L.polygon : L.polyline;
+    const common = { interactive: false, lineJoin: 'round', lineCap: 'round', pane };
+    const outX = px(tok('--ov-outline-extra')), casX = px(tok('--ov-casing-extra'));
+    if (casing && outX > 0) Ctor(latlngs, { ...common, className: 'ov-outline', weight: width + casX + outX, fill: false, opacity }).addTo(map);
+    if (casing) Ctor(latlngs, { ...common, className: 'ov-casing', weight: width + casX, fill: false, opacity }).addTo(map);
+    const core = Ctor(latlngs, { ...common, className: 'ov-core ' + (cls || '') + (closed && fill > 0 ? '' : ' no-fill'), weight: width, dashArray: dash, fill: closed && fill > 0, fillOpacity: fill, opacity: coreOpacity ?? opacity }).addTo(map);
+    if (color) core.getElement().style.setProperty('--c', color);
+    return core;
+  }
+  // ring in a person's colour UNDER a shape's own core + casing (pane below the areas)
+  function ring(pts, { color, coreW, dash, pane = 'locks' }) {
+    const latlngs = pts.map(ll), common = { interactive: false, lineJoin: 'round', lineCap: 'butt', pane, fill: false };
+    const outX = px(tok('--ov-outline-extra')), casX = px(tok('--ov-casing-extra')), rX = px(tok('--ov-ring-extra'));
+    const inner = coreW + casX, band = inner + rX, outer = band + casX;
+    if (outX > 0) L.polygon(latlngs, { ...common, className: 'ov-outline', weight: outer + outX }).addTo(map);
+    L.polygon(latlngs, { ...common, className: 'ov-casing', weight: outer }).addTo(map);
+    const b = L.polygon(latlngs, { ...common, className: 'ov-core no-fill', weight: band, dashArray: dash }).addTo(map);
+    b.getElement().style.setProperty('--c', color);
+    L.polygon(latlngs, { ...common, className: 'ov-casing', weight: inner }).addTo(map);
+  }
+  const marker = (pt, html, pane = 'chips') => L.marker(ll(pt), { pane, interactive: false, icon: L.divIcon({ className: 'mk', iconSize: null, html }) }).addTo(map);
+  const centroid = (pts) => [pts.reduce((s, q) => s + q[0], 0) / pts.length, pts.reduce((s, q) => s + q[1], 0) / pts.length];
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const T = (n) => tok(n);
+  const area = (pts, o = {}) => stroke(pts, { cls: 'ov-area', width: px(T('--ov-area-stroke-width')), fill: +T('--ov-area-fill-opacity'), ...o });
+  const selected = (pts) => stroke(pts, { cls: 'ov-selected', pane: 'selection', width: px(T('--ov-selected-stroke-width')), fill: +T('--ov-selected-fill-opacity') });
+  const collab = (i) => tok(`--collab-${i}`, root);
+  const lock = (pts, i, name, coreW = 1.5) => { ring(pts, { color: collab(i), coreW, dash: T('--ov-lock-dash') }); marker(centroid(pts), `<span class="chip centered" data-testid="lock-badge" style="--c:${collab(i)}">${icon('pencil')}${name} is editing</span>`); };
+  // mid-animation frame: width = area line (core + casing [+ outline]) + extra 8 of 3 → 12, opacity .85 of .9 → 0
+  const pulse = (pts, i) => stroke(pts, { pane: 'pulse', color: collab(i), width: px(T('--ov-area-stroke-width')) + px(T('--ov-casing-extra')) + px(T('--ov-outline-extra')) + 8, opacity: 0.85 });
+  const remoteDraft = (pts, i, label, side = 'right', cursor = null) => {
+    stroke(pts, { pane: 'remote', color: collab(i), width: px(T('--ov-remote-stroke-width')), dash: T('--ov-remote-dash'), fill: +T('--ov-remote-fill-opacity') });
+    if (cursor) stroke([pts[pts.length - 1], cursor], { pane: 'remote', color: collab(i), width: 1.5, dash: '1 4', closed: false, opacity: 0.6, casing: aerial }); // streamed rubber-band; casing on imagery
+    pts.forEach((q) => marker(q, `<span class="pt pt-remote" style="--c:${collab(i)}"></span>`, 'remote'));
+    const km = formatArea(areaKm2(pts));
+    marker(pts[pts.length - 1], `<span class="chip ${side === 'left' ? 'at-vertex-left' : 'at-vertex'}" data-testid="remote-draft-chip" data-km2="${areaKm2(pts)}" style="--c:${collab(i)}">${label}${innerWidth >= 600 ? ` <span class="dim num">· ${km}</span>` : ''}</span>`);
+  };
+  const invalidTick = (a, b) => marker(mid(a, b), `<span class="mk-tick" data-testid="invalid-edge-tick">${icon('x')}</span>`);
+  const handles = (pts, sel = -1) => {
+    pts.forEach((q, i) => { const n = pts[(i + 1) % pts.length]; if (Math.hypot(n[0] - q[0], n[1] - q[1]) >= 88) marker(mid(q, n), '<span class="pt pt-mid"></span>', 'handles'); });
+    pts.forEach((q, i) => marker(q, `<span class="pt pt-handle${i === sel ? ' selected' : ''}"></span>`, 'handles'));
+  };
+  const setFig = (ids, k) => { for (const id of ids) { const el = document.getElementById(id); if (el) el.textContent = /ha/.test(id) ? formatHa(k) : formatArea(k); } };
+  const perimKm = (pts) => { const q = pts.map(ll); let d = 0; for (let i = 0; i < q.length; i++) d += q[i].distanceTo(q[(i + 1) % q.length]); return d / 1000; };
+  const formatPerimeter = (km) => km < 1 ? nf(0).format(km * 1000) + ' m' : nf(2).format(km) + ' km';
+  const setPer = (pts) => { const el = document.getElementById('sel-per'); if (el) el.textContent = formatPerimeter(perimKm(pts)); };
+
+  if (scenario === 'main' && !phone) {
+    area([[96, 180], [236, 158], [258, 300], [116, 324]]);
+    area([[380, 560], [478, 548], [492, 648], [394, 664]]);
+    const pl = [[788, 374], [902, 354], [936, 430], [812, 456]];
+    pulse(pl, 6); area(pl);
+    const locked = [[130, 484], [300, 460], [322, 596], [158, 628]];
+    area(locked); lock(locked, 8, 'Omer');
+    const sel = [[566, 518], [768, 484], [910, 554], [892, 696], [648, 724], [548, 634]];
+    area(sel); selected(sel);
+    setFig(['sel-km', 'sel-km-hist', 'sel-ha'], areaKm2(sel)); setPer(sel);
+    remoteDraft([[700, 180], [872, 158], [948, 248], [846, 316]], 1, 'Dana · drawing', 'right', [760, 290]);
+    const own = [[330, 206], [520, 172], [606, 274], [566, 396], [404, 418]], cursor = [300, 328];
+    stroke([...own, cursor], { cls: 'ov-own', pane: 'own', width: 0.01, fill: +T('--ov-own-fill-opacity'), closed: true, casing: false }).setStyle({ stroke: false });
+    stroke(own, { cls: 'ov-own', pane: 'own', width: px(T('--ov-own-stroke-width')), closed: false });
+    stroke([own[own.length - 1], cursor], { cls: 'ov-own', pane: 'own', width: 2, dash: T('--ov-rubber-dash'), closed: false });
+    stroke([cursor, own[0]], { cls: 'ov-own', pane: 'own', width: 2, dash: T('--ov-closing-dash'), closed: false, opacity: +T('--ov-closing-opacity') });
+    own.forEach((q, i) => marker(q, `<span class="pt ${i === 0 ? 'pt-first' : i === own.length - 1 ? 'pt-last' : 'pt-draft'}"></span>`, 'handles'));
+    marker(cursor, `<svg class="cursor-fake" viewBox="0 0 22 22"><path d="M11 1v8M11 13v8M1 11h8M13 11h8" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M11 1v8M11 13v8M1 11h8M13 11h8" stroke="#10141b" stroke-width="1.6" stroke-linecap="round"/></svg>`, 'handles');
+    const kd = areaKm2([...own, cursor]);
+    document.getElementById('readout').textContent = formatArea(kd);
+    document.querySelector('.readout').title = formatHa(kd);
+  }
+
+  if (scenario === 'main' && phone) {
+    const rc = [[24, 462], [120, 452], [128, 516], [30, 526]];
+    if (mapEl.offsetHeight > 700) { pulse(rc, 6); area(rc); remoteDraft([[214, 470], [340, 452], [356, 512], [236, 522]], 1, 'Dana · drawing', 'left'); } // 360 × 640: UX-AC-82 state only
+    const own = [[62, 214], [222, 164], [300, 292], [246, 396], [96, 384]], tap = [338, 204];
+    stroke(own, { cls: 'ov-own', pane: 'own', width: px(T('--ov-own-stroke-width')), fill: +T('--ov-own-fill-opacity'), closed: true });
+    stroke([own[1], own[2]], { cls: 'ov-own ov-invalid', pane: 'own', width: px(T('--ov-invalid-stroke-width')), dash: T('--ov-invalid-dash'), closed: false });
+    stroke([own[4], tap], { cls: 'ov-own ov-invalid', pane: 'own', width: px(T('--ov-invalid-stroke-width')), dash: T('--ov-invalid-dash'), closed: false });
+    own.forEach((q, i) => marker(q, `<span class="pt ${i === 0 ? 'pt-first' : i === own.length - 1 ? 'pt-last' : 'pt-draft'}"></span>`, 'handles'));
+    const X = (a, b, c, e) => { const r = [b[0] - a[0], b[1] - a[1]], s = [e[0] - c[0], e[1] - c[1]]; const t = ((c[0] - a[0]) * s[1] - (c[1] - a[1]) * s[0]) / (r[0] * s[1] - r[1] * s[0]); return [a[0] + t * r[0], a[1] + t * r[1]]; };
+    const xp = X(own[4], tap, own[1], own[2]);
+    invalidTick(own[1], xp); invalidTick(own[4], xp);
+    marker(xp, `<span class="mk-invalid" data-testid="invalid-marker">${icon('x')}</span>`);
+    document.getElementById('collab-km').textContent = formatArea(areaKm2(rc));
+    document.getElementById('readout').textContent = formatArea(areaKm2(own));
+    document.getElementById('hudmsg').className = 'hud-msg error';
+    document.getElementById('hudmsg').innerHTML = `${icon('circle-alert')}<span>Edges can’t cross here.</span>`; // draw.crossing.short (< 600 px)
+    document.querySelector('#hud').dataset.state = 'invalid';
+  }
+
+  if (scenario === 'aerial') {
+    area([[180, 150], [330, 130], [352, 262], [202, 290]]);
+    area([[1040, 520], [1180, 500], [1200, 610], [1060, 630]]);
+    area([[560, 470], [660, 452], [676, 552], [574, 566]]);
+    const hov = [[760, 560], [900, 540], [918, 660], [780, 676]];
+    stroke(hov, { cls: 'ov-area', pane: 'selection', width: px(T('--ov-area-stroke-width-hover')), fill: +T('--ov-area-fill-opacity-hover') });
+    L.tooltip({ className: 'area-tip', direction: 'top', offset: [0, -6], permanent: true })
+      .setLatLng(ll([850, 540])).setContent(`<bdi>Tennis Center</bdi> <span class="dim">· ${formatArea(areaKm2(hov))}</span>`).addTo(map);
+    const locked = [[380, 610], [540, 586], [560, 716], [404, 742]];
+    area(locked); lock(locked, 8, 'Omer');
+    const rc = [[1180, 380], [1300, 362], [1330, 450], [1200, 474]];
+    pulse(rc, 6); area(rc);
+    document.getElementById('collab-km').textContent = formatArea(areaKm2(rc));
+    remoteDraft([[560, 200], [740, 176], [812, 280], [700, 350], [590, 318]], 1, 'Dana · drawing', 'right', [556, 262]);
+  }
+
+  if (scenario === 'desk1024') {
+    area([[60, 120], [190, 110], [200, 220], [70, 236]]);
+    const locked = [[250, 420], [360, 404], [374, 500], [262, 516]];
+    area(locked); lock(locked, 8, 'Omer');
+    const sel = [[300, 150], [470, 120], [560, 230], [520, 350], [360, 370], [290, 270]];
+    area(sel); selected(sel);
+    setFig(['sel-km', 'sel-km-hist', 'sel-ha'], areaKm2(sel)); setPer(sel);
+  }
+
+  if (scenario === 'sheet') {
+    area([[20, 360], [120, 348], [130, 420], [30, 432]]);
+    const locked = [[236, 336], [352, 322], [362, 410], [248, 424]];
+    area(locked); lock(locked, 8, 'Omer');
+    const sel = [[70, 70], [250, 40], [330, 140], [300, 250], [110, 262], [48, 170]];
+    area(sel); selected(sel);
+    setFig(['sheet-km', 'sheet-ha'], areaKm2(sel));
+  }
+
+  if (scenario === 'naming') {
+    // the finished shape is auto-panned into the strip between the compact HUD and the sheet
+    const top = 16, bottom = mapEl.offsetHeight - kbH - (app.style.getPropertyValue('--sheet-h') ? parseFloat(app.style.getPropertyValue('--sheet-h')) : 0) - 16;
+    const h = bottom - top, w = innerWidth;
+    area([[10, top + h * 0.7], [70, top + h * 0.62], [80, top + h * 1.05], [14, top + h * 1.1]]);
+    const own = [[w * 0.2, top + h * 0.12], [w * 0.62, top + h * 0.02], [w * 0.84, top + h * 0.48], [w * 0.7, top + h * 0.96], [w * 0.3, top + h * 0.9], [w * 0.14, top + h * 0.55]];
+    stroke(own, { cls: 'ov-own', pane: 'own', width: px(T('--ov-own-stroke-width')), fill: +T('--ov-own-fill-opacity') });
+    own.forEach((q) => marker(q, '<span class="pt pt-unsaved"></span>', 'handles'));
+    marker(centroid(own), '<span class="chip neutral centered">Unsaved</span>');
+    const k = areaKm2(own);
+    document.getElementById('readout').textContent = formatArea(k);
+    document.getElementById('points').textContent = `· ${own.length} points`;
+    setFig(['nm-km'], k);
+  }
+
+  if (scenario === 'editing') {
+    area([[20, 520], [120, 506], [130, 590], [30, 604]]);
+    const pts = [[64, 190], [200, 150], [320, 200], [336, 330], [262, 420], [140, 440], [60, 380], [40, 280]];
+    stroke(pts, { cls: 'ov-own', pane: 'own', width: px(T('--ov-own-stroke-width')), fill: +T('--ov-own-fill-opacity') });
+    handles(pts, 2);
+    const k = areaKm2(pts);
+    document.getElementById('readout').textContent = formatArea(k);
+    document.getElementById('points').textContent = `(was ${formatArea(k * 0.936)})`;
+  }
+
+  if (scenario === 'preview') {
+    // map fits both shapes above the 50 dvh sheet
+    area([[16, 230], [70, 222], [76, 270], [22, 276]]);
+    const cur = [[130, 76], [262, 60], [318, 136], [290, 218], [158, 226], [110, 152]];
+    const ghost = [[116, 100], [236, 54], [334, 104], [308, 206], [200, 236], [128, 200]];
+    area(cur); selected(cur);
+    stroke(ghost, { pane: 'history', color: T('--ov-ghost-stroke'), width: px(T('--ov-ghost-stroke-width')), dash: T('--ov-ghost-dash'), fill: +T('--ov-ghost-fill-opacity') });
+    const k = areaKm2(cur); setFig(['pv-km', 'pv-km2'], k);
+  }
+
+  if (scenario === 'limited') {
+    area([[40, 170], [180, 150], [200, 290], [60, 310]]);
+    area([[220, 330], [330, 316], [344, 420], [236, 436]]);
+    area([[50, 380], [150, 372], [160, 450], [60, 460]]);
+  }
+
+  // measured layout: attribution height + control columns → toast region (UI.md §10.12)
+  const attr = mapEl.querySelector('.leaflet-control-attribution');
+  if (attr) app.style.setProperty('--map-attribution-h', attr.offsetHeight + 'px');
+  if (!phone) {
+    const m = mapEl.getBoundingClientRect(), G = 12;
+    const sc = mapEl.querySelector('.leaflet-control-scale');
+    if (sc) app.style.setProperty('--scale-w', sc.getBoundingClientRect().width + 'px');
+    const blr = document.getElementById('map-bl').getBoundingClientRect(), sm = document.getElementById('summary').getBoundingClientRect();
+    const bl = { right: Math.max(blr.right, sm.right), top: Math.min(blr.top, sm.top) };
+    const zoom = mapEl.querySelector('.leaflet-control-zoom').getBoundingClientRect();
+    const pan = document.querySelector('.panel');
+    const insetR = pan && getComputedStyle(pan).display !== 'none' ? m.right - pan.getBoundingClientRect().left + G : 0; // = --map-inset-right
+    const leftW = bl.right - m.left + G, rightW = (m.right - insetR) - zoom.left + G, leftTop = m.bottom - bl.top;
+    app.style.setProperty('--map-controls-left-w', leftW + 'px');
+    app.style.setProperty('--map-controls-right-w', rightW + 'px');
+    app.style.setProperty('--map-controls-left-top', leftTop + 'px');
+    const bottom = Math.max(24, (attr?.offsetHeight || 20) + 8);
+    const minW = parseFloat(getComputedStyle(root).getPropertyValue('--size-toast-min-width'));
+    // the attribution never runs under the bottom-left column: it wraps instead (then the zoom and toasts ride above it)
+    if (attr) { attr.style.maxWidth = (m.width - insetR - leftW - G) + 'px'; app.style.setProperty('--map-attribution-h', attr.offsetHeight + 'px'); }
+    const bottomA = Math.max(24, (attr?.offsetHeight || 20) + 8);
+    let left = leftW, right = insetR + rightW, bot = bottomA;
+    if (m.width - left - right < minW) { left = G; bot = leftTop + 8; } // lift above the bottom-left column
+    const t = document.getElementById('toasts').style;
+    t.setProperty('--toast-left', left + 'px'); t.setProperty('--toast-right', right + 'px'); t.setProperty('--toast-bottom', bot + 'px');
+  }
+})();
+</script>
+</body>
+</html>

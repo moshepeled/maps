@@ -1,0 +1,30 @@
+# dependencies and build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# test and tool output
+playwright-report/
+test-results/
+blob-report/
+e2e/demo/recording/
+
+# Claude Code agent files
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
+# personal learning labs (not part of the app)
+learn/
+
+# crash dumps and OS noise
+*.stackdump
+*.log
+.DS_Store
+Thumbs.db

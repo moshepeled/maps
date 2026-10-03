@@ -1,0 +1,122 @@
+/* ==========================================================================
+   Tools (UX C-03 v2; UI.md v2 section 10.5, section 10.13): the tool rail at >= 600 px and the phone bottom bar that takes its
+   place below 600 px.
+   ========================================================================== */
+
+/* ------------------------------------------------------------------ tool rail */
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border-subtle);
+  min-height: 0;
+}
+.rail-tool {
+  position: relative;
+}
+.rail-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--size-rail-button);
+  height: var(--size-rail-button);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-row);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-instant) var(--ease-standard),
+    color var(--duration-instant) var(--ease-standard);
+}
+.rail-btn:hover {
+  background: var(--color-surface-raised-hover);
+  color: var(--color-text);
+}
+.rail-btn[aria-pressed='true'] {
+  background: var(--color-accent-subtle);
+  box-shadow: inset 0 0 0 1px var(--color-accent-border);
+  color: var(--color-accent-text);
+}
+/* The pressed tool's indicator bar, flush with the rail's left edge (UI.md section 10.5). */
+.rail-btn[aria-pressed='true']::before {
+  content: '';
+  position: absolute;
+  left: calc((var(--size-rail-button) - var(--frame-rail)) / 2);
+  top: 50%;
+  width: 2px;
+  height: 20px;
+  border-radius: 0 2px 2px 0;
+  background: var(--color-accent);
+  transform: translateY(-50%);
+}
+.rail-btn[aria-disabled='true'] {
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+.rail-btn[aria-disabled='true']::before {
+  display: none;
+}
+/* Coarse pointers: 44 px targets in the 52 px rail. */
+@media (any-pointer: coarse) {
+  .rail-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+.rail-sep {
+  width: 24px;
+  height: 1px;
+  margin: 6px 0;
+  background: var(--color-border);
+}
+.rail-spacer {
+  flex: 1;
+}
+.rail-tip {
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+.rail-tip__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.rail-tip__reason {
+  color: var(--color-text-tertiary);
+  white-space: normal;
+  min-width: 180px;
+}
+
+/* ------------------------------------------------------------------ phone bottom bar (UI.md section 10.13) */
+.bottombar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 0 16px env(safe-area-inset-bottom);
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border-subtle);
+}
+.bottombar--split > .btn {
+  flex: 1 1 0;
+}
+.bottombar__primary {
+  min-width: 132px;
+}
+@media (max-width: 359.98px) {
+  .bottombar {
+    padding-inline: 12px;
+  }
+  .bottombar__primary {
+    min-width: 0;
+  }
+}

@@ -1,0 +1,271 @@
+# Snapland compose topology (SPEC section 11, user decision D-2): postgres, redis, redis-cache, a one-shot migrate, two
+# backend replicas and the nginx edge on http://localhost:${HTTP_HOST_PORT:-5173}. See the README for the commands.
+# Every app container reads .env; compose overrides only what differs inside the network. Every published port binds
+# to 127.0.0.1; host ports 3000, 5433, 8060 and 8787 are taken by unrelated software and must never be used.
+name: snapland
+
+# -- Shared fragments of the app services (merged with `<<:`) ---------------------------------------------------------
+# One image for the backends and the one-shot jobs; BuildKit deduplicates the identical build sections.
+x-backend-image: &backend-image
+  image: snapland-backend:local
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+
+# In-network overrides of .env (compose `environment` wins over `env_file`). nginx is the one trusted hop, and it
+# reaches the replicas on backend-N:3100 whatever .env says about HOST/PORT.
+x-backend-environment: &backend-environment
+  NODE_ENV: production
+  LOG_PRETTY: 'false'
+  TRUST_PROXY: '1'
+  HOST: 0.0.0.0
+  PORT: '3100'
+  DATABASE_URL: postgres://${POSTGRES_USER:-snapland}:${POSTGRES_PASSWORD:-snapland}@postgres:5432/${POSTGRES_DB:-snapland}
+  REDIS_URL: redis://redis:6379/0
+  CACHE_REDIS_URL: redis://redis-cache:6379/0
+
+x-backend-runtime: &backend-runtime
+  <<: *backend-image
+  env_file: .env
+  environment: *backend-environment
+  user: node
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  postgres:
+    image: postgis/postgis:17-3.5-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-snapland}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-snapland}
+      POSTGRES_DB: ${POSTGRES_DB:-snapland}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=768MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - max_connections=100
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - jit=off
+      - -c
+      - log_min_duration_statement=250
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+    ports:
+      - '127.0.0.1:${PG_HOST_PORT:-55432}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # A file mount (not the directory) keeps the image's own 10_postgis.sh init script in place.
+      - ./docker/postgres/init/10-pg-stat-statements.sql:/docker-entrypoint-initdb.d/20-pg-stat-statements.sql:ro
+    # -h 127.0.0.1 probes TCP: on a fresh volume the entrypoint's init server listens on the unix socket only, and
+    # migrate connects over TCP.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '5'
+
+  # Critical state (limiter windows, tickets, revocations, presence, locks, drafts, cache generations, pub/sub):
+  # never evicted.
+  redis:
+    image: redis:7.4.11-alpine
+    command:
+      - redis-server
+      - --save
+      - ''
+      - --appendonly
+      - 'no'
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - noeviction
+      - --client-output-buffer-limit
+      - pubsub 32mb 8mb 60
+    ports:
+      - '127.0.0.1:${REDIS_HOST_PORT:-56379}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    logging: *default-logging
+
+  # L2 bbox response bodies only: disposable, LRU-evicted, so cache churn can never OOM the critical instance (section 10.2).
+  redis-cache:
+    image: redis:7.4.11-alpine
+    command:
+      - redis-server
+      - --save
+      - ''
+      - --appendonly
+      - 'no'
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+    ports:
+      - '127.0.0.1:${REDIS_CACHE_HOST_PORT:-56380}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    logging: *default-logging
+
+  # -- Application ----------------------------------------------------------------------------------------------------
+  # One-shot schema migration. It exits 0 when nothing is pending, so every `up` re-runs it safely. Concurrent runners
+  # serialise on a PostgreSQL advisory lock (section 5.4).
+  migrate:
+    <<: *backend-runtime
+    command: ['node', 'dist/scripts/migrate.js', 'up']
+    environment:
+      <<: *backend-environment
+      INSTANCE_ID: migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+    logging: *default-logging
+
+  # Two identical replicas behind nginx prove cross-instance realtime (Redis pub/sub fan-out, section 7.10). They differ
+  # only in INSTANCE_ID (logs, bus origin, metrics).
+  backend-1:
+    <<: *backend-runtime
+    command: ['node', '--enable-source-maps', 'dist/main.js']
+    environment:
+      <<: *backend-environment
+      INSTANCE_ID: backend-1
+    expose:
+      - '3100'
+    # `restart: true`: a restarted store can come back on another IP, and the two Redis instances can trade addresses.
+    # A replica that reconnected mid-restart was seen with its critical clients on redis-cache; a fresh start is safe.
+    depends_on: &backend-depends-on
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+      # The L2 bbox cache is disposable. The app runs without it (L1 only, section 10.6), so it only has to be started.
+      redis-cache:
+        condition: service_started
+        restart: true
+    # Readiness, not liveness: 503 while the database or migrations are not OK or the instance is draining. nginx
+    # waits for it, and it is what `docker compose ps` reports.
+    healthcheck: &backend-healthcheck
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:3100/health/ready']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+      start_interval: 2s
+    deploy: &backend-deploy
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    # SHUTDOWN_GRACE_MS (10 s) plus margin: close WebSockets with 1001, drain HTTP, flush the audit queue (section 10.12).
+    stop_grace_period: 15s
+    restart: unless-stopped
+    logging: *default-logging
+
+  backend-2:
+    <<: *backend-runtime
+    command: ['node', '--enable-source-maps', 'dist/main.js']
+    environment:
+      <<: *backend-environment
+      INSTANCE_ID: backend-2
+    expose:
+      - '3100'
+    depends_on: *backend-depends-on
+    healthcheck: *backend-healthcheck
+    deploy: *backend-deploy
+    stop_grace_period: 15s
+    restart: unless-stopped
+    logging: *default-logging
+
+  # The edge: built SPA + reverse proxy (docker/nginx/nginx.conf). The only service reachable from the host (D-2).
+  nginx:
+    image: snapland-nginx:local
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-/api/v1}
+        VITE_ENABLE_ITM_LAYER: ${VITE_ENABLE_ITM_LAYER:-true}
+        VITE_E2E_HOOKS: ${VITE_E2E_HOOKS:-false}
+    ports:
+      - '127.0.0.1:${HTTP_HOST_PORT:-5173}:80'
+    depends_on:
+      backend-1:
+        condition: service_healthy
+      backend-2:
+        condition: service_healthy
+    user: nginx
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    # Lets the unprivileged master bind :80 (Docker's default for bridge networks, stated explicitly).
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1/healthz']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+      start_interval: 1s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+    # worker_shutdown_timeout (10 s) closes lingering WebSockets before this grace period ends.
+    stop_grace_period: 15s
+    restart: unless-stopped
+    logging: *default-logging
+
+  # -- Tools (profile `tools`; one-shot, `docker compose --profile tools run --rm seed ...`) ---------------------------
+  # Operator commands run inside a replica instead: `docker compose exec backend-1 node dist/scripts/user-admin.js ...`.
+  # Benchmark dataset and the bench-NNN load-test users (docs/BENCHMARKS.md); the k6 script logs in as them itself.
+  seed:
+    <<: *backend-runtime
+    profiles: ['tools']
+    entrypoint: ['/sbin/tini', '--', 'node', 'dist/scripts/seed.js']
+    command: ['--help']
+    environment:
+      <<: *backend-environment
+      INSTANCE_ID: seed
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: 'no'
+    logging: *default-logging
+
+volumes:
+  pgdata:

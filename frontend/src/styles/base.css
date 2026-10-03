@@ -1,0 +1,258 @@
+/* ==========================================================================
+   Base (UI.md v2 section 1, section 3, section 8, section 10.0-10.1): reset, type, icons, utilities, focus, keys, loaders, skip link, boot.
+   Every value comes from docs/design/tokens.css; components never use raw colours (a person's colour arrives as
+   the inline custom property --c).
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+/* The frame colour on html too, so the canvas before the app paints is already the theme's (UI.md section 13). */
+html,
+body {
+  background: var(--color-bg);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+bdi {
+  unicode-bidi: isolate;
+}
+
+:lang(he),
+[dir='rtl'] {
+  font-family: var(--font-hebrew);
+}
+
+/* One frame without transitions while the theme changes: nothing animates every colour at once (UI.md section 13). */
+.theme-switching,
+.theme-switching * {
+  transition: none !important;
+}
+
+/* ------------------------------------------------------------------ icons (UI.md section 12) */
+.ic {
+  width: var(--size-icon-md);
+  height: var(--size-icon-md);
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ic-lg {
+  width: var(--size-icon-lg);
+  height: var(--size-icon-lg);
+  stroke-width: 1.75;
+}
+.ic-sm {
+  width: var(--size-icon-sm);
+  height: var(--size-icon-sm);
+  stroke-width: 2;
+}
+.ic-xs {
+  width: var(--size-icon-xs);
+  height: var(--size-icon-xs);
+  stroke-width: 2.25;
+}
+.ic-2xs {
+  width: var(--size-icon-2xs);
+  height: var(--size-icon-2xs);
+  stroke-width: 3;
+}
+
+/* ------------------------------------------------------------------ utilities */
+/* Every value is an instrument (UI.md section 1.5): tabular mono digits, and a number never wraps apart from its unit. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--letter-spacing-mono);
+  white-space: nowrap;
+}
+
+/* Caps micro-labels (UI.md section 3): uppercase in CSS, so copy keys stay sentence case. */
+.micro {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  line-height: var(--line-height-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-caps);
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+}
+
+/* ------------------------------------------------------------------ keys (UI.md section 10.1 kbd) */
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--size-kbd);
+  height: var(--size-kbd);
+  padding: 0 5px;
+  border-radius: var(--radius-xs);
+  background: var(--color-kbd-bg);
+  color: var(--color-kbd-text);
+  box-shadow: var(--shadow-kbd);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  line-height: 1;
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ loaders */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin var(--duration-spinner) var(--ease-linear) infinite;
+  flex: none;
+}
+.spinner.xs {
+  width: 12px;
+  height: 12px;
+  border-width: 1.75px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.skel {
+  display: block;
+  height: 12px;
+  border-radius: var(--radius-xs);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-sunken) 25%,
+    var(--color-skeleton-highlight) 50%,
+    var(--color-surface-sunken) 75%
+  );
+  background-size: 300% 100%;
+  animation: shimmer var(--duration-skeleton) var(--ease-linear) infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* ------------------------------------------------------------------ links */
+a.link,
+.link {
+  color: var(--color-text-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+button.link {
+  height: auto;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------ skip link, boot (UI.md section 10.1) */
+.skip-link {
+  position: fixed;
+  left: 8px;
+  top: -80px;
+  z-index: var(--z-skip-link);
+  display: inline-flex;
+  align-items: center;
+  height: var(--size-control-lg);
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-elevated);
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  box-shadow: var(--shadow-3);
+}
+.skip-link:focus-visible {
+  top: 8px;
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: var(--size-focus-offset);
+}
+
+.boot {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 16px;
+  background: var(--color-bg);
+}
+.boot .spinner {
+  width: 20px;
+  height: 20px;
+  color: var(--color-icon);
+  justify-self: center;
+}
+
+/* ------------------------------------------------------------------ reduced motion (UI.md section 8) */
+@media (prefers-reduced-motion: reduce) {
+  .skel {
+    animation: none;
+    background: var(--color-surface-sunken);
+  }
+}

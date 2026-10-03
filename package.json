@@ -1,0 +1,45 @@
+{
+  "name": "snapland",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Snapland: real-time collaborative GIS (Fastify + PostGIS + Redis + React/Leaflet)",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "workspaces": [
+    "packages/shared",
+    "backend",
+    "frontend",
+    "e2e"
+  ],
+  "scripts": {
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc -p scripts",
+    "test": "npm run test --workspaces --if-present && npm run test:scripts",
+    "test:scripts": "vitest run --dir scripts",
+    "test:coverage": "npm run test:coverage --workspaces --if-present && npm run test:scripts",
+    "test:integration": "npm run test:integration -w @snapland/backend",
+    "test:e2e": "npm run build -w @snapland/shared && npm run e2e -w @snapland/e2e",
+    "build": "npm run build -w @snapland/shared && npm run build -w @snapland/backend && npm run build -w @snapland/frontend",
+    "check:deps": "node scripts/check-banned-deps.mjs",
+    "lab:up": "node learn/websocket/lab.mjs up",
+    "lab:down": "node learn/websocket/lab.mjs down",
+    "verify": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage && npm run check:deps"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "22.20.4",
+    "eslint": "10.11.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.12.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.2"
+  }
+}

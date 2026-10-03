@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 660" width="960" height="660" role="img" aria-labelledby="t5 d5">
+  <title id="t5">How the AI team built Snapland: spec, review loops, waves</title>
+  <desc id="d5">The assignment became SPEC v1.0 with UX and UI specs; two QA design reviews produced v1.1 and v1.2 before any code. Wave 0 built the foundation and froze contracts; wave 1 ran five tasks in parallel on disjoint files; the T9 integration gate fixed seams; wave 2 added containers, E2E tests and docs. The product owner then chose the Studio redesign and the simple-first rule, which produced the simplification pass (applied 2026-09-29).</desc>
+  <defs>
+    <marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="m5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="660" fill="#111418"/>
+  <g font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#e8ebf0">
+    <text x="480" y="34" text-anchor="middle" font-size="20" font-weight="600">Spec -> review -> build in waves -> gate -> product-owner loop</text>
+
+    <!-- row 1: design loop -->
+    <text x="30" y="70" font-size="14" font-weight="600" fill="#22d3ee">1, Design before code (2026-09-27)</text>
+    <rect x="30" y="82" width="170" height="96" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="115" y="110" text-anchor="middle" font-size="15" font-weight="600">Assignment</text>
+    <text x="115" y="132" text-anchor="middle" font-size="13" fill="#8b95a4">instractions.md</text>
+    <text x="115" y="152" text-anchor="middle" font-size="13" fill="#8b95a4">~50 bullets</text>
+
+    <rect x="230" y="82" width="220" height="96" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="340" y="106" text-anchor="middle" font-size="15" font-weight="600">SPEC v1.0 + ADRs</text>
+    <text x="340" y="126" text-anchor="middle" font-size="13" fill="#8b95a4">team-lead; UX.md, UI.md by the</text>
+    <text x="340" y="144" text-anchor="middle" font-size="13" fill="#8b95a4">ux- and ui-design-expert agents</text>
+    <text x="340" y="166" text-anchor="middle" font-size="13" fill="#8b95a4">section 1 traceability, section 3.3 contracts</text>
+
+    <rect x="480" y="82" width="220" height="96" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="590" y="106" text-anchor="middle" font-size="15" font-weight="600">QA design review #1</text>
+    <text x="590" y="126" text-anchor="middle" font-size="13" fill="#8b95a4">qa-expert: M1-M25, N1-N26,</text>
+    <text x="590" y="144" text-anchor="middle" font-size="13" fill="#8b95a4">G1-G31 -> resolved in section 17</text>
+    <text x="590" y="166" text-anchor="middle" font-size="13" fill="#8b95a4">-> SPEC v1.1</text>
+
+    <rect x="730" y="82" width="200" height="96" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="830" y="106" text-anchor="middle" font-size="15" font-weight="600">Review #2 -> v1.2</text>
+    <text x="830" y="126" text-anchor="middle" font-size="13" fill="#8b95a4">MA1-MA12, MI1-MI32,</text>
+    <text x="830" y="144" text-anchor="middle" font-size="13" fill="#8b95a4">GA1-GA27 -> section 18</text>
+    <text x="830" y="166" text-anchor="middle" font-size="13" fill="#8b95a4">"approved for build"</text>
+
+    <line x1="200" y1="130" x2="228" y2="130" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+    <line x1="450" y1="130" x2="478" y2="130" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+    <line x1="700" y1="130" x2="728" y2="130" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+
+    <!-- row 2: build waves -->
+    <text x="30" y="222" font-size="14" font-weight="600" fill="#22d3ee">2, Build in waves with exclusive file ownership (SPEC section 14)</text>
+    <rect x="30" y="234" width="250" height="116" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="155" y="258" text-anchor="middle" font-size="15" font-weight="600">Wave 0, T0 foundation</text>
+    <text x="155" y="280" text-anchor="middle" font-size="13" fill="#8b95a4">team-lead: configs, shared package,</text>
+    <text x="155" y="298" text-anchor="middle" font-size="13" fill="#8b95a4">container, app, infra, module stubs</text>
+    <text x="155" y="316" text-anchor="middle" font-size="13" fill="#8b95a4">integration harness, foundation tests</text>
+    <text x="155" y="336" text-anchor="middle" font-size="13" fill="#22d3ee">contracts frozen for wave 1</text>
+
+    <rect x="310" y="234" width="330" height="116" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="475" y="258" text-anchor="middle" font-size="15" font-weight="600">Wave 1, five tasks in parallel</text>
+    <text x="475" y="280" text-anchor="middle" font-size="13" fill="#8b95a4">T1 auth, T2 areas, T3 realtime</text>
+    <text x="475" y="298" text-anchor="middle" font-size="13" fill="#8b95a4">T4 platform, T5 frontend, disjoint write sets</text>
+    <text x="475" y="316" text-anchor="middle" font-size="13" fill="#8b95a4">scoped lint / type / test gates per task</text>
+    <text x="475" y="336" text-anchor="middle" font-size="13" fill="#22d3ee">failures in other paths: reported, never fixed</text>
+
+    <rect x="670" y="234" width="260" height="116" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="800" y="258" text-anchor="middle" font-size="15" font-weight="600">T9, integration gate</text>
+    <text x="800" y="280" text-anchor="middle" font-size="13" fill="#8b95a4">repo-wide gates with production infra,</text>
+    <text x="800" y="298" text-anchor="middle" font-size="13" fill="#8b95a4">two-user cross-stack smoke, seam fixes</text>
+    <text x="800" y="316" text-anchor="middle" font-size="13" fill="#8b95a4">new cross-instance REST -> WS test</text>
+    <text x="800" y="336" text-anchor="middle" font-size="13" fill="#22d3ee">F1-F4 recorded in SPEC section 19</text>
+
+    <line x1="280" y1="292" x2="308" y2="292" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+    <line x1="640" y1="292" x2="668" y2="292" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+
+    <!-- row 3: wave 2 and product owner loop -->
+    <text x="30" y="394" font-size="14" font-weight="600" fill="#22d3ee">3, Ship, then the product owner decides (2026-09-28 ... 29)</text>
+    <rect x="30" y="406" width="250" height="110" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="155" y="430" text-anchor="middle" font-size="15" font-weight="600">Wave 2</text>
+    <text x="155" y="452" text-anchor="middle" font-size="13" fill="#8b95a4">T6 containers, seed, benchmarks</text>
+    <text x="155" y="470" text-anchor="middle" font-size="13" fill="#8b95a4">T7 QA: E2E + system tests</text>
+    <text x="155" y="488" text-anchor="middle" font-size="13" fill="#8b95a4">T8 docs: README, OpenAPI</text>
+
+    <rect x="310" y="406" width="330" height="110" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="475" y="430" text-anchor="middle" font-size="15" font-weight="600">Product owner decisions</text>
+    <text x="475" y="452" text-anchor="middle" font-size="13" fill="#8b95a4">4 concepts -> Studio brief -> D-4...D-6 (ADR-0010)</text>
+    <text x="475" y="470" text-anchor="middle" font-size="13" fill="#8b95a4">"simple first" engineering rule</text>
+    <text x="475" y="488" text-anchor="middle" font-size="13" fill="#8b95a4">D-7 delete the tile proxy, D-8 email usernames</text>
+
+    <rect x="670" y="406" width="260" height="110" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="800" y="430" text-anchor="middle" font-size="15" font-weight="600">Simplification pass (09-29)</text>
+    <text x="800" y="452" text-anchor="middle" font-size="13" fill="#8b95a4">9 read-only audits -> 110 proposals</text>
+    <text x="800" y="470" text-anchor="middle" font-size="13" fill="#8b95a4">99 accepted -> 11 packages in 2 waves</text>
+    <text x="800" y="488" text-anchor="middle" font-size="13" fill="#8b95a4">contracts frozen; ~9,000 lines fewer</text>
+
+    <line x1="280" y1="461" x2="308" y2="461" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+    <line x1="640" y1="461" x2="668" y2="461" stroke="#22d3ee" stroke-width="2" marker-end="url(#a5)"/>
+
+    <!-- loop arrows -->
+    <path d="M830,178 L830,206 L155,206 L155,232" fill="none" stroke="#8b95a4" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#m5)"/>
+    <path d="M800,350 L800,378 L155,378 L155,404" fill="none" stroke="#8b95a4" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#m5)"/>
+
+    <!-- rules strip -->
+    <rect x="30" y="546" width="900" height="56" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="480" y="569" text-anchor="middle" font-size="14" font-weight="600">Rules that held in every phase</text>
+    <text x="480" y="591" text-anchor="middle" font-size="13" fill="#8b95a4">reports end with command output, findings -> numbered resolutions, deviations get a one-line reason, the user makes the commits</text>
+
+    <text x="480" y="636" text-anchor="middle" font-size="13" fill="#8b95a4">Two reviews found defects on paper before any code; parallel building was safe because contracts and file sets were fixed first.</text>
+  </g>
+</svg>

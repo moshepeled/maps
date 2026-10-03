@@ -22,7 +22,8 @@ nginx, and docker compose.
 macOS and Linux terminals all work.
 
 ```bash
-cd /d/dev/fullstack/Snapland            # or wherever you cloned the repo
+git clone https://github.com/moshepeled/maps.git
+cd maps
 node scripts/setup-env.mjs              # creates .env from .env.example with a random JWT secret (safe to re-run)
 docker compose up -d --build            # builds the images and starts the whole stack in the background
 ```

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 570" width="960" height="570" role="img" aria-label="Health endpoints and readiness rules">
+  <title>Health endpoints and readiness rules</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b95a4"/>
+    </marker>
+    <style>
+      text { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; fill: #e8ebf0; font-size: 15px; }
+      .title { font-size: 21px; font-weight: 600; }
+      .h { font-size: 16px; font-weight: 600; }
+      .m { fill: #8b95a4; font-size: 14px; }
+      .a { fill: #22d3ee; }
+      .code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 14px; }
+      .box { fill: #1a1f26; stroke: #3a4250; stroke-width: 1.5; }
+      .hi { stroke: #22d3ee; }
+      .ln { stroke: #22d3ee; stroke-width: 2; fill: none; marker-end: url(#arr); }
+      .lm { stroke: #8b95a4; stroke-width: 1.5; fill: none; marker-end: url(#arrm); }
+    </style>
+  </defs>
+  <rect width="960" height="570" fill="#111418"/>
+  <text x="24" y="38" class="title">Health endpoints and readiness rules</text>
+
+  <!-- live -->
+  <rect x="24" y="70" width="290" height="96" rx="12" class="box"/>
+  <text x="40" y="96" class="h code">GET /health/live</text>
+  <text x="40" y="120" class="m">200 while the event loop runs</text>
+  <text x="40" y="140" class="m">no dependency checks</text>
+  <text x="40" y="160" class="m">{ status, instanceId, uptimeS }</text>
+
+  <!-- ready -->
+  <rect x="24" y="196" width="290" height="176" rx="12" class="box hi"/>
+  <text x="40" y="222" class="h code">GET /health/ready</text>
+  <text x="40" y="248" class="m">four checks in parallel, 1 s budget each:</text>
+  <text x="40" y="272" class="code">database   db.ping()</text>
+  <text x="40" y="292" class="code">redis      PING</text>
+  <text x="40" y="312" class="code">migrations pending = 0 ?</text>
+  <text x="40" y="332" class="code">shutdown   lifecycleState flag</text>
+  <text x="40" y="358" class="m">cacheRedis: informational only</text>
+
+  <!-- decision rows -->
+  <rect x="360" y="196" width="280" height="56" rx="10" class="box"/>
+  <text x="376" y="220">database fail, migrations pending</text>
+  <text x="376" y="240">or shutting down</text>
+  <rect x="690" y="196" width="246" height="56" rx="10" class="box hi"/>
+  <text x="706" y="220" class="a">503  status: "fail"</text>
+  <text x="706" y="240" class="m">load balancer stops routing</text>
+  <line x1="314" y1="224" x2="358" y2="224" class="ln"/>
+  <line x1="640" y1="224" x2="688" y2="224" class="ln"/>
+
+  <rect x="360" y="266" width="280" height="56" rx="10" class="box"/>
+  <text x="376" y="290">only redis fails</text>
+  <text x="376" y="310" class="m">(DB and migrations fine)</text>
+  <rect x="690" y="266" width="246" height="56" rx="10" class="box"/>
+  <text x="706" y="290" class="a">200  status: "degraded"</text>
+  <text x="706" y="310" class="m">REST works; no tickets, no fan-out</text>
+  <line x1="314" y1="294" x2="358" y2="294" class="ln"/>
+  <line x1="640" y1="294" x2="688" y2="294" class="ln"/>
+
+  <rect x="360" y="336" width="280" height="56" rx="10" class="box"/>
+  <text x="376" y="360">everything ok</text>
+  <rect x="690" y="336" width="246" height="56" rx="10" class="box"/>
+  <text x="706" y="360" class="a">200  status: "ok"</text>
+  <line x1="314" y1="364" x2="358" y2="364" class="ln"/>
+  <line x1="640" y1="364" x2="688" y2="364" class="ln"/>
+
+  <!-- metrics -->
+  <rect x="24" y="410" width="912" height="84" rx="12" class="box"/>
+  <text x="40" y="436" class="h code">GET /metrics</text>
+  <text x="40" y="458" class="m">Prometheus text from this container's own Registry; scrape-time samplers refresh the pool/Redis gauges first</text>
+  <text x="40" y="478" class="m">(1 s cap each). Meant for the internal network only: nginx does not expose it.</text>
+
+  <text x="24" y="526" class="m">Compose health checks call /health/ready on each replica; graceful shutdown flips the shutdown flag first,</text>
+  <text x="24" y="548" class="m">so the answer becomes 503 before any socket is closed.</text>
+</svg>

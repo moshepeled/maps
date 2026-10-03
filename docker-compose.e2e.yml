@@ -1,0 +1,36 @@
+# Snapland - E2E overrides (SPEC section 11.1, section 12.2). Layered on top of docker-compose.yml, never used on its own:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --build   # E2E stack on http://localhost:5173
+#   npm run test:e2e                                                               # Playwright (E2E_BASE_URL)
+#   docker compose up -d --build                                                   # back to the normal stack
+#
+# Test-only settings. They never go into .env.example or .env:
+#   - nginx is built with the read-only window.__snapland debugging hook (the specs themselves assert only the DOM) and
+#     with the ITM aerial layer. The image gets its own tag, so the normal snapland-nginx:local image is never
+#     overwritten with a test build.
+#   - Both backends raise the per-IP auth and refresh limits. Every Playwright browser context reaches nginx from
+#     the same Docker gateway address. One spec run would otherwise exhaust the production budgets (AUTH_RATE_LIMIT_MAX
+#     is 10 per window) and fail with 429s unrelated to the behaviour under test. Every other limit keeps its
+#     production value.
+#
+# Compose merges these keys into the base definitions: `build.args` and `environment` are merged key by key, and
+# `image` is replaced.
+name: snapland
+
+x-e2e-limits: &e2e-limits
+  AUTH_RATE_LIMIT_MAX: '1000'
+  REFRESH_RATE_LIMIT_MAX: '1000'
+
+services:
+  nginx:
+    image: snapland-nginx:e2e
+    build:
+      args:
+        VITE_E2E_HOOKS: 'true'
+        VITE_ENABLE_ITM_LAYER: 'true'
+
+  backend-1:
+    environment: *e2e-limits
+
+  backend-2:
+    environment: *e2e-limits

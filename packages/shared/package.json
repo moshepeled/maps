@@ -1,0 +1,35 @@
+{
+  "name": "@snapland/shared",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Contracts shared by backend and frontend: schemas, protocol, limits, validation, geodesy",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@snapland/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "@snapland/source": "./src/testing/protocol-examples.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "clean": "node -e \"for (const d of ['dist','coverage']) require('node:fs').rmSync(d,{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "geographiclib-geodesic": "2.2.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@vitest/coverage-v8": "5.0.2",
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
+  }
+}

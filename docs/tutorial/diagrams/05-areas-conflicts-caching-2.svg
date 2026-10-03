@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" width="960" height="680" role="img" aria-labelledby="t2 d2">
+  <title id="t2">Storage model of the areas module: users, areas, area_versions, the change sequence, system_state and audit_logs</title>
+  <desc id="d2">Entity boxes with their key columns. The areas table holds the current row with measurements computed at write time; area_versions holds one immutable full snapshot per version with a unique change_seq; a global sequence stamps both; system_state holds the purge watermark that retention raises; audit_logs is the append-only trail.</desc>
+  <defs>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; fill: #e8ebf0; }
+    .m { fill: #8b95a4; font-size: 12.5px; }
+    .c { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 12.5px; }
+    .h { font-size: 19px; font-weight: 600; }
+    .e { font-size: 15px; font-weight: 600; fill: #22d3ee; }
+    .box { fill: #1a1f26; stroke: #2b3340; stroke-width: 1.5; }
+    .hdr { fill: #141a21; }
+    .line { stroke: #22d3ee; stroke-width: 1.5; fill: none; }
+  </style>
+  <rect width="960" height="680" fill="#111418"/>
+  <text class="h" x="30" y="36">Storage model of an area (migrations 0004, 0005, 0006, 0007)</text>
+
+  <!-- users -->
+  <rect class="box" x="30" y="70" width="200" height="130" rx="10"/>
+  <rect class="hdr" x="31" y="71" width="198" height="28" rx="9"/>
+  <text class="e" x="44" y="91">users</text>
+  <text class="c" x="44" y="118">id uuid PK</text>
+  <text class="c" x="44" y="138">display_name, color</text>
+  <text class="c" x="44" y="158">role, disabled_at</text>
+  <text class="c m" x="44" y="180">never deleted, only disabled</text>
+
+  <!-- sequence -->
+  <rect class="box" x="270" y="70" width="330" height="54" rx="10"/>
+  <text class="e" x="284" y="92">SEQUENCE area_change_seq (bigint)</text>
+  <text class="c m" x="284" y="112">nextval() under xact advisory lock 7210001</text>
+
+  <!-- areas -->
+  <rect class="box" x="270" y="150" width="330" height="340" rx="10"/>
+  <rect class="hdr" x="271" y="151" width="328" height="28" rx="9"/>
+  <text class="e" x="284" y="171">areas - the current row</text>
+  <text class="c" x="284" y="198">id uuid PK   (= the client's draft id)</text>
+  <text class="c" x="284" y="218">name, description</text>
+  <text class="c" x="284" y="238">geom geometry(Polygon, 4326)  stored CCW</text>
+  <text class="c" x="284" y="258">area_km2, perimeter_km <- geom::geography</text>
+  <text class="c" x="284" y="278">vertex_count, bbox_extent_deg  (LOD)</text>
+  <text class="c" x="284" y="298">version, change_seq bigint <- last write</text>
+  <text class="c" x="284" y="318">created_by/updated_by/deleted_by -> users</text>
+  <text class="c" x="284" y="338">created_at, updated_at, deleted_at</text>
+  <text class="c m" x="284" y="358">  deleted_at IS NOT NULL = tombstone</text>
+  <text class="c m" x="284" y="384">CHECK ST_IsValid(geom), ST_NPoints <= 2000</text>
+  <text class="c m" x="284" y="404">CHECK area range, deleted_at ⇔ deleted_by</text>
+  <text class="c m" x="284" y="430">GiST areas_geom_live_gist (geom)</text>
+  <text class="c m" x="284" y="450">  WHERE deleted_at IS NULL (partial)</text>
+  <text class="c m" x="284" y="474">btree areas_deleted_at_idx (retention)</text>
+
+  <!-- area_versions -->
+  <rect class="box" x="650" y="70" width="280" height="420" rx="10"/>
+  <rect class="hdr" x="651" y="71" width="278" height="28" rx="9"/>
+  <text class="e" x="664" y="91">area_versions - snapshots</text>
+  <text class="c" x="664" y="118">PK (area_id, version)</text>
+  <text class="c" x="664" y="138">area_id -> areas ON DELETE CASCADE</text>
+  <text class="c" x="664" y="158">op: create|update|delete|restore</text>
+  <text class="c" x="664" y="178">name, description, geom,</text>
+  <text class="c" x="664" y="198">  area_km2, perimeter_km,</text>
+  <text class="c" x="664" y="218">  vertex_count   (full snapshot)</text>
+  <text class="c" x="664" y="238">changed_fields text[] ⊆</text>
+  <text class="c" x="664" y="258">  {name, description,</text>
+  <text class="c" x="664" y="278">   geometry, deleted}</text>
+  <text class="c" x="664" y="298">merged, base_version, reverted_from</text>
+  <text class="c" x="664" y="318">change_seq bigint UNIQUE <- the feed</text>
+  <text class="c" x="664" y="338">actor_id -> users, request_id</text>
+  <text class="c" x="664" y="358">created_at</text>
+  <text class="c m" x="664" y="388">TRIGGER BEFORE UPDATE -></text>
+  <text class="c m" x="664" y="408">  'rows are immutable'</text>
+  <text class="c m" x="664" y="436">append-only: rows leave only by</text>
+  <text class="c m" x="664" y="456">the retention cascade</text>
+
+  <!-- system_state -->
+  <rect class="box" x="30" y="530" width="400" height="100" rx="10"/>
+  <rect class="hdr" x="31" y="531" width="398" height="28" rx="9"/>
+  <text class="e" x="44" y="551">system_state (key -> jsonb)</text>
+  <text class="c" x="44" y="578">change_feed_purge_watermark</text>
+  <text class="c m" x="44" y="596">  raised by retention.purgeAreas; since &lt; it -> 410</text>
+  <text class="c" x="44" y="620">retention_last_run { at, purged, durationMs }</text>
+
+  <!-- audit_logs -->
+  <rect class="box" x="460" y="530" width="470" height="100" rx="10"/>
+  <rect class="hdr" x="461" y="531" width="468" height="28" rx="9"/>
+  <text class="e" x="474" y="551">audit_logs - append-only, BRIN on occurred_at</text>
+  <text class="c" x="474" y="578">occurred_at, action, outcome, actor_id (no FK), target_type,</text>
+  <text class="c" x="474" y="596">target_id, request_id, instance_id, ip, user_agent, details</text>
+  <text class="c m" x="474" y="620">INSERT ... SELECT * FROM unnest(12 arrays); details <= 4 KiB</text>
+
+  <!-- arrows -->
+  <line class="line" x1="230" y1="135" x2="270" y2="300" marker-end="url(#ar2)"/>
+  <text class="m" x="186" y="250">created_by</text>
+  <text class="m" x="186" y="266">updated_by</text>
+  <text class="m" x="186" y="282">deleted_by</text>
+
+  <line class="line" x1="435" y1="124" x2="435" y2="150" marker-end="url(#ar2)"/>
+  <text class="m" x="445" y="142">stamps change_seq on every write</text>
+
+  <line class="line" x1="600" y1="97" x2="650" y2="97" marker-end="url(#ar2)"/>
+  <text class="m" x="646" y="62" text-anchor="end">copied into the snapshot</text>
+
+  <line class="line" x1="600" y1="300" x2="650" y2="300" marker-end="url(#ar2)"/>
+  <text class="m" x="625" y="290" text-anchor="middle">1 : n</text>
+
+  <polyline class="line" points="790,490 790,508 300,508 300,530" marker-end="url(#ar2)"/>
+  <text class="m" x="310" y="522">retention purge raises the watermark to max(change_seq) of the purged versions (same statement)</text>
+
+  <text class="m" x="30" y="654">Figure 5.2 - Current row + immutable snapshots + one global sequence. History reads and base-version merges need only</text>
+  <text class="m" x="30" y="670">(area_id, version); the change feed needs only change_seq; bbox reads never touch area_versions.</text>
+</svg>

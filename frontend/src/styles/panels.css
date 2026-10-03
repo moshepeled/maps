@@ -1,0 +1,946 @@
+/* ==========================================================================
+   Inspector content (UI.md v2 section 10.8.2 - section 10.8.7, section 10.13): area details (Selection), banners, the History timeline,
+   Areas in view, the save form and the conflict panel, plus their phone-sheet variants. Every value is set in mono
+   (tabular), units in sans beside it (UI.md section 3).
+   ========================================================================== */
+
+.sep {
+  color: var(--color-text-tertiary);
+}
+/* A number's unit, set in sans beside the mono figure. */
+.unit {
+  font-family: var(--font-sans);
+  letter-spacing: normal;
+}
+
+/* ------------------------------------------------------------------ Selection: area details (C-11) */
+.area-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.area-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0 16px 16px;
+}
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  margin-bottom: 10px;
+}
+.title-row .swatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-2xs);
+  background: var(--color-accent-border);
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+}
+.title-row > .icon-btn {
+  margin-right: -8px;
+}
+/* "Preview" while a history version is previewed (UX F-07 step 3): the name and figures are that version's. */
+.title-row > .tag-current {
+  flex: none;
+}
+.area-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-title);
+  overflow-wrap: anywhere;
+  outline: none;
+}
+.area-name:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+.title-row .details-edit {
+  flex: 1;
+  min-width: 0;
+}
+/* Rename swaps the heading for a 32 px input at the heading's size (UI.md section 10.8.2). */
+.rename-input {
+  height: 32px;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-title);
+}
+
+/* The readout well: AREA + the figure, ha on the right; then perimeter, points, version cells. */
+.well {
+  border-radius: var(--radius-card);
+  background: var(--color-surface-inset);
+  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+}
+.well__top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+}
+.well__area {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.well__figure {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--color-text);
+}
+.well__figure .num {
+  font-size: var(--font-size-figure);
+  line-height: var(--line-height-figure);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-figure);
+}
+.well__figure .unit {
+  font-size: var(--font-size-md);
+  line-height: 1;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+.well__ha {
+  padding-bottom: 4px;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  color: var(--color-text-secondary);
+}
+.well__cells {
+  display: grid;
+  grid-template-columns: 1.25fr 0.8fr 0.8fr;
+  margin: 0;
+  border-top: 1px solid var(--color-border-subtle);
+}
+.well__cell {
+  min-width: 0;
+  padding: 10px 14px 11px;
+}
+.well__cell + .well__cell {
+  border-left: 1px solid var(--color-border-subtle);
+}
+.well__cell dd {
+  margin: 6px 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  line-height: 1;
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.well__cell .unit {
+  margin-left: 1px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+}
+
+/* Created / Last edit: the person's dot and name, then the time in mono. */
+.props {
+  display: grid;
+  row-gap: 6px;
+  margin: 12px 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+}
+.props__row {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  align-items: center;
+}
+.props dt {
+  color: var(--color-text-tertiary);
+}
+.props dd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text);
+}
+.props__time {
+  color: var(--color-text-secondary);
+}
+
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.panel-actions__edit {
+  flex: 1 1 auto;
+}
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* The description, under the actions. */
+.details {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+.d-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: var(--size-control-sm);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+.d-label .btn-ghost {
+  margin-right: -8px;
+}
+.d-text {
+  white-space: pre-wrap;
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
+}
+.d-empty {
+  color: var(--color-text-tertiary);
+}
+.d-label > .d-empty {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+  font-weight: var(--font-weight-regular);
+}
+/* The overlay inspector is short (1024 x 768): a tighter gap keeps the People and Activity headers in view. */
+.app[data-layout='overlay'] .details {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.form-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.details-edit {
+  gap: 8px;
+}
+
+/* ------------------------------------------------------------------ banners (UI.md section 10.8.7) */
+.banner {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-sm);
+}
+.banner > .ic {
+  width: var(--size-icon-md);
+  height: var(--size-icon-md);
+  margin-top: 1px;
+}
+.banner b {
+  display: block;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+.banner p {
+  margin: 2px 0 0;
+  color: var(--color-text-secondary);
+}
+.banner > p:only-of-type {
+  margin: 0;
+}
+.banner .acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.banner.lock {
+  --c: var(--collab-8);
+  background: color-mix(in srgb, var(--c) 8%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--c) 40%, transparent);
+}
+.banner.lock > .avatar {
+  --avatar-ring: color-mix(in srgb, var(--c) 8%, var(--color-surface));
+}
+.banner.warn {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+}
+.banner.warn > .ic {
+  color: var(--color-warning-icon);
+}
+.banner.danger {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-text);
+}
+.banner.danger > .ic {
+  color: var(--color-danger-icon);
+}
+.banner.accent {
+  background: var(--color-accent-faint);
+  border-color: var(--color-accent-border);
+}
+.banner.accent > .ic {
+  color: var(--color-accent-text);
+}
+.banner.neutral {
+  background: var(--color-surface-inset);
+  border-color: var(--color-border);
+}
+.banner.neutral > .ic {
+  color: var(--color-icon);
+}
+/* Banners sit between the properties and the actions (UI.md section 10.8.2). */
+.area-body > .banner {
+  margin-bottom: 12px;
+}
+.area-body > .deleted-state {
+  margin: 4px 0 0;
+}
+
+/* ------------------------------------------------------------------ History timeline (C-13; UI.md section 10.8.3) */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 0;
+}
+.tl-button {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  /* The person line runs under the time too, so its figures keep one line beside the Preview cue's width. */
+  grid-template-areas:
+    'node top time'
+    '. sub sub';
+  column-gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: var(--radius-row);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* The rail: a 1 px line through the node column, from the first node to the last (node centre = 18 px). */
+.tl-button::before {
+  content: '';
+  position: absolute;
+  left: 22.5px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border);
+}
+.tl-item:first-child .tl-button::before {
+  top: 18px;
+}
+.tl-item:last-child .tl-button::before {
+  bottom: calc(100% - 18px);
+}
+.tl-item:only-child .tl-button::before {
+  display: none;
+}
+.tl-button:hover {
+  background: var(--color-surface-hover);
+}
+.tl-button[aria-current='true'] {
+  background: var(--color-accent-faint);
+  box-shadow: inset 0 0 0 1px var(--color-accent-border);
+}
+/* The node rings in the actor's colour (--node, set inline; mine is the accent); the current one is filled. */
+.tl-node {
+  grid-area: node;
+  justify-self: center;
+  /* Centred on the first 22 px line (18 px from the top), where the rail starts, even when the title wraps. */
+  align-self: start;
+  margin-top: 5.5px;
+  position: relative;
+  z-index: 1;
+  width: var(--size-history-node);
+  height: var(--size-history-node);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  box-shadow:
+    inset 0 0 0 2px var(--node),
+    var(--shadow-collab-dot);
+}
+.tl-item--current .tl-node {
+  background: var(--node);
+  box-shadow:
+    0 0 0 3px var(--color-surface),
+    0 0 0 4px var(--node);
+}
+/* One line of tags; a long title wraps inside its own box so the v-tag and CURRENT stay on the first line. */
+.tl-top {
+  grid-area: top;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  min-height: 22px;
+}
+.ver {
+  display: inline-block;
+  padding: 3px 5px;
+  border-radius: var(--radius-xs);
+  background: var(--color-neutral-badge-bg);
+  color: var(--color-neutral-badge-text);
+  font-size: var(--font-size-2xs);
+  line-height: 1;
+  font-weight: var(--font-weight-semibold);
+}
+.tl-top > .ver,
+.tl-top > .tag-current {
+  flex: none;
+}
+.tl-title {
+  min-width: 0;
+  padding: 2px 0;
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+.tag-current {
+  padding: 3px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--color-accent-faint);
+  box-shadow: inset 0 0 0 1px var(--color-accent-border);
+  color: var(--color-accent-text);
+  font-size: var(--font-size-2xs);
+  line-height: 1;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-tag);
+  text-transform: uppercase;
+}
+.tl-sub {
+  grid-area: sub;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  min-width: 0;
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-secondary);
+}
+.tl-sub:empty {
+  display: none;
+}
+.tl-sub .num {
+  font-size: var(--font-size-mono-xs);
+  white-space: normal;
+}
+/* A rename's or restore's source ("from "Yarkon Plot"") reads as text beside the person. */
+.tl-detail {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tl-time {
+  grid-area: time;
+  align-self: start;
+  justify-self: end;
+  font-size: var(--font-size-mono-xs);
+  line-height: 22px;
+  color: var(--color-text-tertiary);
+}
+/* Preview (UI.md section 10.8.3): on hover or focus the time gives way to a visual cue; the row is the control. Both stay in
+   the layout (visibility, not display), so the time column keeps its width and the titles never reflow on hover. */
+.tl-preview {
+  grid-area: time;
+  justify-self: end;
+  align-self: start;
+  display: inline-grid;
+  place-items: center;
+  height: 26px;
+  /* Centred on the 22 px title line without making it taller. */
+  margin: -2px 0;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-faint);
+  box-shadow: inset 0 0 0 1px var(--color-accent-border);
+  color: var(--color-accent-text);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  font-weight: var(--font-weight-semibold);
+  visibility: hidden;
+}
+.tl-button:hover .tl-preview,
+.tl-button:focus-visible .tl-preview {
+  visibility: visible;
+}
+.tl-button:hover .tl-time,
+.tl-button:focus-visible .tl-time {
+  visibility: hidden;
+}
+.preview-banner {
+  margin: 4px 8px 8px;
+}
+.history-loading {
+  display: grid;
+  gap: 12px;
+  padding: 4px 12px 8px;
+}
+.skel-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+}
+.skel--node {
+  justify-self: center;
+  width: var(--size-history-node);
+  height: var(--size-history-node);
+  margin-top: 2px;
+  border-radius: var(--radius-full);
+}
+.skel-row__bars {
+  display: grid;
+  gap: 6px;
+}
+.skel--short {
+  width: 40%;
+}
+.skel--long {
+  width: 70%;
+  height: 10px;
+}
+.history-error {
+  margin: 4px 8px 8px;
+}
+
+/* ------------------------------------------------------------------ Areas in view (C-10; UI.md section 10.8.4) */
+.list-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.list-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.list-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 16px 14px;
+}
+.list-status {
+  display: grid;
+  gap: 2px;
+}
+.list-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.list-controls .input {
+  flex: 1;
+  min-width: 0;
+}
+.list {
+  list-style: none;
+  margin: 0 -12px;
+  padding: 0;
+}
+.li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  align-items: baseline;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius-row);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.li:hover {
+  background: var(--color-surface-hover);
+}
+.li .n {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+.li .k {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.li .m {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-tertiary);
+}
+.li .m .lock {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  color: var(--color-text-secondary);
+}
+.list-capped {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-secondary);
+}
+.p-empty {
+  color: var(--color-text-secondary);
+}
+/* Phones: the summary and the centre coordinates top the list (UX C-26, C-27). The readout is wider than a 360 px
+   sheet, so both wrap (numbers are otherwise nowrap), balanced so a coordinate is not left alone on its line. */
+.summary--list,
+.coord-readout--list {
+  font-size: var(--font-size-mono-xs);
+  color: var(--color-text-secondary);
+  white-space: normal;
+  text-wrap: balance;
+}
+.coord-readout {
+  user-select: text;
+  direction: ltr;
+}
+
+/* ------------------------------------------------------------------ save form (C-09; UI.md section 10.8.4) */
+.save-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+.save-form > .insp-head {
+  margin: 0 -16px -4px;
+}
+/* The compact well: AREA, the figure, then ha, perimeter. */
+.save-well {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  padding: 10px 14px 12px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-inset);
+  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+}
+.save-well .micro {
+  flex-basis: 100%;
+}
+.save-well__figure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--color-text);
+}
+.save-well__figure .num {
+  font-size: var(--font-size-figure-sm);
+  line-height: var(--line-height-figure-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-figure);
+}
+.save-well__figure .unit {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+.save-well__meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.save-form__actions .push {
+  margin-left: auto;
+}
+/* Phone naming sheet: "Save area, 0.139 km²" + Discard, then Back, Save at 50/50 (UI.md section 10.13). */
+.save-form__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  margin: 8px -8px 0 0;
+}
+.save-form__title {
+  min-width: 0;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-md);
+  font-weight: var(--font-weight-semibold);
+}
+.save-form__title .num {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+}
+.app[data-layout='phone'] .save-form__actions > .btn {
+  flex: 1 1 0;
+}
+.add-description {
+  align-self: flex-start;
+  margin-left: -12px;
+}
+
+/* ------------------------------------------------------------------ conflict (C-19; UI.md section 10.8.5) */
+.conflict-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.conflict-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+.cf-title {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.cf-title .ic {
+  color: var(--color-warning-icon);
+  margin-top: 1px;
+}
+.cf-title h2 {
+  min-width: 0;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-md);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+  outline: none;
+}
+.cf-title h2:focus-visible {
+  outline: var(--size-focus-ring) solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+.cf-body {
+  padding-left: 26px;
+  color: var(--color-text-secondary);
+}
+/* The legend well: swatches drawn exactly as on the map, so it is the key to the two lines (UI.md section 10.8.5). */
+.legend {
+  display: grid;
+  padding: 4px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface-inset);
+  box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+}
+.lg-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding-left: 10px;
+}
+@media (pointer: coarse) {
+  .lg-row {
+    min-height: 48px;
+  }
+}
+.lg-swatch {
+  flex: none;
+  width: 28px;
+  height: 10px;
+  overflow: visible;
+  fill: none;
+  stroke-linecap: round;
+}
+.lg-swatch__casing {
+  stroke: var(--ov-casing);
+  stroke-opacity: var(--ov-casing-opacity);
+  stroke-width: calc(var(--ov-own-stroke-width) + var(--ov-casing-extra));
+}
+.lg-swatch__core {
+  stroke: var(--ov-own-stroke);
+  stroke-width: var(--ov-own-stroke-width);
+}
+.lg-swatch__core--theirs {
+  stroke: var(--c);
+  stroke-dasharray: var(--ov-remote-dash);
+  stroke-linecap: butt;
+}
+.lg-km {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.lg-toggle[aria-pressed='false'] {
+  color: var(--color-text-tertiary);
+}
+.cf-actions {
+  display: grid;
+  gap: 10px;
+}
+.cf-act .btn:not(.btn-sm) {
+  width: 100%;
+}
+.cf-act .help {
+  margin-top: 4px;
+  padding: 0 2px;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-tertiary);
+}
+.cf-act .btn-sm {
+  margin-left: -8px;
+}
+table.diff {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+}
+/* The review's caption takes focus when the review replaces the buttons (UX section 8.3); it is a label, not a control. */
+table.diff caption {
+  caption-side: top;
+  padding: 0 2px 8px;
+  text-align: left;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-xs);
+}
+table.diff caption:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+table.diff th {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-inset);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-2xs);
+  line-height: var(--line-height-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-caps);
+  text-transform: uppercase;
+}
+table.diff td {
+  padding: 8px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  vertical-align: top;
+}
+table.diff th[scope='row'] {
+  background: none;
+  color: var(--color-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
+}
+.radio-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.radio {
+  display: inline-flex;
+  gap: 8px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+.radio input {
+  margin: 1px 0 0;
+  accent-color: var(--color-accent);
+}
+.merged {
+  color: var(--color-text-tertiary);
+}
+.merged .ic {
+  color: var(--color-success-icon);
+  vertical-align: -3px;
+  margin-right: 4px;
+}
+
+/* ------------------------------------------------------------------ in the phone sheet (UI.md section 10.13) */
+.sheet .title-row {
+  gap: 9px;
+  margin-bottom: 0;
+}
+.sheet .title-row .swatch {
+  width: 11px;
+  height: 11px;
+}
+.sheet .title-row > .icon-btn {
+  width: 44px;
+  height: 44px;
+  margin-right: -12px;
+}
+/* Metrics line: the figure, then ha, perimeter, points in mono. */
+.sheet-metrics {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-top: 6px;
+}
+.sheet-metrics__figure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--color-text);
+}
+.sheet-metrics__figure .num {
+  font-size: var(--font-size-figure-sm);
+  line-height: var(--line-height-figure-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-figure);
+}
+.sheet-metrics__figure .unit {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.sheet-metrics__meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  white-space: normal;
+}
+.sheet .props__row {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+/* The actions stay reachable at the sheet's bottom edge while the details above them scroll (UX section 3.2). */
+.sheet .panel-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding: 8px 0 0;
+  background: var(--color-surface);
+}
+/* The three 44 px actions share one row down to 360 px; narrower, Delete wraps to its own line instead of clipping. */
+.sheet .panel-actions > .btn {
+  flex: 1 0 auto;
+  padding: 0 12px;
+}
+.sheet .list-body,
+.sheet .conflict-body {
+  padding-bottom: 16px;
+}

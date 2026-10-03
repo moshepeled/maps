@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 830" width="960" height="830" role="img" aria-labelledby="t2 d2">
+  <title id="t2">Snapland system model</title>
+  <desc id="d2">Two browsers talk to nginx on port 5173 over HTTP JSON and WebSocket. nginx, the only published HTTP port, serves the SPA and balances two stateless Fastify replicas with least_conn. Both replicas share PostgreSQL with PostGIS for durable state, a critical Redis for shared ephemeral state and pub/sub fan-out, and a disposable redis-cache for L2 bbox bodies; the three stores are also published on 127.0.0.1 for local tooling and the integration tests. Map tiles are fetched by the browser directly from OpenStreetMap and the GovMap ITM cache.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="830" fill="#111418"/>
+  <g font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#e8ebf0">
+    <text x="480" y="34" text-anchor="middle" font-size="20" font-weight="600">Snapland system model (docker-compose.yml, default profile)</text>
+
+    <!-- browsers -->
+    <rect x="40" y="58" width="280" height="132" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="56" y="84" font-size="16" font-weight="600">Browser - Alice</text>
+    <text x="56" y="106" font-size="13" fill="#8b95a4">React 19 + Leaflet 1.9 (Vite SPA)</text>
+    <text x="56" y="128" font-size="14">stores: geometry in WGS84 lat/lng</text>
+    <text x="56" y="148" font-size="14">HTTP client: access token in memory</text>
+    <text x="56" y="168" font-size="14">RealtimeClient: ticket -> WS, resync</text>
+
+    <rect x="340" y="58" width="280" height="132" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="356" y="84" font-size="16" font-weight="600">Browser - Bob</text>
+    <text x="356" y="106" font-size="13" fill="#8b95a4">same SPA, possibly another replica</text>
+    <text x="356" y="128" font-size="14">sees Alice's draft in her colour</text>
+    <text x="356" y="148" font-size="14">sees presence, locks, area.changed</text>
+    <text x="356" y="168" font-size="14">keeps working over REST if WS drops</text>
+
+    <rect x="650" y="58" width="270" height="132" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="666" y="84" font-size="15" font-weight="600">Tile servers (browser-direct)</text>
+    <text x="666" y="108" font-size="14">tile.openstreetmap.org - "Map"</text>
+    <text x="666" y="130" font-size="14">cdn.govmap.gov.il - "Aerial"</text>
+    <text x="666" y="150" font-size="13" fill="#8b95a4">2022 ITM cache, EPSG:2039 (D-1)</text>
+    <text x="666" y="172" font-size="13" fill="#8b95a4">no backend hop in this path</text>
+    <line x1="620" y1="124" x2="648" y2="124" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#m)"/>
+
+    <!-- arrows browsers -> nginx -->
+    <line x1="110" y1="190" x2="110" y2="238" stroke="#22d3ee" stroke-width="2" marker-end="url(#a)"/>
+    <text x="118" y="218" font-size="12" fill="#8b95a4">REST</text>
+    <line x1="250" y1="190" x2="250" y2="238" stroke="#22d3ee" stroke-width="2" stroke-dasharray="6 4" marker-start="url(#a)" marker-end="url(#a)"/>
+    <text x="258" y="218" font-size="12" fill="#8b95a4">WS</text>
+    <line x1="410" y1="190" x2="410" y2="238" stroke="#22d3ee" stroke-width="2" marker-end="url(#a)"/>
+    <text x="418" y="218" font-size="12" fill="#8b95a4">REST</text>
+    <line x1="550" y1="190" x2="550" y2="238" stroke="#22d3ee" stroke-width="2" stroke-dasharray="6 4" marker-start="url(#a)" marker-end="url(#a)"/>
+    <text x="558" y="218" font-size="12" fill="#8b95a4">WS</text>
+
+    <!-- nginx -->
+    <rect x="40" y="240" width="580" height="96" rx="12" fill="#161b22" stroke="#e8ebf0" stroke-width="1.5"/>
+    <text x="56" y="266" font-size="16" font-weight="600">nginx 1.30 - the only published HTTP port: 127.0.0.1:5173 -> :80</text>
+    <text x="56" y="290" font-size="14">built SPA, proxy /api /ws /docs /health, least_conn over 2 replicas</text>
+    <text x="56" y="312" font-size="14">WS upgrade pass-through, gzip, problem+json for 413/502/503/504</text>
+
+    <!-- arrows nginx -> backends -->
+    <line x1="180" y1="336" x2="180" y2="388" stroke="#22d3ee" stroke-width="2" marker-end="url(#a)"/>
+    <line x1="480" y1="336" x2="480" y2="388" stroke="#22d3ee" stroke-width="2" marker-end="url(#a)"/>
+    <text x="330" y="366" text-anchor="middle" font-size="13" fill="#8b95a4">least_conn, no sticky sessions</text>
+
+    <!-- backends -->
+    <rect x="40" y="390" width="280" height="140" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="56" y="416" font-size="16" font-weight="600">backend-1, Node 22 + Fastify 5</text>
+    <text x="56" y="438" font-size="13" fill="#8b95a4">:3100 internal, never published</text>
+    <text x="56" y="460" font-size="14">REST routes -> services -> repositories</text>
+    <text x="56" y="480" font-size="14">WS gateway snapland.v1 (interest)</text>
+    <text x="56" y="500" font-size="14">infra: pg Pool, ioredis, EventBus</text>
+    <text x="56" y="520" font-size="13" fill="#8b95a4">INSTANCE_ID=backend-1 (logs, origin)</text>
+
+    <rect x="340" y="390" width="280" height="140" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="2"/>
+    <text x="356" y="416" font-size="16" font-weight="600">backend-2, identical image</text>
+    <text x="356" y="438" font-size="13" fill="#8b95a4">differs only in INSTANCE_ID</text>
+    <text x="356" y="460" font-size="14">stateless: any replica serves any</text>
+    <text x="356" y="480" font-size="14">request or socket; state is in the</text>
+    <text x="356" y="500" font-size="14">stores below, never in the process</text>
+    <text x="356" y="520" font-size="13" fill="#8b95a4">(except per-socket queues, L1 caches)</text>
+
+    <!-- fan-out callout -->
+    <rect x="650" y="390" width="270" height="140" rx="12" fill="#161b22" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="666" y="414" font-size="14" font-weight="600" fill="#22d3ee">Cross-instance fan-out (ADR-0004)</text>
+    <text x="666" y="436" font-size="13">1. backend-1 serves its own sockets</text>
+    <text x="666" y="454" font-size="13">2. PUBLISH snap:ch:&lt;channel&gt; to Redis</text>
+    <text x="666" y="472" font-size="13">3. backend-2 receives it (it drops</text>
+    <text x="666" y="490" font-size="13">&#160;&#160;&#160;&#160;only envelopes it sent itself)</text>
+    <text x="666" y="508" font-size="13">4. sends to sockets in that viewport</text>
+    <text x="666" y="525" font-size="13" fill="#8b95a4">lost? the REST change feed repairs</text>
+
+    <!-- arrows backends -> stores: each replica drops onto one shared access line; every store hangs off it -->
+    <line x1="180" y1="530" x2="180" y2="566" stroke="#8b95a4" stroke-width="2"/>
+    <line x1="480" y1="530" x2="480" y2="566" stroke="#8b95a4" stroke-width="2"/>
+    <line x1="180" y1="566" x2="785" y2="566" stroke="#8b95a4" stroke-width="2"/>
+    <text x="330" y="558" text-anchor="middle" font-size="12" fill="#8b95a4">both replicas use all three stores</text>
+    <line x1="180" y1="566" x2="180" y2="598" stroke="#8b95a4" stroke-width="2" marker-end="url(#m)"/>
+    <text x="188" y="590" font-size="12" fill="#8b95a4">SQL</text>
+    <line x1="480" y1="566" x2="480" y2="598" stroke="#8b95a4" stroke-width="2" marker-end="url(#m)"/>
+    <text x="488" y="590" font-size="12" fill="#8b95a4">Redis commands, pub/sub (both ways)</text>
+    <line x1="785" y1="566" x2="785" y2="598" stroke="#8b95a4" stroke-width="2" marker-end="url(#m)"/>
+    <text x="793" y="590" font-size="12" fill="#8b95a4">L2 bodies</text>
+
+    <!-- stores -->
+    <rect x="40" y="600" width="280" height="140" rx="12" fill="#161b22" stroke="#e8ebf0" stroke-width="1.5"/>
+    <text x="56" y="626" font-size="16" font-weight="600">PostgreSQL 17 + PostGIS 3.5</text>
+    <text x="56" y="648" font-size="13" fill="#8b95a4">durable, transactional</text>
+    <text x="56" y="670" font-size="14">areas, area_versions, users</text>
+    <text x="56" y="690" font-size="14">sessions, audit_logs</text>
+    <text x="56" y="710" font-size="14">schema from the `migrate` one-shot</text>
+    <text x="56" y="730" font-size="13" fill="#8b95a4">advisory locks: change feed, retention</text>
+
+    <rect x="340" y="600" width="280" height="140" rx="12" fill="#161b22" stroke="#e8ebf0" stroke-width="1.5"/>
+    <text x="356" y="626" font-size="16" font-weight="600">Redis 7.4 `redis` - noeviction</text>
+    <text x="356" y="648" font-size="13" fill="#8b95a4">shared ephemeral, TTL-bound</text>
+    <text x="356" y="670" font-size="14">pub/sub channels snap:ch:&lt;name&gt;</text>
+    <text x="356" y="690" font-size="14">rate limits, tickets, revocations</text>
+    <text x="356" y="710" font-size="14">presence, locks, draft ownership</text>
+    <text x="356" y="730" font-size="14">cache generations (invalidation)</text>
+
+    <rect x="650" y="600" width="270" height="140" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="666" y="626" font-size="16" font-weight="600">Redis 7.4 `redis-cache`</text>
+    <text x="666" y="648" font-size="13" fill="#8b95a4">allkeys-lru: shared, disposable</text>
+    <text x="666" y="670" font-size="14">L2 bbox response bodies (gzip)</text>
+    <text x="666" y="690" font-size="14">used by both replicas</text>
+    <text x="666" y="710" font-size="14">the app runs without it (L1 only)</text>
+    <text x="666" y="730" font-size="13" fill="#8b95a4">churn can never evict critical keys</text>
+
+    <text x="480" y="768" text-anchor="middle" font-size="13" fill="#8b95a4">solid cyan = HTTP JSON /api/v1 (commands), dashed cyan = WebSocket snapland.v1 (events), grey = data access: SQL, Redis commands + pub/sub, L2 bodies</text>
+    <text x="480" y="790" text-anchor="middle" font-size="13" fill="#8b95a4">One published HTTP port, two stateless replicas, three stores: durable (PostgreSQL), shared-ephemeral (Redis), disposable (redis-cache).</text>
+    <text x="480" y="812" text-anchor="middle" font-size="13" fill="#8b95a4">The stores are also published on 127.0.0.1 (55432, 56379, 56380) for local tooling and the integration tests; the backends never are.</text>
+  </g>
+</svg>

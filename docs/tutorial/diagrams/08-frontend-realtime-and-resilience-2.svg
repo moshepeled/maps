@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 660" width="960" height="660" role="img" aria-labelledby="title2">
+  <title id="title2">The RealtimeClient state machine with its timers (the first attempt follows the same grace and degrade timers), and the inbound-only liveness timeline</title>
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrm2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="660" fill="#111418"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" fill="#e8ebf0">
+    <text x="480" y="34" text-anchor="middle" font-size="18" font-weight="600">Connection states (RealtimeClient.ts) and the timers that move between them</text>
+
+    <!-- states -->
+    <rect x="40" y="80" width="160" height="50" rx="25" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="120" y="110" text-anchor="middle" font-weight="600">connecting</text>
+
+    <rect x="400" y="80" width="160" height="50" rx="25" fill="#0f2a30" stroke="#22d3ee" stroke-width="2"/>
+    <text x="480" y="110" text-anchor="middle" font-weight="600">live</text>
+
+    <rect x="400" y="290" width="160" height="50" rx="25" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="480" y="320" text-anchor="middle" font-weight="600">reconnecting</text>
+
+    <rect x="760" y="290" width="160" height="50" rx="25" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="840" y="320" text-anchor="middle" font-weight="600">limited</text>
+
+    <rect x="760" y="440" width="160" height="50" rx="25" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="840" y="470" text-anchor="middle" font-weight="600">offline</text>
+
+    <rect x="40" y="440" width="160" height="50" rx="25" fill="#161b22" stroke="#8b95a4" stroke-width="1.5"/>
+    <text x="120" y="470" text-anchor="middle" font-weight="600">signed-out</text>
+
+    <!-- connecting -> live -->
+    <path d="M200 105 L400 105" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr2)"/>
+    <text x="300" y="96" text-anchor="middle" font-size="13" fill="#22d3ee">welcome</text>
+
+    <!-- connecting -> reconnecting (start() arms the same timers as beginOutage) -->
+    <path d="M150 130 L150 250 L430 250 L430 290" stroke="#8b95a4" stroke-width="1.5" stroke-dasharray="6 4" fill="none" marker-end="url(#arrm2)"/>
+    <text x="290" y="268" text-anchor="middle" font-size="13" fill="#8b95a4">graceTimer 3 s, no welcome yet</text>
+    <text x="290" y="286" text-anchor="middle" font-size="13" fill="#8b95a4">(start() arms it too)</text>
+
+    <!-- live -> reconnecting -->
+    <path d="M460 130 L460 290" stroke="#8b95a4" stroke-width="1.5" fill="none" marker-end="url(#arrm2)"/>
+    <text x="452" y="190" text-anchor="end" font-size="13" fill="#8b95a4">socket closed -></text>
+    <text x="452" y="208" text-anchor="end" font-size="13" fill="#8b95a4">beginOutage(); graceTimer</text>
+    <text x="452" y="226" text-anchor="end" font-size="13" fill="#8b95a4">fires after 3 s (blips hidden)</text>
+
+    <!-- reconnecting -> live -->
+    <path d="M500 290 L500 130" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr2)"/>
+    <text x="508" y="190" font-size="13" fill="#22d3ee">welcome (isReconnect):</text>
+    <text x="508" y="208" font-size="13" fill="#22d3ee">restate, resume draft,</text>
+    <text x="508" y="226" font-size="13" fill="#22d3ee">re-lock, pullFeed</text>
+
+    <!-- reconnecting -> limited -->
+    <path d="M560 315 L760 315" stroke="#8b95a4" stroke-width="1.5" fill="none" marker-end="url(#arrm2)"/>
+    <text x="660" y="306" text-anchor="middle" font-size="13" fill="#8b95a4">degradeTimer 10 s, REST ok</text>
+    <text x="660" y="336" text-anchor="middle" font-size="13" fill="#8b95a4">-> poll feed 5 s, presence 15 s</text>
+
+    <!-- limited -> live -->
+    <path d="M840 290 L840 165 L545 165 L545 130" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr2)"/>
+    <text x="692" y="157" text-anchor="middle" font-size="13" fill="#22d3ee">welcome -> resync, toast if outage >= 10 s</text>
+
+    <!-- -> offline -->
+    <path d="M840 340 L840 440" stroke="#8b95a4" stroke-width="1.5" fill="none" marker-end="url(#arrm2)"/>
+    <text x="832" y="385" text-anchor="end" font-size="13" fill="#8b95a4">navigator.onLine false</text>
+    <text x="832" y="403" text-anchor="end" font-size="13" fill="#8b95a4">or 3 REST failures</text>
+
+    <!-- offline -> reconnecting (ends inside the reconnecting box's bottom edge) -->
+    <path d="M760 465 L520 465 L520 340" stroke="#8b95a4" stroke-width="1.5" fill="none" marker-end="url(#arrm2)"/>
+    <text x="640" y="456" text-anchor="middle" font-size="13" fill="#8b95a4">'online' event -> retryNow()</text>
+    <text x="640" y="482" text-anchor="middle" font-size="13" fill="#8b95a4">(-> live if still welcomed)</text>
+
+    <!-- reconnecting -> signed-out (labels sit left of the vertical segment) -->
+    <path d="M440 340 L440 478 L200 478" stroke="#8b95a4" stroke-width="1.5" fill="none" marker-end="url(#arrm2)"/>
+    <text x="428" y="385" text-anchor="end" font-size="13" fill="#8b95a4">ticket says SESSION_ENDED,</text>
+    <text x="428" y="403" text-anchor="end" font-size="13" fill="#8b95a4">4401 + refresh failed,</text>
+    <text x="428" y="421" text-anchor="end" font-size="13" fill="#8b95a4">or endSession() (dialog up)</text>
+
+    <!-- signed-out -> connecting -->
+    <path d="M120 440 L120 130" stroke="#22d3ee" stroke-width="2" fill="none" marker-end="url(#arr2)"/>
+    <text x="128" y="340" font-size="13" fill="#22d3ee">start() after</text>
+    <text x="128" y="358" font-size="13" fill="#22d3ee">signing in again</text>
+
+    <!-- liveness timeline -->
+    <rect x="40" y="520" width="880" height="120" rx="12" fill="#161b22" stroke="#8b95a4" stroke-width="1"/>
+    <text x="60" y="546" font-weight="600">Liveness is judged on INBOUND frames only (onInbound re-arms two timers)</text>
+    <line x1="80" y1="596" x2="880" y2="596" stroke="#8b95a4" stroke-width="2"/>
+    <g fill="#22d3ee">
+      <circle cx="80" cy="596" r="5"/>
+      <circle cx="420" cy="596" r="5"/>
+      <circle cx="760" cy="596" r="5"/>
+      <circle cx="845" cy="596" r="6" fill="#e8ebf0"/>
+    </g>
+    <text x="60" y="622" font-size="13">0 s: last frame received</text>
+    <text x="420" y="622" text-anchor="middle" font-size="13">20 s: send ping (pong = proof of life)</text>
+    <text x="760" y="622" text-anchor="middle" font-size="13">40 s: ping again</text>
+    <text x="845" y="580" text-anchor="middle" font-size="13">45 s: close 4408</text>
+    <text x="900" y="546" text-anchor="end" font-size="13" fill="#8b95a4">also: no welcome within 5 s of open -> 4408</text>
+  </g>
+</svg>

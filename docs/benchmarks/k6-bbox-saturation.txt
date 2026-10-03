@@ -1,0 +1,76 @@
+
+
+  █ THRESHOLDS 
+
+    burst_created
+    ✗ 'count==50' count=57
+
+    burst_rate_limited
+    ✗ 'count==10' count=0
+
+    checks
+    ✓ 'rate>0.99' rate=99.01%
+
+    http_req_duration{scenario:bbox}
+    ✗ 'p(95)<500' p(95)=2.59s
+
+    http_req_duration{scenario:writes}
+    ✗ 'p(95)<300' p(95)=7.38s
+
+    http_req_failed{scenario:bbox}
+    ✓ 'rate<0.01' rate=0.03%
+
+    http_req_failed{scenario:writes}
+    ✗ 'rate<0.01' rate=17.11%
+
+    http_reqs{scenario:bbox}
+    ✓ 'count>0' count=3174
+
+    http_reqs{scenario:writes}
+    ✓ 'count>0' count=187
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 3361   17.984231/s
+    checks_succeeded...: 99.01% 3328 out of 3361
+    checks_failed......: 0.98%  33 out of 3361
+
+    ✗ create 201
+      ↳  82% — ✓ 155 / ✗ 32
+    ✗ bbox 200
+      ↳  99% — ✓ 3173 / ✗ 1
+
+    CUSTOM
+    burst_created..................: 57     0.304999/s
+    burst_rate_limited.............: 0      0/s
+    x_cache_bypass.................: 1      0.005351/s
+    x_cache_hit_l1.................: 55     0.294297/s
+    x_cache_hit_l2.................: 9      0.048158/s
+    x_cache_miss...................: 3108   16.630464/s
+
+    HTTP
+    http_req_duration..............: avg=1.91s min=4.49ms  med=1.79s p(95)=4.38s  p(99)=6.8s   max=11.56s
+      { expected_response:true }...: avg=1.86s min=4.49ms  med=1.79s p(95)=3.15s  p(99)=6.74s  max=9.62s 
+      { scenario:bbox }............: avg=1.71s min=23.39ms med=1.78s p(95)=2.59s  p(99)=3.03s  max=11.56s
+      { scenario:writes }..........: avg=5.5s  min=45.36ms med=6.08s p(95)=7.38s  p(99)=9.05s  max=9.16s 
+    http_req_failed................: 1.04%  36 out of 3442
+      { scenario:bbox }............: 0.03%  1 out of 3174
+      { scenario:writes }..........: 17.11% 32 out of 187
+    http_reqs......................: 3442   18.41765/s
+      { scenario:bbox }............: 3174   16.98362/s
+      { scenario:writes }..........: 187    1.00061/s
+
+    EXECUTION
+    dropped_iterations.............: 108    0.577893/s
+    iteration_duration.............: avg=6.04s min=45.86ms med=5.98s p(95)=12.23s p(99)=14.24s max=2m5s  
+    iterations.....................: 1094   5.853838/s
+    vus............................: 12     min=0          max=71
+    vus_max........................: 71     min=25         max=71
+
+    NETWORK
+    data_received..................: 1.0 GB 5.6 MB/s
+    data_sent......................: 2.3 MB 12 kB/s
+
+
+

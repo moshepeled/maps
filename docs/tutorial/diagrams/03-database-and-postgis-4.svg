@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" width="960" height="640" role="img" aria-labelledby="t4 d4">
+  <title id="t4">History is append-only; the change feed has no gaps</title>
+  <desc id="d4">Top: the areas row moves from version 1 to 3 while a full snapshot row is appended to area_versions in the same transaction for each step; a trigger rejects UPDATE on the history. Bottom: why nextval alone is not enough for a change feed, and how the transaction-scoped advisory lock 7210001 makes commit order equal change_seq order.</desc>
+  <defs>
+    <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+    <marker id="m4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b95a4"/>
+    </marker>
+  </defs>
+  <rect width="960" height="640" fill="#111418"/>
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#e8ebf0">
+    <text x="480" y="36" font-size="20" text-anchor="middle" font-weight="600">History is append-only; the change feed has no gaps</text>
+
+    <!-- areas row timeline -->
+    <text x="30" y="72" font-size="12" fill="#8b95a4">areas - the current row (version, change_seq)</text>
+    <rect x="30" y="82" width="250" height="60" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="155" y="107" font-size="14" text-anchor="middle" font-weight="600">v1, create</text>
+    <text x="155" y="128" font-size="12" text-anchor="middle" fill="#8b95a4">change_seq 41, deleted_at NULL</text>
+    <line x1="280" y1="112" x2="353" y2="112" stroke="#22d3ee" stroke-width="2" marker-end="url(#a4)"/>
+    <text x="317" y="104" font-size="11" text-anchor="middle" fill="#8b95a4">PATCH name</text>
+
+    <rect x="355" y="82" width="250" height="60" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="480" y="107" font-size="14" text-anchor="middle" font-weight="600">v2, update</text>
+    <text x="480" y="128" font-size="12" text-anchor="middle" fill="#8b95a4">change_seq 57, deleted_at NULL</text>
+    <line x1="605" y1="112" x2="678" y2="112" stroke="#22d3ee" stroke-width="2" marker-end="url(#a4)"/>
+    <text x="642" y="104" font-size="11" text-anchor="middle" fill="#8b95a4">DELETE</text>
+
+    <rect x="680" y="82" width="250" height="60" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="805" y="107" font-size="14" text-anchor="middle" font-weight="600">v3, delete (tombstone)</text>
+    <text x="805" y="128" font-size="12" text-anchor="middle" fill="#8b95a4">change_seq 63, deleted_at set</text>
+
+    <!-- snapshots -->
+    <line x1="155" y1="142" x2="155" y2="178" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#m4)"/>
+    <line x1="480" y1="142" x2="480" y2="178" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#m4)"/>
+    <line x1="805" y1="142" x2="805" y2="178" stroke="#8b95a4" stroke-width="1.5" marker-end="url(#m4)"/>
+    <text x="175" y="166" font-size="11" fill="#8b95a4">area_versions - one full snapshot per step</text>
+    <text x="500" y="166" font-size="11" fill="#8b95a4">same transaction, PK (area_id, version)</text>
+
+    <rect x="30" y="180" width="250" height="90" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="155" y="204" font-size="14" text-anchor="middle">(id, 1), op = create</text>
+    <text x="155" y="226" font-size="12" text-anchor="middle" fill="#8b95a4">changed: name, description, geometry</text>
+    <text x="155" y="246" font-size="12" text-anchor="middle" fill="#8b95a4">change_seq 41, actor_id, request_id</text>
+
+    <rect x="355" y="180" width="250" height="90" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="480" y="204" font-size="14" text-anchor="middle">(id, 2), op = update</text>
+    <text x="480" y="226" font-size="12" text-anchor="middle" fill="#8b95a4">changed: name, base_version 1</text>
+    <text x="480" y="246" font-size="12" text-anchor="middle" fill="#8b95a4">merged false, change_seq 57</text>
+
+    <rect x="680" y="180" width="250" height="90" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="805" y="204" font-size="14" text-anchor="middle">(id, 3), op = delete</text>
+    <text x="805" y="226" font-size="12" text-anchor="middle" fill="#8b95a4">changed: deleted</text>
+    <text x="805" y="246" font-size="12" text-anchor="middle" fill="#8b95a4">change_seq 63</text>
+
+    <rect x="30" y="284" width="900" height="40" rx="10" fill="#161b22" stroke="#2c333d"/>
+    <text x="480" y="309" font-size="12" text-anchor="middle" fill="#22d3ee">BEFORE UPDATE trigger -> restrict_violation (23001). Rows leave only via ON DELETE CASCADE when retention purges the area.</text>
+
+    <!-- change feed ordering -->
+    <text x="480" y="362" font-size="16" text-anchor="middle" font-weight="600">Why every write holds pg_advisory_xact_lock(7210001) from nextval to COMMIT</text>
+
+    <rect x="30" y="378" width="440" height="200" rx="10" fill="#1a1f26" stroke="#2c333d"/>
+    <text x="250" y="402" font-size="14" text-anchor="middle" font-weight="600">Without the lock (sequences are not commit-ordered)</text>
+    <text x="50" y="428" font-size="13">1. Tx A: nextval -> 100</text>
+    <text x="50" y="450" font-size="13">2. Tx B: nextval -> 101</text>
+    <text x="50" y="472" font-size="13">3. Tx B commits first</text>
+    <text x="50" y="494" font-size="13">4. Reader since=99 -> sees 101, nextSince = 101</text>
+    <text x="50" y="516" font-size="13">5. Tx A commits: seq 100 is now behind the reader</text>
+    <text x="250" y="552" font-size="13" text-anchor="middle" fill="#8b95a4">Change 100 is skipped forever - a silent gap.</text>
+
+    <rect x="490" y="378" width="440" height="200" rx="10" fill="#1a1f26" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="710" y="402" font-size="14" text-anchor="middle" font-weight="600">With the lock (held ~ 1-2 ms, released at COMMIT)</text>
+    <text x="510" y="428" font-size="13">1. Tx A: takes lock 7210001, nextval -> 100</text>
+    <text x="510" y="450" font-size="13">2. Tx B: lock request blocks (A still holds it)</text>
+    <text x="510" y="472" font-size="13">3. Tx A commits -> lock released</text>
+    <text x="510" y="494" font-size="13">4. Tx B: takes lock, nextval -> 101, commits</text>
+    <text x="510" y="516" font-size="13">5. Reader since=99 sees 100, then 101 - in order</text>
+    <text x="710" y="552" font-size="12" text-anchor="middle" fill="#8b95a4">Commit order = seq order, cost: a ceiling of hundreds of commits/s</text>
+
+    <text x="480" y="612" font-size="14" text-anchor="middle" fill="#8b95a4">Figure 4 - Every mutation appends an immutable snapshot; the advisory lock makes change_seq a safe resync cursor.</text>
+  </g>
+</svg>

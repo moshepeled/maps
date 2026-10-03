@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 960" width="960" height="960" role="img" aria-labelledby="t1 d1">
+  <title id="t1">POST /api/v1/areas: the write pipeline, where it can fail, and what each step costs</title>
+  <desc id="d1">A vertical pipeline from the browser through nginx, the Fastify hooks, the areas service, one PostgreSQL transaction, cache invalidation, the bus event, the audit row and the reply. Each step shows the status it fails with and whether it costs a drawing action.</desc>
+  <defs>
+    <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 15px; fill: #e8ebf0; }
+    .m { fill: #8b95a4; font-size: 13px; }
+    .c { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 13px; }
+    .h { font-size: 19px; font-weight: 600; }
+    .k { font-size: 12.5px; fill: #8b95a4; letter-spacing: .06em; }
+    .p { font-size: 12.5px; }
+    .box { fill: #1a1f26; stroke: #2b3340; stroke-width: 1.5; }
+    .tx { fill: #141a21; stroke: #22d3ee; stroke-width: 1.5; stroke-dasharray: 6 4; }
+    .pill { fill: #171c23; stroke: #3a4453; stroke-width: 1; }
+    .acc { fill: #22d3ee; }
+    .line { stroke: #22d3ee; stroke-width: 1.5; }
+  </style>
+  <rect width="960" height="960" fill="#111418"/>
+
+  <text class="h" x="30" y="38">POST /api/v1/areas - one write, hop by hop</text>
+  <text class="k" x="30" y="76">STEP</text>
+  <text class="k" x="555" y="76">FAILS WITH</text>
+  <text class="k" x="790" y="76">COSTS AN ACTION?</text>
+
+  <!-- row 1: browser -->
+  <rect class="box" x="30" y="92" width="510" height="46" rx="8"/>
+  <text x="44" y="111">Browser: validatePolygon() runs first - line of defence 1/4</text>
+  <text class="c m" x="44" y="130">POST /api/v1/areas { id, name, description?, geometry }</text>
+  <line class="line" x1="285" y1="138" x2="285" y2="150" marker-end="url(#ar1)"/>
+
+  <!-- row 2: nginx -->
+  <rect class="box" x="30" y="150" width="510" height="46" rx="8"/>
+  <text x="44" y="169">nginx -> backend-1 or backend-2 (either replica may serve it)</text>
+  <text class="c m" x="44" y="188">Alice's WebSocket may live on the other instance</text>
+  <line class="line" x1="285" y1="196" x2="285" y2="208" marker-end="url(#ar1)"/>
+
+  <!-- row 3: authenticate -->
+  <rect class="box" x="30" y="208" width="510" height="46" rx="8"/>
+  <text x="44" y="227">onRequest: app.authenticate</text>
+  <text class="c m" x="44" y="246">bearer token -> request.auth (userId, sessionId, role)</text>
+  <rect class="pill" x="555" y="214" width="220" height="34" rx="17"/>
+  <text class="p" x="665" y="236" text-anchor="middle">401 UNAUTHENTICATED</text>
+  <rect class="pill" x="790" y="214" width="150" height="34" rx="17"/>
+  <text class="p acc" x="865" y="236" text-anchor="middle">free</text>
+  <line class="line" x1="285" y1="254" x2="285" y2="266" marker-end="url(#ar1)"/>
+
+  <!-- row 4: transport schema -->
+  <rect class="box" x="30" y="266" width="510" height="46" rx="8"/>
+  <text x="44" y="285">Fastify body validation - the transport schema</text>
+  <text class="c m" x="44" y="304">CreateAreaRequestSchema: JSON shape and abuse caps only</text>
+  <rect class="pill" x="555" y="272" width="220" height="34" rx="17"/>
+  <text class="p" x="665" y="294" text-anchor="middle">400 VALIDATION_FAILED</text>
+  <rect class="pill" x="790" y="272" width="150" height="34" rx="17"/>
+  <text class="p acc" x="865" y="294" text-anchor="middle">free</text>
+  <line class="line" x1="285" y1="312" x2="285" y2="324" marker-end="url(#ar1)"/>
+
+  <!-- row 5: drawRateLimit -->
+  <rect class="box" x="30" y="324" width="510" height="46" rx="8" stroke="#22d3ee"/>
+  <text x="44" y="343">preHandler: app.drawRateLimit('area.create') - consume 1 of 50/min</text>
+  <text class="c m" x="44" y="362">sets X-Draw-RateLimit-Limit / -Remaining / -Reset</text>
+  <rect class="pill" x="555" y="330" width="220" height="34" rx="17"/>
+  <text class="p" x="665" y="352" text-anchor="middle">429 RATE_LIMITED</text>
+  <rect class="pill" x="790" y="330" width="150" height="34" rx="17"/>
+  <text class="p acc" x="865" y="347" text-anchor="middle">the 429 is free;</text>
+  <text class="p" x="865" y="361" text-anchor="middle">every step below: 1</text>
+  <line class="line" x1="285" y1="370" x2="285" y2="382" marker-end="url(#ar1)"/>
+
+  <!-- row 6: sanitise -->
+  <rect class="box" x="30" y="382" width="510" height="46" rx="8"/>
+  <text x="44" y="401">service.create -> prepareCreate: sanitise the text</text>
+  <text class="c m" x="44" y="420">sanitizeName / sanitizeDescription (empty or too long -> 400)</text>
+  <rect class="pill" x="555" y="388" width="220" height="34" rx="17"/>
+  <text class="p" x="665" y="410" text-anchor="middle">400 VALIDATION_FAILED (name)</text>
+  <rect class="pill" x="790" y="388" width="150" height="34" rx="17"/>
+  <text class="p" x="865" y="410" text-anchor="middle">costs 1</text>
+  <line class="line" x1="285" y1="428" x2="285" y2="440" marker-end="url(#ar1)"/>
+
+  <!-- row 7: geometry -->
+  <rect class="box" x="30" y="440" width="510" height="46" rx="8"/>
+  <text x="44" y="459">Service: validatePolygon, stages 1-12 - line of defence 2/4</text>
+  <text class="c m" x="44" y="478">7 dp, dedupe, closure, simplicity, holes, extent, area, CCW</text>
+  <rect class="pill" x="555" y="446" width="220" height="34" rx="17"/>
+  <text class="p" x="665" y="468" text-anchor="middle">422 INVALID_GEOMETRY + sub-code</text>
+  <rect class="pill" x="790" y="446" width="150" height="34" rx="17"/>
+  <text class="p" x="865" y="468" text-anchor="middle">costs 1</text>
+  <line class="line" x1="285" y1="486" x2="285" y2="498" marker-end="url(#ar1)"/>
+
+  <!-- row 8: squatting guard -->
+  <rect class="box" x="30" y="498" width="510" height="46" rx="8"/>
+  <text x="44" y="517">#assertNotSquatted: drafts.getOwner(id) in Redis (fail-open)</text>
+  <text class="c m" x="44" y="536">another user's live draft id -> refused before any DB work</text>
+  <rect class="pill" x="555" y="504" width="220" height="34" rx="17"/>
+  <text class="p" x="665" y="526" text-anchor="middle">409 AREA_ID_CONFLICT</text>
+  <rect class="pill" x="790" y="504" width="150" height="34" rx="17"/>
+  <text class="p" x="865" y="526" text-anchor="middle">costs 1</text>
+  <line class="line" x1="285" y1="544" x2="285" y2="556" marker-end="url(#ar1)"/>
+
+  <!-- row 9: transaction -->
+  <rect class="tx" x="30" y="556" width="510" height="160" rx="10"/>
+  <text class="acc" x="44" y="578">db.withTransaction - BEGIN ... COMMIT (one transaction)</text>
+  <text class="c" x="44" y="602">1  checkGeometry: ST_IsValid, ST_Area - line of defence 3/4</text>
+  <text class="c" x="44" y="626">2  lockChangeFeed: pg_advisory_xact_lock(7210001) until COMMIT</text>
+  <text class="c" x="44" y="650">3  insert ... nextval(area_change_seq) ... ON CONFLICT DO NOTHING</text>
+  <text class="c m" x="60" y="668">no row -> replay (200) or 409</text>
+  <text class="c m" x="60" y="684">CHECK 23514 -> 422 geometry / 400 text - line of defence 4/4</text>
+  <text class="c" x="44" y="706">4  insertVersionFromCurrent (op 'create') -> reload -> COMMIT</text>
+  <rect class="pill" x="555" y="590" width="220" height="34" rx="17"/>
+  <text class="p" x="665" y="612" text-anchor="middle">422 GEOS_INVALID / AREA_TOO_*</text>
+  <rect class="pill" x="555" y="640" width="220" height="34" rx="17"/>
+  <text class="p" x="665" y="662" text-anchor="middle">200 replay, 409, 422 / 400</text>
+  <rect class="pill" x="790" y="618" width="150" height="34" rx="17"/>
+  <text class="p" x="865" y="640" text-anchor="middle">costs 1</text>
+  <line class="line" x1="285" y1="716" x2="285" y2="728" marker-end="url(#ar1)"/>
+
+  <!-- row 10: afterCommit -->
+  <rect class="box" x="30" y="728" width="510" height="46" rx="8"/>
+  <text x="44" y="747">afterCommit: invalidate([old, new bbox]) THEN publish('areas')</text>
+  <text class="c m" x="44" y="766">both awaited before the reply; neither throws</text>
+  <rect class="pill" x="555" y="734" width="220" height="34" rx="17"/>
+  <text class="p m" x="665" y="756" text-anchor="middle">never fails the request</text>
+  <line class="line" x1="285" y1="774" x2="285" y2="786" marker-end="url(#ar1)"/>
+
+  <!-- row 11: audit -->
+  <rect class="box" x="30" y="786" width="510" height="46" rx="8"/>
+  <text x="44" y="805">audit.record('area.create', success) + metrics</text>
+  <text class="c m" x="44" y="824">queued; one batch INSERT ... SELECT * FROM unnest(...) <= 1 s later</text>
+  <line class="line" x1="285" y1="832" x2="285" y2="844" marker-end="url(#ar1)"/>
+
+  <!-- row 12: reply -->
+  <rect class="box" x="30" y="844" width="510" height="46" rx="8" stroke="#22d3ee"/>
+  <text x="44" y="863">Reply 201 + Location + ETag "v1"</text>
+  <text class="c m" x="44" y="882">or 200 + Idempotent-Replay: true when the create was a replay</text>
+
+  <text class="m" x="30" y="922">Figure 5.1 - Every request that reaches drawRateLimit costs one drawing action, whatever happens after it.</text>
+  <text class="m" x="30" y="940">Only a 401, a transport 400 and the 429 itself are free (SPEC section 6.3; areas-rate-limit.int.test.ts:33).</text>
+</svg>

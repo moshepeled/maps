@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" font-family="system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <title>The Snapland test pyramid: five levels, their tools, where they live and how many there are</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  <rect width="960" height="640" fill="#111418"/>
+  <text x="480" y="36" text-anchor="middle" fill="#e8ebf0" font-size="20" font-weight="600">The test pyramid (SPEC section 12.2) as it exists in the tree</text>
+
+  <!-- Load -->
+  <rect x="200" y="60" width="200" height="72" rx="10" fill="#1b2027" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="300" y="90" text-anchor="middle" fill="#e8ebf0" font-size="16" font-weight="600">Load</text>
+  <text x="300" y="112" text-anchor="middle" fill="#8b95a4" font-size="13">k6</text>
+  <text x="600" y="82" fill="#e8ebf0" font-size="14">loadtest/bbox.js: one k6 script (bbox reads,</text>
+  <text x="600" y="102" fill="#e8ebf0" font-size="14">the draw-limit burst); not a workspace</text>
+  <text x="600" y="124" fill="#8b95a4" font-size="13">results: docs/BENCHMARKS.md, docs/benchmarks/</text>
+
+  <!-- E2E -->
+  <rect x="140" y="150" width="320" height="72" rx="10" fill="#1b2027" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="300" y="180" text-anchor="middle" fill="#e8ebf0" font-size="16" font-weight="600">End to end</text>
+  <text x="300" y="202" text-anchor="middle" fill="#8b95a4" font-size="13">Playwright 1.63, two browser contexts</text>
+  <text x="600" y="172" fill="#e8ebf0" font-size="14">e2e/tests/*.spec.ts - 6 specs, workers: 1</text>
+  <text x="600" y="192" fill="#e8ebf0" font-size="14">against nginx on http://localhost:5173</text>
+  <text x="600" y="214" fill="#8b95a4" font-size="13">npm run test:e2e (E2E compose override)</text>
+
+  <!-- Integration -->
+  <rect x="110" y="240" width="380" height="72" rx="10" fill="#1b2027" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="300" y="270" text-anchor="middle" fill="#e8ebf0" font-size="16" font-weight="600">Integration</text>
+  <text x="300" y="292" text-anchor="middle" fill="#8b95a4" font-size="13">Vitest 5, real PostgreSQL 17/PostGIS 3.5, Redis 7.4</text>
+  <text x="600" y="262" fill="#e8ebf0" font-size="14">backend/test/integration/**/*.int.test.ts - 49 files</text>
+  <text x="600" y="282" fill="#e8ebf0" font-size="14">in-process Fastify (inject / listen port 0), ws client</text>
+  <text x="600" y="304" fill="#8b95a4" font-size="13">npm run test:integration (own DB + Redis prefix per run)</text>
+
+  <!-- Docker line -->
+  <line x1="40" y1="330" x2="920" y2="330" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="8 6"/>
+  <text x="920" y="324" text-anchor="end" fill="#22d3ee" font-size="13">above this line: docker compose up -d postgres redis redis-cache</text>
+  <text x="920" y="348" text-anchor="end" fill="#22d3ee" font-size="13">below this line: no Docker at all - this is what npm run verify runs</text>
+
+  <!-- Unit -->
+  <rect x="50" y="360" width="500" height="72" rx="10" fill="#1b2027" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="300" y="390" text-anchor="middle" fill="#e8ebf0" font-size="16" font-weight="600">Unit and component</text>
+  <text x="300" y="412" text-anchor="middle" fill="#8b95a4" font-size="13">Vitest 5 (node / jsdom), fakes for Db, Redis, sockets, fake timers</text>
+  <text x="600" y="382" fill="#e8ebf0" font-size="14">colocated *.test.ts(x): shared 9, backend 47</text>
+  <text x="600" y="402" fill="#e8ebf0" font-size="14">frontend 66 (9 render React), scripts 3</text>
+  <text x="600" y="424" fill="#8b95a4" font-size="13">npm run test, npm run test:coverage (thresholds)</text>
+
+  <!-- Static -->
+  <rect x="20" y="450" width="560" height="72" rx="10" fill="#1b2027" stroke="#8b95a4" stroke-width="1.5"/>
+  <text x="300" y="480" text-anchor="middle" fill="#e8ebf0" font-size="16" font-weight="600">Static</text>
+  <text x="300" y="502" text-anchor="middle" fill="#8b95a4" font-size="13">tsc strict, ESLint strictTypeChecked, Prettier, banned-dependency audit (R45)</text>
+  <text x="600" y="472" fill="#e8ebf0" font-size="14">all code, every workspace and the repo scripts</text>
+  <text x="600" y="492" fill="#e8ebf0" font-size="14">tsconfig.base.json, eslint.config.js, .prettierrc.json</text>
+  <text x="600" y="514" fill="#8b95a4" font-size="13">npm run lint, format:check, typecheck, check:deps</text>
+
+  <!-- rule -->
+  <rect x="20" y="548" width="920" height="70" rx="10" fill="#0d1a1f" stroke="#22d3ee" stroke-width="1"/>
+  <text x="40" y="574" fill="#e8ebf0" font-size="14" font-weight="600">The one sorting rule (SPEC section 12.2):</text>
+  <text x="40" y="596" fill="#e8ebf0" font-size="14">any test that talks to Redis or PostgreSQL is an integration test (*.int.test.ts) - so unit tests never need Docker.</text>
+</svg>

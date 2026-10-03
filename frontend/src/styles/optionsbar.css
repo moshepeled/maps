@@ -1,0 +1,485 @@
+/* ==========================================================================
+   Options bar and HUD (UX C-05 v2; UI.md v2 section 10.6, section 10.13): the docked HUD above the map at >= 600 px - one row:
+   mode tag, readout, points, message strip, actions, or key hints - and the phone HUD docked above the map
+   below 600 px: readout row + exactly one message line.
+   ========================================================================== */
+
+/* A size container: the narrow-bar steps below follow the bar's own width, which the docked inspector makes
+   narrowest exactly at 1,200 px (UX C-05). */
+.optbar {
+  container: optbar / inline-size;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  height: var(--frame-optbar);
+  padding: 0 10px 0 12px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-subtle);
+  white-space: nowrap;
+}
+.optbar-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--color-border);
+  flex: none;
+}
+
+/* The HUD content group inside the bar: the bar's row continues through it. */
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+/* ------------------------------------------------------------------ mode tag */
+.mode-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: var(--size-mode-tag);
+  padding: 0 10px 0 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.01em;
+  flex: none;
+}
+/* Only the editing kicker (it holds the area's name) gives way, down to its icon and a few letters. */
+.mode-tag--kicker {
+  flex: 0 1 auto;
+  min-width: 72px;
+}
+.mode-tag__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mode-tag--accent {
+  background: var(--color-accent-subtle);
+  box-shadow: inset 0 0 0 1px var(--color-accent-border);
+  color: var(--color-accent-text);
+}
+.mode-tag--neutral {
+  background: var(--color-surface-pressed);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  color: var(--color-text);
+}
+.mode-tag--icon {
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  flex: none;
+}
+
+/* ------------------------------------------------------------------ readout and points (UI.md section 10.6) */
+.readout {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex: none;
+  border-radius: var(--radius-xs);
+}
+.readout__value {
+  font-size: var(--font-size-readout);
+  line-height: var(--line-height-readout);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-readout);
+  color: var(--color-text);
+}
+.readout__unit {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+.readout__ha,
+.readout__delta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.readout .tooltip {
+  top: calc(100% + 8px);
+  left: 0;
+}
+.points {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex: none;
+}
+.points__value {
+  font-size: var(--font-size-readout-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ------------------------------------------------------------------ message strip (one line, .short copy)
+   The strip takes the space left after the fixed items, but never less than room for a .short copy: the narrow
+   steps below free space before it would get less (UX C-05). */
+.hud-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 176px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-inset);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+}
+.hud-msg .msg-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.hud-msg .msg-text .ic {
+  color: var(--color-text-tertiary);
+}
+.msg-text__copy {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.msg-text__copy kbd {
+  height: 18px;
+  min-width: 18px;
+  margin: 0 2px;
+}
+.hud-msg .msg-acts {
+  display: flex;
+  gap: 6px;
+  flex: none;
+  margin-left: auto;
+}
+/* With a selected point's actions: the actions keep their size and only the text gives way, so they never spill
+   over the bar's buttons (UX-AC-117). */
+.hud-msg.with-actions {
+  flex: 1 0 auto;
+  min-width: 0;
+  height: auto;
+  min-height: 28px;
+  padding-right: 3px;
+}
+.hud-msg.with-actions .msg-text {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 96px;
+}
+.hud-msg--error {
+  background: var(--color-danger-bg);
+  box-shadow: inset 0 0 0 1px var(--color-danger-border);
+  color: var(--color-danger-text);
+}
+.hud-msg--error .msg-text .ic {
+  color: var(--color-danger-icon);
+}
+.hud-msg--warning {
+  background: var(--color-warning-bg);
+  box-shadow: inset 0 0 0 1px var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+.hud-msg--warning .msg-text .ic {
+  color: var(--color-warning-icon);
+}
+.hud-msg--armed {
+  background: var(--color-accent-faint);
+  box-shadow: inset 0 0 0 1px var(--color-accent-border);
+  color: var(--color-accent-text);
+}
+.hud-msg--armed .msg-text .ic {
+  color: var(--color-accent-text);
+}
+.hud-msg--rate {
+  background: transparent;
+  padding: 0;
+}
+.rate-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
+  box-shadow: inset 0 0 0 1px var(--color-warning-border);
+  color: var(--color-warning-text);
+  font-size: var(--font-size-2xs);
+  line-height: 16px;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+.rate-chip .ic {
+  color: var(--color-warning-icon);
+}
+
+.hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  margin-left: auto;
+}
+.hud-msg + .hud-actions {
+  margin-left: 0;
+}
+
+/* ------------------------------------------------------------------ key hints and the selection summary */
+.key-hints {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  overflow: hidden;
+}
+.key-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.key-hint__label {
+  color: var(--color-text-secondary);
+}
+.optbar-hints {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+}
+.optbar-hints .key-hint + .key-hint::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--color-text-tertiary);
+}
+.optbar-hints-group {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.optbar-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-weight: var(--font-weight-semibold);
+}
+.optbar-name bdi {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.optbar-name__area {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+.optbar-name__area .num {
+  font-size: var(--font-size-readout-name);
+  color: var(--color-text);
+}
+.optbar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* ------------------------------------------------------------------ history preview legend (UX C-13) */
+.pv-legend {
+  display: flex;
+  gap: 14px;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-xs);
+  color: var(--color-text-secondary);
+}
+.pv-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.pv-legend svg {
+  width: 22px;
+  height: 8px;
+  flex: none;
+  fill: none;
+}
+.pv-legend__casing {
+  stroke: var(--ov-casing);
+  stroke-opacity: var(--ov-casing-opacity);
+}
+.pv-legend__ghost {
+  stroke: var(--ov-ghost-stroke);
+}
+.pv-legend__current {
+  stroke: var(--ov-own-stroke);
+}
+
+/* ------------------------------------------------------------------ narrow bars (UX C-05)
+   Space is freed in this order as the bar narrows: the ha value and the key chips inside buttons, then the mode tag
+   and *Undo* become icons (their text stays the accessible name), then the AREA / POINTS labels and the edit delta;
+   only then does the strip ellipsize. Readout values, points and the action buttons never hide. A selected point's
+   *Move point* / *Delete point* are icons whenever their labels would squeeze the strip. Widths are the bar's
+   (UI.md section 10.6): 1,100 is where the widest Drawing content still fits in full. */
+@container optbar (max-width: 1300px) {
+  .hud-msg .btn-collapsible {
+    aspect-ratio: 1;
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .hud-msg .btn-collapsible .btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+@container optbar (max-width: 1100px) {
+  .readout__ha,
+  .btn-kbd {
+    display: none;
+  }
+}
+/* AreaSelected keeps only `E`, `F2` and `Esc` once the name and all five hints no longer fit. */
+@container optbar (max-width: 980px) {
+  .key-hint--wide {
+    display: none;
+  }
+}
+@container optbar (max-width: 940px) {
+  .mode-tag {
+    width: var(--size-mode-tag);
+    height: var(--size-mode-tag);
+    min-width: 0;
+    justify-content: center;
+    padding: 0;
+    flex: none;
+  }
+  .mode-tag__text,
+  .hud-actions .btn-collapsible .btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .hud-actions .btn-collapsible {
+    aspect-ratio: 1;
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .hud {
+    gap: 10px;
+  }
+}
+@container optbar (max-width: 720px) {
+  .readout .micro,
+  .points .micro,
+  .readout__delta {
+    display: none;
+  }
+  .hud {
+    gap: 8px;
+  }
+  .hud-msg {
+    min-width: 112px;
+  }
+  .hud-msg.with-actions .msg-text {
+    min-width: 0;
+  }
+}
+
+/* ------------------------------------------------------------------ phone HUD (UI.md section 10.13) */
+.phone-hud {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-subtle);
+  overflow: hidden;
+}
+.hud--phone {
+  gap: 12px;
+}
+.hud-lines {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.hud-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.points--phone {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.hud-kicker {
+  margin-left: auto;
+  min-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.hud--phone .hud-msg {
+  height: auto;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.hud--phone .hud-msg--error,
+.hud--phone .hud-msg--warning {
+  border-bottom: 2px solid currentColor;
+}
+/* A selected point's *Move point* / *Delete point* beside the two lines: 44 px icon buttons whose text stays their
+   accessible name, so the readout row and the message keep the 58 px HUD (UI.md section 10.13). */
+.hud-acts--phone {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+.hud-acts--phone .btn-collapsible {
+  aspect-ratio: 1;
+  justify-content: center;
+  padding-inline: 0;
+}
+.hud-acts--phone .btn-collapsible .btn-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.phone-hud .pv-legend {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+/* The label of a button the narrow bar collapsed to its icon (components/frame/useCollapsedTip.tsx): under the
+   button, like the rail's tooltips beside theirs (UX-AC-116). */
+.btn-collapsible {
+  position: relative;
+}
+.btn-tip {
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: default;
+}
