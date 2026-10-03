@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Snapland System Architecture",
+    "output": "docs/architecture/snapland-system.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/moshepeled/maps.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "4455bc718cbd86737e9cf27c35146f0306fe2499"
+    }
+  },
+  "components": [
+    {
+      "id": "spa",
+      "type": "frontend",
+      "label": "Browser SPA",
+      "sublabel": "React + Leaflet",
+      "pos": [40, 290],
+      "size": [150, 64],
+      "sources": [
+        { "path": "frontend/src/map/mapInstance.ts", "line": 63, "label": "Leaflet map" },
+        { "path": "frontend/src/api/http.ts", "line": 161, "end_line": 170, "label": "REST fetch with bearer token" },
+        { "path": "frontend/src/workspace/Workspace.ts", "line": 89, "label": "WebSocket with snapland.v1" }
+      ]
+    },
+    {
+      "id": "tiles",
+      "type": "external",
+      "label": "Map tile servers",
+      "sublabel": "OSM, GovMap ITM, Esri",
+      "pos": [40, 470],
+      "size": [150, 64],
+      "sources": [
+        { "path": "frontend/src/map/baseLayers.ts", "line": 1, "end_line": 20, "label": "OSM and Esri tile URLs" },
+        { "path": "frontend/src/map/itm.ts", "line": 35, "label": "GovMap 2022 ITM cache" },
+        { "path": "docker/nginx/snippets/spa-headers.conf", "line": 2, "end_line": 4, "label": "CSP img-src tile hosts" }
+      ]
+    },
+    {
+      "id": "edge",
+      "type": "security",
+      "label": "nginx edge",
+      "sublabel": ":5173 SPA + reverse proxy",
+      "pos": [340, 290],
+      "size": [150, 64],
+      "sources": [
+        { "path": "docker/nginx/nginx.conf", "line": 84, "end_line": 92, "label": "upstream least_conn" },
+        { "path": "docker/nginx/nginx.conf", "line": 140, "end_line": 154, "label": "/ws upgrade proxy" },
+        { "path": "docker-compose.yml", "line": 209, "end_line": 219, "label": "published on 127.0.0.1:5173" }
+      ]
+    },
+    {
+      "id": "api_one",
+      "type": "backend",
+      "label": "backend-1",
+      "sublabel": "Fastify: REST + /ws",
+      "pos": [620, 130],
+      "size": [170, 64],
+      "sources": [
+        { "path": "docker-compose.yml", "line": 151, "end_line": 158, "label": "replica backend-1" },
+        { "path": "backend/src/app.ts", "line": 39, "end_line": 48, "label": "feature modules" },
+        { "path": "backend/src/modules/realtime/gateway.ts", "line": 94, "end_line": 100, "label": "GET /ws gateway" }
+      ]
+    },
+    {
+      "id": "bus",
+      "type": "messagebus",
+      "label": "Redis (critical)",
+      "sublabel": "pub/sub, tickets, locks",
+      "pos": [620, 290],
+      "size": [170, 64],
+      "sources": [
+        { "path": "backend/src/infra/events/redis-event-bus.ts", "line": 63, "label": "publish" },
+        { "path": "backend/src/infra/events/redis-event-bus.ts", "line": 99, "label": "subscribe" },
+        { "path": "backend/src/infra/auth/ws-tickets.ts", "line": 54, "end_line": 72, "label": "one-time ws tickets" }
+      ]
+    },
+    {
+      "id": "api_two",
+      "type": "backend",
+      "label": "backend-2",
+      "sublabel": "Fastify: REST + /ws",
+      "pos": [620, 450],
+      "size": [170, 64],
+      "sources": [
+        { "path": "docker-compose.yml", "line": 193, "end_line": 200, "label": "replica backend-2" },
+        { "path": "backend/src/app.ts", "line": 39, "end_line": 48, "label": "feature modules" }
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL + PostGIS",
+      "sublabel": "areas, audit, GIST index",
+      "pos": [940, 290],
+      "size": [170, 64],
+      "sources": [
+        { "path": "docker-compose.yml", "line": 41, "end_line": 42, "label": "postgis 17-3.5" },
+        { "path": "backend/src/modules/areas/areas.repository.ts", "line": 168, "end_line": 191, "label": "bbox query ST_Intersects" },
+        { "path": "backend/migrations/0004_areas.sql", "line": 31, "label": "GIST index on geom" }
+      ]
+    },
+    {
+      "id": "cache",
+      "type": "database",
+      "label": "Redis cache",
+      "sublabel": "L2 area cache, LRU",
+      "pos": [1200, 290],
+      "size": [170, 64],
+      "sources": [
+        { "path": "docker-compose.yml", "line": 112, "end_line": 124, "label": "allkeys-lru instance" },
+        { "path": "backend/src/infra/cache/redis-area-cache.ts", "line": 1, "end_line": 12, "label": "L1 in process, L2 in Redis" }
+      ]
+    }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "User's browser", "wraps": ["spa"], "pad": 18 },
+    { "kind": "region", "label": "Docker Compose project snapland", "wraps": ["edge", "api_one", "bus", "api_two", "pg", "cache"], "pad": 22 }
+  ],
+  "connections": [
+    { "from": "spa", "to": "edge", "label": "REST + WebSocket", "variant": "emphasis" },
+    { "from": "spa", "to": "tiles", "label": "map tiles", "variant": "dashed" },
+    { "from": "edge", "to": "api_one", "label": "least_conn", "variant": "emphasis" },
+    { "from": "edge", "to": "api_two", "label": "least_conn", "variant": "emphasis" },
+    { "from": "api_one", "to": "bus", "label": "pub/sub", "variant": "dashed" },
+    { "from": "api_two", "to": "bus", "label": "pub/sub", "variant": "dashed" },
+    { "from": "api_one", "to": "pg", "label": "SQL + PostGIS" },
+    { "from": "api_two", "to": "pg", "label": "SQL + PostGIS" },
+    { "from": "api_one", "to": "cache", "label": "L2 cache", "variant": "dashed", "fromSide": "right", "toSide": "top" },
+    { "from": "api_two", "to": "cache", "label": "L2 cache", "variant": "dashed", "fromSide": "right", "toSide": "bottom" }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "Real-time path",
+      "items": [
+        "The browser trades its JWT for a one-time ticket, then opens /ws (snapland.v1)",
+        "A save on one replica is published to Redis; both replicas fan it out to their sockets",
+        "Each socket gets only changes inside its viewport plus a 50% margin"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Inside each backend",
+      "items": [
+        "Modules: health, meta, auth, areas, realtime, admin, retention",
+        "Drawing limit: 50 actions per minute per user, shared by REST and WebSocket in Redis",
+        "Audit writer batches rows into audit_logs; retention purges old rows under an advisory lock"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Startup and operations",
+      "items": [
+        "A one-shot migrate container runs the SQL migrations before both backends start",
+        "Every replica serves /health/live, /health/ready and /metrics",
+        "nginx serves the app; every published port binds to 127.0.0.1"
+      ]
+    }
+  ]
+}

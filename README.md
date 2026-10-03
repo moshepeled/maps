@@ -12,6 +12,8 @@ nginx, and docker compose.
   Scene list and captions: [`docs/demo/README.md`](docs/demo/README.md).
 - **Tutorial**: [`docs/tutorial/index.html`](docs/tutorial/index.html), a ten-chapter course on how the app was
   designed and built. Open the file in a browser; it works offline.
+- **Architecture diagram**: [below](#architecture-and-technical-decisions), with an interactive version in
+  [`docs/architecture/snapland-system.html`](docs/architecture/snapland-system.html).
 
 ---
 
@@ -96,6 +98,12 @@ time. Make a registered user admin with `npm run user-admin -w @snapland/backend
 ---
 
 ## Architecture and technical decisions
+
+![Snapland system architecture](docs/architecture/snapland-system.png)
+
+The interactive version, [`docs/architecture/snapland-system.html`](docs/architecture/snapland-system.html), links
+every box to the source lines it is based on: download it and open it in a browser. It is generated with archify from
+[`docs/architecture/snapland-system.architecture.json`](docs/architecture/snapland-system.architecture.json).
 
 - **Commands over REST, events over WebSocket.** Every durable change (create, update, delete, restore) is one
   validated REST call; a custom WebSocket protocol (`snapland.v1`, no collaboration library) carries committed-change
@@ -293,13 +301,15 @@ loadtest/         k6 load test (bbox.js)
 docker/           nginx image and PostgreSQL init script
 scripts/          repo tooling (setup-env, banned-dependency and publishability checks)
 docs/             SPEC.md (design reference), adr/, openapi.json, BENCHMARKS.md, design/ (UX/UI specs, mockups),
-                  tutorial/ (the course), demo/ (the demo video)
+                  tutorial/ (the course), demo/ (the demo video), architecture/ (the system diagram)
 ```
 
 ## Documentation
 
 - [`docs/SPEC.md`](docs/SPEC.md): architecture, database schema, REST and WebSocket contracts, security, scaling and
   test strategy.
+- [`docs/architecture/`](docs/architecture/): the system architecture diagram (PNG, interactive HTML and its JSON
+  source).
 - [`docs/adr/`](docs/adr/): architecture decision records (linked above).
 - [`docs/openapi.json`](docs/openapi.json): the OpenAPI 3.1 document, also served live at `/docs`
   (regenerate with `npm run openapi:export -w @snapland/backend`).
@@ -309,4 +319,5 @@ docs/             SPEC.md (design reference), adr/, openapi.json, BENCHMARKS.md,
 - [`docs/demo/snapland-demo.mp4`](docs/demo/snapland-demo.mp4): the demo video ([scene list](docs/demo/README.md)).
 - [`docs/design/UX.md`](docs/design/UX.md) and [`docs/design/UI.md`](docs/design/UI.md): interaction and visual design.
 - [`instractions.md`](instractions.md): the original assignment.
+
 # maps
